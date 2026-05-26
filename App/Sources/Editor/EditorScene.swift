@@ -482,9 +482,6 @@ struct EditorScene: View {
         if sceneUUID.isEmpty {
             sceneUUID = UUID().uuidString
         }
-        // Mirror onto the session so cross-scene save loops (e.g. the
-        // dev-quit handler) can build records for every open window.
-        session.sceneUUID = sceneUUID
         // First caller seeds the queue. Returns the count of records
         // pending — we need to open `count - 1` extra windows
         // (the current scene covers the first).
@@ -565,26 +562,6 @@ struct EditorScene: View {
             openWindow(id: SceneID.editor.rawValue)
         case .commandPalette:
             CommandActions.presentCommandPalette()
-        case .quit:
-            // Dev-only: snapshot every open session into the store,
-            // flush dirty drafts, then `exit(0)`. iOS's normal
-            // background save doesn't fire because we're foreground —
-            // hence the explicit loop. Skips graceful UIKit teardown
-            // but that's the point (force-kill simulates a real quit
-            // for restore testing).
-            for openSession in AppStateBus.shared.scenes.allOpenSessions {
-                guard !openSession.sceneUUID.isEmpty else { continue }
-                for tab in openSession.tabs where tab.document.isDirty {
-                    if let live = tab.state.textView?.text {
-                        tab.document.text = live
-                    }
-                    tab.document.autoSave()
-                }
-                SessionsStore.shared.save(
-                    SessionRecord(scene: openSession.sceneUUID, session: openSession)
-                )
-            }
-            exit(0)
         }
     }
 

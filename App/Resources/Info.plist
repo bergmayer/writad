@@ -149,16 +149,6 @@
 			<key>UIApplicationShortcutItemIconType</key>
 			<string>UIApplicationShortcutIconTypeSearch</string>
 		</dict>
-		<dict>
-			<key>UIApplicationShortcutItemType</key>
-			<string>com.palefire.ayyyy.shortcut.quit</string>
-			<key>UIApplicationShortcutItemTitle</key>
-			<string>Quit (Dev)</string>
-			<key>UIApplicationShortcutItemSubtitle</key>
-			<string>Save sessions and exit</string>
-			<key>UIApplicationShortcutItemIconType</key>
-			<string>UIApplicationShortcutIconTypeProhibit</string>
-		</dict>
 	</array>
 </dict>
 </plist>

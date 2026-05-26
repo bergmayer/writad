@@ -23,20 +23,6 @@ enum CommandActions {
         Self.context.scenes.openWindowAction?(.editor)
     }
 
-    /// Dev-only: terminate the process so the next launch exercises
-    /// the restore path. `_exit` skips atexit handlers — more
-    /// aggressive than `exit()` in case something in the SwiftUI
-    /// teardown chain was blocking the latter.
-    ///
-    /// For accurate restore testing, send the app to background
-    /// first (Home gesture) so `scenePhase == .background` fires the
-    /// normal save path — then come back and hit ⌘⇧Q. Saving inline
-    /// here was blocking on `URL.bookmarkData` for File Provider URLs,
-    /// preventing the quit from ever happening.
-    static func devQuit() {
-        _exit(0)
-    }
-
     /// Every user-initiated new tab/window offers drafts recovery so
     /// an unsaved buffer isn't buried behind a fresh blank surface.
     static func newTab() {

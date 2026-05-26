@@ -99,11 +99,6 @@ struct EditorCommands: Commands {
             CommandGroup(after: .appInfo) {
                 Button("Command Palette…") { presentSheet(.commandPalette) }
                     .keyboardShortcut(AppShortcut.commandPalette)
-                // Dev-only: dock-menu Quit goes through paths SwiftUI
-                // hides from us on iPad — menu / ⌘⇧Q is the reliable
-                // route. Remove before App Store submission.
-                Button("Quit (Dev)") { CommandActions.devQuit() }
-                    .keyboardShortcut("q", modifiers: [.command, .shift])
             }
         }
 

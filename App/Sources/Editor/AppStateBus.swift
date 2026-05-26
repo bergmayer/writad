@@ -244,9 +244,6 @@ final class PendingURLs {
 enum HomeShortcut: String {
     case newFile        = "com.palefire.ayyyy.shortcut.newFile"
     case commandPalette = "com.palefire.ayyyy.shortcut.commandPalette"
-    /// Dev affordance — saves all open windows to the session store
-    /// then `exit(0)`s the process so the next launch can be tested.
-    case quit           = "com.palefire.ayyyy.shortcut.quit"
 }
 
 /// Replaces bare string literals at every `openWindow(id:)` call so
@@ -585,10 +582,6 @@ final class EditorSession {
     /// View of the global pool, surfaced on the session so existing
     /// call sites don't need to reach into `ClosedTabsStore` directly.
     var recentlyClosed: [ClosedTabRecord] { ClosedTabsStore.shared.records }
-    /// Set by `EditorScene` after its `@State` UUID is generated.
-    /// Lets cross-scene save loops (the dev-quit handler) write each
-    /// session's `SessionRecord` under the correct key.
-    var sceneUUID: String = ""
 
     init() {
         let initial = TabModel()
