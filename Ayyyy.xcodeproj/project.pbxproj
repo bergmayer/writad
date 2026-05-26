@@ -64,6 +64,12 @@
 		B2000037 /* Wave1Sheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000037 /* Wave1Sheets.swift */; };
 		B2000038 /* OutlineSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000038 /* OutlineSheet.swift */; };
 		B200003A /* OutlineSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100003A /* OutlineSidebar.swift */; };
+		B2000040 /* ProcessLinesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000040 /* ProcessLinesSheet.swift */; };
+		B2000041 /* CanonizeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000041 /* CanonizeSheet.swift */; };
+		B2000042 /* CharacterPanelSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000042 /* CharacterPanelSheet.swift */; };
+		B2000043 /* OrganizeFootnotesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000043 /* OrganizeFootnotesSheet.swift */; };
+		B2000044 /* MarkdownTableSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000044 /* MarkdownTableSheet.swift */; };
+		B2000045 /* DraftsRecoverySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000045 /* DraftsRecoverySheet.swift */; };
 		B2010001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1010001 /* Assets.xcassets */; };
 		B2020001 /* FileEncoding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000001 /* FileEncoding */; };
 		B2020002 /* LineEnding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000002 /* LineEnding */; };
@@ -132,6 +138,12 @@
 		B1000037 /* Wave1Sheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wave1Sheets.swift; sourceTree = "<group>"; };
 		B1000038 /* OutlineSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutlineSheet.swift; sourceTree = "<group>"; };
 		B100003A /* OutlineSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutlineSidebar.swift; sourceTree = "<group>"; };
+		B1000040 /* ProcessLinesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessLinesSheet.swift; sourceTree = "<group>"; };
+		B1000041 /* CanonizeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanonizeSheet.swift; sourceTree = "<group>"; };
+		B1000042 /* CharacterPanelSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterPanelSheet.swift; sourceTree = "<group>"; };
+		B1000043 /* OrganizeFootnotesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrganizeFootnotesSheet.swift; sourceTree = "<group>"; };
+		B1000044 /* MarkdownTableSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownTableSheet.swift; sourceTree = "<group>"; };
+		B1000045 /* DraftsRecoverySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftsRecoverySheet.swift; sourceTree = "<group>"; };
 		B1010001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B1010002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B1010003 /* Ayyyy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ayyyy.entitlements; sourceTree = "<group>"; };
@@ -277,6 +289,12 @@
 				B1000037 /* Wave1Sheets.swift */,
 				B1000038 /* OutlineSheet.swift */,
 				B100003A /* OutlineSidebar.swift */,
+				B1000040 /* ProcessLinesSheet.swift */,
+				B1000041 /* CanonizeSheet.swift */,
+				B1000042 /* CharacterPanelSheet.swift */,
+				B1000043 /* OrganizeFootnotesSheet.swift */,
+				B1000044 /* MarkdownTableSheet.swift */,
+				B1000045 /* DraftsRecoverySheet.swift */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -456,6 +474,12 @@
 				B2000022 /* LineUtilitiesSheets.swift in Sources */,
 				B2000023 /* Snippets.swift in Sources */,
 				B2000024 /* DeveloperToolsSheets.swift in Sources */,
+				B2000040 /* ProcessLinesSheet.swift in Sources */,
+				B2000041 /* CanonizeSheet.swift in Sources */,
+				B2000042 /* CharacterPanelSheet.swift in Sources */,
+				B2000043 /* OrganizeFootnotesSheet.swift in Sources */,
+				B2000044 /* MarkdownTableSheet.swift in Sources */,
+				B2000045 /* DraftsRecoverySheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
