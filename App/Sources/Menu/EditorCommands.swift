@@ -21,7 +21,12 @@ struct EditorCommands: Commands {
     @FocusedValue(\.presentEditorSheet) private var focusedPresenter: SheetPresenter?
     @FocusedValue(\.focusedSession) private var focusedSession: EditorSession?
 
-    private var editorState: EditorState? { bus.scenes.currentEditor }
+    /// Prefer the FocusedSceneValue — it resolves to the actually-
+    /// focused window at menu-build time. Falls back to the bus on
+    /// cold launch (no scene has focus yet).
+    private var editorState: EditorState? {
+        focusedSession?.activeTab.state ?? bus.scenes.currentEditor
+    }
     private var isEnabled: Bool { editorState != nil }
 
     /// Resyncs the bus to the focused scene before any CommandAction
@@ -142,15 +147,19 @@ struct EditorCommands: Commands {
             // previous explicit Menu produced a duplicate entry.
         }
         CommandGroup(replacing: .saveItem) {
-            Button("Save") { AppStateBus.shared.editing.saveCurrentDocument?() }
-                .keyboardShortcut(AppShortcut.save)
-                .disabled(!isEnabled)
-            Button("Save As…") { AppStateBus.shared.pickers.pending = .saveAs }
-                .keyboardShortcut(AppShortcut.saveAs)
-                .disabled(!isEnabled)
+            Button("Save") {
+                focused { AppStateBus.shared.editing.saveCurrentDocument?() }
+            }
+            .keyboardShortcut(AppShortcut.save)
+            .disabled(!isEnabled)
+            Button("Save As…") {
+                focused { AppStateBus.shared.pickers.pending = .saveAs }
+            }
+            .keyboardShortcut(AppShortcut.saveAs)
+            .disabled(!isEnabled)
             Divider()
             Button("Revert to Saved") {
-                AppStateBus.shared.editing.revertRequestCount += 1
+                focused { AppStateBus.shared.editing.revertRequestCount += 1 }
             }
             .disabled(!isEnabled)
             Button("Show Revisions…") {
