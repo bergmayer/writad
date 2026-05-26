@@ -5,17 +5,15 @@ import AyyyySyntax
 
 /// SwiftUI wrapper around `EditorEngine.TextView`.
 ///
-/// Architecture note (do not regress): the engine's `TextView` IS
-/// the source of truth for the buffer. Per-keystroke text never
-/// flows back into SwiftUI's observation graph — the previous
-/// `Binding<String>` design copied the full buffer through
-/// `document.text` → `state.text` on every keystroke, which froze
-/// editing on multi-MB files. Instead the coordinator bumps a tiny
-/// `document.bufferRevision` counter and (for status-bar /
-/// markdown-preview consumers that need eventual consistency)
-/// debounces a snapshot back into `document.text` / `state.text`.
-/// `isDirty` is set up-front via the engine's `shouldChangeTextIn`
-/// delegate so the dirty flag is range-aware, not buffer-flow-aware.
+/// Architecture note — do not regress: the engine's `TextView` IS
+/// the buffer's source of truth. Per-keystroke text never flows back
+/// into SwiftUI's observation graph. The previous `Binding<String>`
+/// design copied the full buffer through `document.text` →
+/// `state.text` on every keystroke and froze editing on multi-MB
+/// files. The coordinator instead bumps a tiny
+/// `document.bufferRevision` counter; status bar / markdown preview
+/// pull a debounced snapshot. `isDirty` is set up-front via
+/// `shouldChangeTextIn` so the flag is range-aware.
 struct EditorTextView: UIViewRepresentable {
 
     let document: PlainTextDocument
@@ -43,11 +41,9 @@ struct EditorTextView: UIViewRepresentable {
         )
         textView.theme = initialTheme
         // EditorEngine.TextView hardcodes white as its scroll-view
-        // background, so DarkTheme (textColor = .white) painted white
-        // text on a white view — blank by design. Every shipping theme
-        // (Light, Dark, the textamp ports) conforms to
-        // `EditorBackgroundProviding` and supplies its own surface
-        // colour — Dracula gives Dracula bg, Norton gives DOS-blue, etc.
+        // background, so DarkTheme (textColor = .white) painted
+        // white-on-white — blank by design. Shipping themes
+        // conform to `EditorBackgroundProviding` for their own surface.
         textView.backgroundColor = (initialTheme as? EditorBackgroundProviding)?
             .editorBackgroundColor ?? .systemBackground
         context.coordinator.themeCacheKey = initialThemeKey
@@ -56,24 +52,19 @@ struct EditorTextView: UIViewRepresentable {
         textView.isFindInteractionEnabled = true
         textView.alwaysBounceVertical = true
         textView.contentInsetAdjustmentBehavior = .always
-        // Attach navigation buttons to the keyboard's own shortcut
-        // bar (system-managed, follows the keyboard around) instead
-        // of an inputAccessoryView (which sticks to the text view's
-        // bottom edge and overlaps our status bar in Stage Manager /
-        // Slide Over windows).
+        // Use the keyboard's own shortcut bar instead of an
+        // inputAccessoryView — the latter sticks to the text view's
+        // bottom and overlaps our status bar in Stage Manager / Slide
+        // Over.
         KeyboardAccessoryBar.install(on: textView)
         textView.onFoldToggle = { [weak textView] body in
             guard let textView else { return }
             let isFolded = body.contains { textView.foldedLineIndices.contains($0) }
             textView.setLinesFolded(!isFolded, range: body)
         }
-        // Markdown inline patterns (`*foo*`, `**foo**`, `` `foo` ``,
-        // `[label](url)`, headings, lists, quotes) get foreground colours
-        // and font traits via the engine's per-line post-highlight
-        // decorator. Captured weakly to avoid `state` → `textView` →
-        // closure → `state` cycle.
-        // Decorator is a no-op for files marked large — it walks every
-        // line on every render and would lag a multi-MB document.
+        // No-op on large files — the decorator walks every line per
+        // render and would lag a multi-MB document. Weak capture
+        // avoids a state → textView → closure → state cycle.
         MarkdownInlineHighlighter.install(on: textView) { [weak state] in
             guard let state, !state.isLargeFile else { return .plain }
             return state.languageIdentifier
@@ -85,49 +76,40 @@ struct EditorTextView: UIViewRepresentable {
         applyIndentStrategy(to: textView)
         applyCharacterPairs(to: textView)
 
-        // Bookmark gutter — a content-space subview of the engine's
-        // scroll view. Stays in sync with bookmark locations via
-        // `updateUIView`; rerenders on scroll/contentSize change via
-        // its own `layoutSubviews`.
+        // Subviews of the engine's scroll view so they scroll with
+        // content. Each rebuilds in its own `layoutSubviews`; the
+        // coordinator pushes fresh data through `updateUIView`.
         let bookmarks = BookmarkGutterOverlay(host: textView)
         textView.addSubview(bookmarks)
         context.coordinator.bookmarkOverlay = bookmarks
 
-        // Scrollbar-edge tick marks for live match hits — paints one
-        // small line at each match's y position on the right side of
-        // the scrollview so the user can see how matches cluster.
         let matchMarks = MatchScrollMarksOverlay(host: textView)
         textView.addSubview(matchMarks)
         context.coordinator.matchScrollOverlay = matchMarks
 
-        // VS Code–style change indicators inside the line-number
-        // gutter — green/yellow/red bars where the current buffer
-        // diverges from the last saved (or loaded) snapshot.
+        // Green / yellow / red bars where the buffer diverges from
+        // the last saved (or loaded) snapshot.
         let history = ChangeHistoryGutterOverlay(host: textView)
         textView.addSubview(history)
         context.coordinator.changeHistoryOverlay = history
 
-        // Note: arbitrary fold markers (Fold Selection) used to live
-        // in a sibling overlay here, but the engine's own
-        // `bringSubviewToFront(gutterContainerView)` covered it and
-        // pushing it outside the gutter looked off-theme. Solution:
-        // synthesize a `FoldableRegion` for each entry in
-        // `state.userFoldedBodyRanges` from `refreshFoldableRegions`
-        // — the engine then paints its native gutter chevron
-        // (theme-aware, inside the gutter, and tap-toggles via the
-        // existing `onFoldToggle` hook).
+        // Fold Selection markers used to live in a sibling overlay,
+        // but the engine's `bringSubviewToFront(gutterContainerView)`
+        // covered them. Workaround: synthesize a `FoldableRegion` for
+        // each `userFoldedBodyRanges` entry in `refreshFoldableRegions`
+        // — the engine then paints its native, theme-aware chevron
+        // inside the gutter.
 
         state.textView = textView
         return textView
     }
 
     func updateUIView(_ textView: EditorEngine.TextView, context: Context) {
-        // The engine owns the live buffer. We only push `document.text`
-        // into the text view when an EXTERNAL writer changed it — a
-        // load, a Revert, a Revisions-sheet restore, a Save-As pulled
-        // a different decode. Tracked via `lastPushedDocumentText` so
-        // we don't compare-and-assign the buffer on every render
-        // (which was the O(n) cost that froze typing on big files).
+        // Only push `document.text` into the text view when an
+        // EXTERNAL writer changed it (load / Revert / restore /
+        // Save-As re-decode). `lastPushedDocumentText` is the cache
+        // that lets us skip the O(n) `!=` compare on every render —
+        // that compare was the typing freeze on big files.
         if context.coordinator.lastPushedDocumentText != document.text {
             context.coordinator.lastPushedDocumentText = document.text
             if textView.text != document.text {
@@ -161,27 +143,22 @@ struct EditorTextView: UIViewRepresentable {
         }
         context.coordinator.refreshFoldableRegions(textView)
         context.coordinator.bookmarkOverlay?.bookmarks = state.bookmarks
-        // Feed the change-history gutter the latest baseline + body.
-        // The change-history overlay is gated three ways. The user
-        // preference (`showChangeHistoryGutter`, off by default) is
-        // the explicit opt-in. The byte ceiling
-        // (`changeHistoryGutterByteLimit`) is the perf gate: even
-        // when the preference is on, we refuse to render past the
-        // ceiling because the per-line diff + `caretRect` lookups
-        // + bar layout become perceptible after a delete on
-        // hundred-KB-plus files. The cache short-circuit avoids
-        // re-splitting when the source strings didn't change between
-        // renders.
+        // Change-history gutter is gated three ways:
+        //  - user preference (off by default)
+        //  - byte ceiling (`changeHistoryGutterByteLimit`) — per-line
+        //    diff + caretRect lookups become perceptible after big
+        //    deletes on 100kB+ files
+        //  - cache short-circuit to skip re-splitting when sources
+        //    didn't change between renders
         let coord = context.coordinator
         let prefOn = state.showChangeHistoryGutter
         let withinSize = textView.text.utf16.count <= Timing.changeHistoryGutterByteLimit
         let shouldRender = prefOn && !state.isLargeFile && withinSize
         if let overlay = coord.changeHistoryOverlay {
             if !shouldRender {
-                // Drop any bars we may have rendered before the
-                // preference flipped off or the file grew past the
-                // ceiling (paste, undo of a big delete, etc.). Reset
-                // the cache too so re-enabling re-renders fresh.
+                // Drop stale bars from before the pref flipped off
+                // or a paste pushed the file past the ceiling. Reset
+                // caches so re-enabling renders fresh.
                 coord.overlayRefreshTask?.cancel()
                 if !overlay.baseline.isEmpty || !overlay.current.isEmpty {
                     overlay.baseline = []
@@ -225,8 +202,8 @@ struct EditorTextView: UIViewRepresentable {
         textView.smartQuotesType = state.smartQuotes ? .yes : .no
         textView.smartDashesType = state.smartQuotes ? .yes : .no
         textView.spellCheckingType = state.spellCheck ? .yes : .no
-        // dataDetectorTypes isn't exposed by the editor engine's TextView;
-        // the `autoLinkDetection` preference is stored but not yet wired.
+        // `autoLinkDetection` is stored but not wired —
+        // EditorEngine.TextView doesn't expose dataDetectorTypes.
         textView.keyboardType = .asciiCapable
     }
 
@@ -248,20 +225,15 @@ struct EditorTextView: UIViewRepresentable {
         textView.lineHeightMultiplier  = CGFloat(state.lineHeight)
         textView.lineSelectionDisplayType = state.highlightCurrentLine ? .line : .disabled
 
-        // Cap the soft-wrap width at the page-guide column. The
-        // engine wraps at the text-container's right edge; with a
-        // monospaced font we can compute the desired width as
-        // `column × char-advance` and push the right inset to make
-        // the wrap line up exactly with the page-guide bar. Wrap is
-        // a no-op when wrapping is off, and a no-op when the
-        // window is already narrower than the column requires.
+        // Cap soft-wrap at the page-guide column by pushing the
+        // text container's right inset to `width − (column ×
+        // char-advance)`. No-op when wrapping is off or the window is
+        // already narrower than the column.
         applyPageGuideWrap(to: textView)
     }
 
     private func applyPageGuideWrap(to textView: EditorEngine.TextView) {
         guard state.wrapLines, state.pageGuideColumn > 0 else {
-            // Wrap disabled or no column set — return to default
-            // right inset so any prior cap is cleared.
             if textView.textContainerInset.right != 0 {
                 var inset = textView.textContainerInset
                 inset.right = 0
@@ -270,19 +242,15 @@ struct EditorTextView: UIViewRepresentable {
             return
         }
         let font = state.font.uiFont(size: CGFloat(state.fontSize))
-        // Monospaced advance — `" "` width is the canonical glyph
-        // advance for the engine's monospaced rendering path. Using
-        // `UIFont.advance(of:)` would require attributing a string,
-        // and "size(withAttributes:)" suffices.
+        // Width of a space probes the monospaced advance; `UIFont
+        // .advance(of:)` would require attributing a string.
         let probe = " " as NSString
         let charWidth = probe.size(withAttributes: [.font: font]).width
         guard charWidth > 0 else { return }
         let desiredColumnWidth = CGFloat(state.pageGuideColumn) * charWidth
-        // The available content width is the scrollview width minus
-        // the gutter (line numbers) minus the existing left inset.
-        // `textContainerInset.left` is the body-text inset to the
-        // right of the gutter; we keep it intact and only push the
-        // right inset.
+        // Available width = scroll width − gutter − left inset.
+        // Keep `textContainerInset.left` (the gutter-to-body gap)
+        // intact and only push the right inset.
         let scrollWidth = textView.frame.width
         let gutterWidth = textView.gutterWidth
         let leftInset = textView.textContainerInset.left
@@ -311,9 +279,8 @@ struct EditorTextView: UIViewRepresentable {
         coordinator: Coordinator
     ) {
         coordinator.currentLanguageIdentifier = identifier
-        // Files marked large bypass tree-sitter regardless of the
-        // identifier — the initial parse is O(file size) and runs on
-        // the engine's pipeline. Plain text mode keeps typing snappy.
+        // Large files bypass tree-sitter — the initial parse is O(N)
+        // on the engine's pipeline. Plain-text keeps typing snappy.
         if state.isLargeFile {
             textView.setLanguageMode(PlainTextLanguageMode())
             return
@@ -345,58 +312,40 @@ struct EditorTextView: UIViewRepresentable {
         let document: PlainTextDocument
         let state: EditorState
         var currentLanguageIdentifier: LanguageIdentifier?
-        /// Snapshot of `document.text` from the last EXTERNAL push
-        /// (load / revert / restore). Lets `updateUIView` skip the
-        /// O(n) `textView.text != document.text` compare when
-        /// `document.text` hasn't changed since the last push — the
-        /// engine itself is keeping the buffer up to date for user
-        /// edits, so we don't need to re-sync.
+        /// Last EXTERNAL push of `document.text` (load / revert /
+        /// restore). Lets `updateUIView` skip the O(n) `!=` compare
+        /// when the engine has already kept the buffer up to date.
         var lastPushedDocumentText: String?
-        /// `true` while we're programmatically applying a sync from
-        /// the sibling split pane — short-circuits delegate callbacks
-        /// so we don't bounce the same edit back across the pair.
+        /// True while applying a sync from the sibling split pane —
+        /// short-circuits delegate callbacks so the same edit
+        /// doesn't bounce back across the pair.
         var isApplyingSiblingSync: Bool = false
         /// Debounced snapshot back into `state.text` / `document.text`
-        /// for consumers that need eventual consistency (status-bar
-        /// counts, markdown preview). Rescheduled on every keystroke;
-        /// runs once after typing pauses.
+        /// for eventual-consistency consumers (status counts,
+        /// markdown preview).
         var bufferSnapshotTask: Task<Void, Never>?
-        /// Cache key for fold discovery — string length + language. Skips
-        /// the O(N) walk on every SwiftUI re-render when the buffer
-        /// hasn't actually changed (SwiftUI re-evaluates body on every
-        /// `@Observable` change and updateUIView fires every time).
+        /// Cache key for fold discovery; skips the O(N) walk when
+        /// nothing relevant has changed. SwiftUI re-evaluates body
+        /// on every `@Observable` mutation, so updateUIView fires
+        /// constantly even when the buffer hasn't budged.
         private var foldCacheKey: (length: Int, language: LanguageIdentifier, userFolds: String)?
-        /// Overlay drawn inside the engine's scroll view to render
-        /// bookmark slot numbers in the gutter. Owned by the engine view
-        /// (as a subview) — this reference just lets `updateUIView`
-        /// push fresh data without re-walking the view hierarchy.
         weak var bookmarkOverlay: BookmarkGutterOverlay?
         weak var changeHistoryOverlay: ChangeHistoryGutterOverlay?
-        /// Cached source strings for the change-history overlay so the
-        /// debounced refresh skips the expensive `components(separatedBy:)`
-        /// split when the underlying text hasn't actually changed
-        /// between renders. Pairs with `overlayRefreshTask` (debounce)
-        /// and the `isLargeFile` gate (skip-entirely) below to keep
-        /// per-keystroke main-thread cost flat regardless of file size.
+        /// Cached source strings; the debounced refresh skips the
+        /// `components(separatedBy:)` split when text hasn't changed.
         var changeHistoryBaselineCache: String?
         var changeHistoryCurrentCache: String?
-        /// Debounce window for the change-history overlay refresh.
-        /// `updateUIView` fires on every SwiftUI body re-evaluation —
-        /// which on a large file is every keystroke — and the
-        /// overlay refresh splits both buffer + baseline by `\n`
-        /// (allocates one Array<String> per text per call). For
-        /// Moby Dick that's ~22k allocations per call; running it
-        /// 30+ times per second of typing freezes the main thread.
-        /// Debouncing means we only re-split after the user pauses,
-        /// so typing stays snappy and the diff bars update a beat
-        /// later — an acceptable trade for snappy editing.
+        /// `updateUIView` fires per body re-eval — i.e. every
+        /// keystroke on a big file. Splitting both baseline + buffer
+        /// by "\n" on each call is ~22k allocs on Moby Dick. The
+        /// debounce coalesces them into one re-split after the user
+        /// pauses; diff bars update a beat late, typing stays snappy.
         var overlayRefreshTask: Task<Void, Never>?
-        /// Cached theme inputs. `AppTheme.current(...)` returns a fresh
-        /// reference each call, and the engine's `theme.didSet` uses `!==`,
-        /// so reassigning the equivalent theme on every SwiftUI re-render
-        /// invalidates every line controller and re-lays the whole view —
-        /// which on a large file shows up as the viewport drifting
-        /// down a line per update. Skip when nothing actually changed.
+        /// `AppTheme.current(...)` returns a fresh reference each
+        /// call; the engine's `theme.didSet` uses `!==`. Reassigning
+        /// an equivalent theme per render invalidates every line
+        /// controller and re-lays the view — visible on large files
+        /// as the viewport drifting down a line per update.
         var themeCacheKey: ThemeCacheKey?
 
         struct ThemeCacheKey: Equatable {
@@ -413,26 +362,19 @@ struct EditorTextView: UIViewRepresentable {
 
         func textViewDidChange(_ textView: EditorEngine.TextView) {
             if isApplyingSiblingSync { return }
-            // Tiny payload — no full buffer flows through. Observers
-            // that care about "the buffer changed" (autosave
-            // scheduler, change-history overlay debouncer) react to
-            // this counter; observers that need the actual text
-            // pull it from the engine on demand.
+            // No full buffer flows through — observers react to the
+            // counter; ones that need the actual text pull it from
+            // the engine on demand.
             document.bufferRevision &+= 1
             scheduleBufferSnapshot(from: textView)
-            // Invalidate the fold cache when the text actually changes.
             foldCacheKey = nil
             refreshFoldableRegions(textView)
         }
 
-        /// Debounce a snapshot of the live buffer back into
-        /// `document.text` / `state.text`. These are the eventual-
-        /// consistency surfaces — status-bar line/char counts,
-        /// markdown preview, sheets that read `document.text` on
-        /// open. They don't need to update on every keystroke, just
-        /// shortly after the user pauses. The debounce window
-        /// matches the change-history overlay so both refresh
-        /// together for a single re-render pass.
+        /// Eventual-consistency surfaces (status counts, markdown
+        /// preview, sheets reading `document.text` on open). Window
+        /// matches the change-history overlay so both refresh in
+        /// the same render pass.
         private func scheduleBufferSnapshot(from textView: EditorEngine.TextView) {
             bufferSnapshotTask?.cancel()
             bufferSnapshotTask = Task { @MainActor [weak document, weak state, weak self] in
@@ -442,9 +384,8 @@ struct EditorTextView: UIViewRepresentable {
                 let snapshot = textView.text
                 if document.text != snapshot {
                     document.text = snapshot
-                    // Avoid bouncing the snapshot back through
-                    // `updateUIView`'s `lastPushedDocumentText`
-                    // check — we already match.
+                    // Match `lastPushedDocumentText` so the next
+                    // updateUIView doesn't bounce this snapshot back.
                     self.lastPushedDocumentText = snapshot
                 }
                 if state.text != snapshot {
@@ -454,17 +395,14 @@ struct EditorTextView: UIViewRepresentable {
         }
 
         func refreshFoldableRegions(_ textView: EditorEngine.TextView) {
-            // Skip on large files.
             guard !state.isLargeFile else {
                 textView.foldableRegions = []
                 return
             }
             let length = (textView.text as NSString).length
-            // Cache key includes the user-fold-set fingerprint so a
-            // newly-folded selection invalidates the language-discovery
-            // cache and emits an updated `foldableRegions` list. Without
-            // that the ad-hoc fold's gutter indicator would only paint
-            // after the next unrelated edit.
+            // Includes user-fold fingerprint so a newly-folded
+            // selection invalidates the cache — otherwise the ad-hoc
+            // fold's chevron only paints after the next edit.
             let userFingerprint = state.userFoldedBodyRanges
                 .map { "\($0.lowerBound)-\($0.upperBound)" }
                 .sorted()
@@ -480,18 +418,14 @@ struct EditorTextView: UIViewRepresentable {
                 in: textView.text as NSString,
                 language: state.languageIdentifier
             )
-            // User folds from `Fold Selection` aren't part of any
-            // language discovery — synthesize a FoldableRegion for
-            // each so the engine paints its native, theme-aware
-            // gutter chevron at the header line. The "header" is
-            // the visible line immediately above the body; the body
-            // is the collapsed range itself.
+            // Fold Selection isn't in language discovery — synthesize
+            // a FoldableRegion so the engine paints its native chevron
+            // at the header line just above the body.
             for body in state.userFoldedBodyRanges {
                 let header = max(0, body.lowerBound - 1)
-                // De-dupe if language discovery already declared a
-                // foldable region with the same header (unlikely but
-                // possible — e.g. user selected exactly the body of
-                // an existing fold).
+                // De-dupe in case language discovery already covers
+                // the same header (user selected an existing fold's
+                // body exactly).
                 if regions.contains(where: { $0.headerRow == header }) { continue }
                 regions.append(EditorEngine.TextView.FoldableRegion(
                     headerRow: header,
@@ -512,15 +446,12 @@ struct EditorTextView: UIViewRepresentable {
             refreshLiveMatches(textView)
         }
 
-        /// Static id namespace used so we can replace just our own
-        /// highlights on each refresh without disturbing other
-        /// decorations (bracket match, find hits, etc.).
+        /// Namespace so refresh only replaces our highlights, not
+        /// bracket-match / find / etc.
         private static let liveMatchIDPrefix = "live-match-"
 
-        /// Recompute "every other occurrence of the current selection"
-        /// highlights + the matching gutter ticks. No-op when the
-        /// preference is off, the selection is empty, single-character,
-        /// or spans a newline.
+        /// No-op when pref off, selection empty / single-char, or
+        /// the needle crosses a newline.
         func refreshLiveMatches(_ textView: EditorEngine.TextView) {
             let selRange = textView.selectedRange
             let ns = textView.text as NSString
@@ -536,17 +467,15 @@ struct EditorTextView: UIViewRepresentable {
                 return
             }
             let needle = ns.substring(with: selRange)
-            // Single-line selections only — multi-line matching with
-            // this naive scanner would be confusing and expensive.
+            // Single-line only — naive multi-line would be slow and
+            // confusing.
             if needle.contains("\n") || needle.contains("\r") {
                 textView.highlightedRanges = cleared
                 state.liveMatchCount = 0
                 matchScrollOverlay?.matchRanges = []
                 return
             }
-            // Walk the whole buffer with NSString.range(of:options:range:)
-            // and collect non-overlapping matches outside the user's
-            // current selection.
+            // Non-overlapping matches outside the user's selection.
             var hits: [NSRange] = []
             var searchStart = 0
             while searchStart < ns.length {
@@ -573,31 +502,20 @@ struct EditorTextView: UIViewRepresentable {
             matchScrollOverlay?.matchRanges = hits
         }
 
-        /// Gutter-edge overlay drawing one tick per match. Mirrors
-        /// `BookmarkGutterOverlay`; populated by `refreshLiveMatches`.
+        /// Populated by `refreshLiveMatches`.
         weak var matchScrollOverlay: MatchScrollMarksOverlay?
 
-        /// Single `shouldChangeTextIn` for the coordinator. Handles
-        /// three jobs in order so the engine sees one consistent
-        /// answer per edit:
-        ///   1. Range-aware dirty-flag set — the cheap way to know
-        ///      "user is about to mutate the buffer" without
-        ///      comparing the post-edit text against a baseline.
-        ///   2. Split-pane sibling sync — propagate the same
-        ///      `(range, replacement)` to the other pane's text
-        ///      view so both stay character-for-character in step
-        ///      without going through any shared observable.
-        ///   3. Auto-continue lists on Enter (the original behavior
-        ///      this delegate was added for). Gated on the
-        ///      `autoContinueLists` pref. When the helper
-        ///      intercepts the newline we return `false` so the
-        ///      engine doesn't ALSO insert the bare `\n` — but the
-        ///      dirty flag / sibling sync already fired above.
-        ///
-        /// Sibling-sync re-entrancy is guarded by
-        /// `isApplyingSiblingSync` so the programmatic
-        /// `sibling.replace(range:withText:)` doesn't bounce back
-        /// across the pair.
+        /// One delegate, three jobs in order so the engine sees a
+        /// consistent answer per edit:
+        ///   1. Range-aware dirty flag (cheap; no buffer compare).
+        ///   2. Sibling-pane sync — propagate the same
+        ///      `(range, replacement)` so both panes stay in step
+        ///      without a shared observable. Guarded by
+        ///      `isApplyingSiblingSync` against bouncing back.
+        ///   3. List-continuation interceptor on Enter. When the
+        ///      helper handles the newline we return `false` so the
+        ///      engine doesn't also insert a bare `\n` — but jobs
+        ///      1 + 2 already fired above.
         func textView(
             _ textView: EditorEngine.TextView,
             shouldChangeTextIn range: NSRange,
@@ -605,17 +523,13 @@ struct EditorTextView: UIViewRepresentable {
         ) -> Bool {
             if isApplyingSiblingSync { return true }
 
-            // 1. Flip dirty up front. This is the entry point for
-            // "first edit on this document" — no need to compare
-            // buffers afterwards.
+            // 1. Dirty flag up front — entry point for "first edit
+            // on this doc", no after-the-fact buffer compare needed.
             if !document.isDirty { document.isDirty = true }
 
-            // 2. Sibling-pane sync. The engine handles the edit
-            // incrementally on both sides — no full-buffer copy.
-            // `state.textView` is the abstract `EditorActions`
-            // protocol; cast to the concrete engine view so we can
-            // reach its delegate (the sibling pane's coordinator)
-            // and arm the recursion guard.
+            // 2. Sibling sync. Cast the abstract `EditorActions` to
+            // the concrete engine view so we can reach the sibling
+            // coordinator and arm its recursion guard.
             if state.splitOpen,
                let siblingActions = state.siblingState?.textView,
                let sibling = siblingActions as? EditorEngine.TextView,
@@ -735,7 +649,6 @@ extension EditorEngine.TextView: EditorActions {
         let nsText = text as NSString
         let lineRange = nsText.lineRange(for: range)
         let lineContent = nsText.substring(with: lineRange)
-        // Insert another copy of the line(s) immediately after.
         let endOfLines = lineRange.location + lineRange.length
         let needsLeadingNewline = (endOfLines == nsText.length) && !lineContent.hasSuffix("\n") && !lineContent.hasSuffix("\r")
         let insertion = needsLeadingNewline ? ("\n" + lineContent) : lineContent
@@ -826,9 +739,8 @@ extension EditorEngine.TextView: EditorActions {
         let cursor = selectedRange.location
         let lineRange = nsText.lineRange(for: NSRange(location: cursor, length: 0))
         var end = lineRange.location + lineRange.length
-        // Don't consume the trailing newline — Mac convention. `lineRange`
-        // already includes any CRLF pair, so a single decrement here lands on
-        // `\r`, which we also want to keep.
+        // Keep the trailing newline (Mac convention). `lineRange`
+        // already covers CRLF, so we step back over either byte.
         while end > cursor {
             let last = nsText.character(at: end - 1)
             guard last == 0x0A || last == 0x0D else { break }
@@ -912,14 +824,13 @@ extension EditorEngine.TextView: EditorActions {
 
     // MARK: - Spell check
 
-    /// Shared UITextChecker — one instance per process is enough; it
-    /// retains learned words for the lifetime of the app.
+    /// One instance per process; retains learned words for the app's
+    /// lifetime.
     private static let textChecker = UITextChecker()
 
-    /// Range we currently consider "ignored" within this textView —
-    /// UITextChecker ignores per-checker, but we also remember the
-    /// word so we don't re-flag immediately. Plain Set is fine; this
-    /// list is short-lived.
+    /// Remembers ignored words so the highlighter doesn't immediately
+    /// re-flag them — UITextChecker's ignoreWord is per-checker but
+    /// doesn't filter the highlight pass.
     private static var ignoredWords: Set<String> = []
 
     func jumpToNextMisspelling() {
@@ -952,10 +863,9 @@ extension EditorEngine.TextView: EditorActions {
 
     func learnSelectedWord() {
         guard let word = wordAtSelection(), !word.isEmpty else { return }
-        // UITextChecker exposes learnWord/unlearnWord/hasLearnedWord as
-        // static members (they consult the system-wide learned-words
-        // dictionary). The same goes for `ignoreWord` — that's an
-        // instance method, scoped per checker.
+        // `learnWord` is a static — it writes to the system-wide
+        // learned-words dictionary. `ignoreWord` is an instance
+        // method scoped per checker.
         UITextChecker.learnWord(word)
         Self.ignoredWords.remove(word)
     }
@@ -966,9 +876,8 @@ extension EditorEngine.TextView: EditorActions {
         Self.ignoredWords.insert(word)
     }
 
-    /// Static id prefix used by `highlightAllMisspellings` so we can
-    /// remove only our own marks without disturbing live-match,
-    /// bracket-match, or find-bar highlights.
+    /// Namespace so we replace only misspelling marks, not live-match
+    /// / bracket-match / find-bar highlights.
     private static let misspellingHighlightID = "ayyyy.misspelling-"
 
     func highlightAllMisspellings() {
@@ -1016,9 +925,7 @@ extension EditorEngine.TextView: EditorActions {
         }
     }
 
-    /// Substring of the buffer covering the word the cursor sits inside.
-    /// Returns nil if the cursor is in whitespace and there's no
-    /// surrounding word.
+    /// Word at the cursor; nil if the cursor sits in whitespace.
     private func wordAtSelection() -> String? {
         let nsText = text as NSString
         let length = nsText.length
@@ -1111,12 +1018,10 @@ extension EditorEngine.TextView: EditorActions {
 
 // MARK: - Bookmark gutter overlay
 
-/// A `UIView` parked as a subview of the engine's scroll view so its
-/// children scroll with the content. Renders a small numbered badge in
-/// the gutter next to each bookmarked line (slot 0–9). Repaints in
-/// `layoutSubviews` whenever the host's bounds or content size change,
-/// and explicitly when `bookmarks` is assigned via SwiftUI's
-/// `updateUIView` pass.
+/// Lives as a subview of the engine's scroll view so its badges
+/// scroll with the content. One numbered badge per bookmark slot
+/// (0–9). Repaints in `layoutSubviews` and whenever `bookmarks` is
+/// reassigned.
 final class BookmarkGutterOverlay: UIView {
 
     weak var host: EditorEngine.TextView?
@@ -1137,8 +1042,8 @@ final class BookmarkGutterOverlay: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         guard let host else { return }
-        // Cover the entire scroll content area so children positioned at
-        // content-coordinates scroll naturally with the engine.
+        // Cover the full content area so children in content
+        // coordinates scroll with the engine.
         let cs = host.contentSize
         let width = max(host.gutterWidth, 16)
         frame = CGRect(x: 0, y: 0, width: width, height: cs.height)
@@ -1147,24 +1052,23 @@ final class BookmarkGutterOverlay: UIView {
 
     private func rebuildBadges() {
         guard let host else { return }
-        // Cheap to recreate every layout: there are at most 10 badges.
-        // Avoids leaking views when bookmarks reshuffle.
+        // At most 10 badges — cheap to recreate, no risk of leaking
+        // views when slots reshuffle.
         subviews.forEach { $0.removeFromSuperview() }
 
         let textLength = (host.text as NSString).length
         let order = bookmarks.keys.sorted()
         for slot in order {
             guard let location = bookmarks[slot] else { continue }
-            // Drop stale bookmarks past EOF — these can happen if the
-            // file was edited externally and reloaded shorter.
+            // Stale bookmark past EOF — possible after an external
+            // edit shrank the file.
             let clamped = max(0, min(location, textLength))
             let rect = host.caretRect(atCharacterIndex: clamped)
             guard rect.height > 0, rect.height.isFinite, rect.minY.isFinite else { continue }
             let badge = makeBadge(slot: slot)
             let size = CGSize(width: 16, height: 16)
-            // Right-aligned inside the gutter so it sits between the
-            // line numbers and the text — visible without nudging the
-            // numbers out of place.
+            // Right-aligned in the gutter so it sits between line
+            // numbers and text — visible without pushing the numbers.
             let x = max(0, bounds.width - size.width - 2)
             let y = rect.minY + max(0, (rect.height - size.height) / 2)
             badge.frame = CGRect(x: x, y: y, width: size.width, height: size.height)
@@ -1187,12 +1091,8 @@ final class BookmarkGutterOverlay: UIView {
 
 // MARK: - Match scrollbar marks overlay
 
-/// Right-edge overlay that paints a tick at the y position of every
-/// live-match hit. Like `BookmarkGutterOverlay`, it lives as a subview
-/// of the engine's scroll view so it auto-scrolls with the content.
-/// The view occupies a thin strip on the trailing edge of the content
-/// area; ticks span its full width so they're visible against any
-/// background.
+/// Thin trailing-edge strip; one tick per live-match hit's y
+/// position. Scrolls with content via subview parking.
 final class MatchScrollMarksOverlay: UIView {
 
     weak var host: EditorEngine.TextView?
@@ -1244,18 +1144,10 @@ final class MatchScrollMarksOverlay: UIView {
 
 // MARK: - Change history gutter
 
-/// VS Code–style change indicator on the inside edge of the line
-/// number gutter. Compares the current buffer against the last
-/// saved (or initially loaded) snapshot line-by-line:
-///
-/// * **green** — line is new since the baseline
-/// * **yellow** — line content differs from the baseline
-/// * **red triangle** — original line at this position was deleted
-///
-/// Cheap line-by-line diff: snapshot the baseline as `[String]` once,
-/// then on each layout walk both lists in parallel. For documents
-/// over a few thousand lines this could move to a CollectionDifference
-/// based pass, but for the typical markdown / source range it's fine.
+/// VS Code-style change bars on the inside edge of the line-number
+/// gutter — green = added line, yellow = modified, red wedge =
+/// deletion. Cheap parallel walk over baseline + current `[String]`;
+/// could move to `CollectionDifference` if needed for huge files.
 final class ChangeHistoryGutterOverlay: UIView {
 
     weak var host: EditorEngine.TextView?
@@ -1282,14 +1174,10 @@ final class ChangeHistoryGutterOverlay: UIView {
         super.layoutSubviews()
         guard let host else { return }
         let cs = host.contentSize
-        // Sit just outside the gutter, in the padding between the
-        // line-number column and the text body. We can't render the
-        // bars *inside* the gutter — the engine's
+        // Sit at `x == gutterWidth`, in the `textContainerInset.left`
+        // margin. Inside the gutter is unreachable: the engine calls
         // `bringSubviewToFront(gutterContainerView)` in its own
-        // `layoutSubviews` covers any sibling view that overlaps the
-        // gutter area. Placing the strip at `x == gutterWidth` puts
-        // it in the `textContainerInset.left` margin, which has no
-        // line-number drawing on top of it, so the bars are visible.
+        // layoutSubviews and would cover any sibling we parked there.
         frame = CGRect(x: host.gutterWidth, y: 0, width: Self.stripWidth, height: cs.height)
         rebuild()
     }
@@ -1299,11 +1187,9 @@ final class ChangeHistoryGutterOverlay: UIView {
         guard let host else { return }
         guard !baseline.isEmpty || !current.isEmpty else { return }
 
-        // Cheap "what's different" pass: for each line of the current
-        // buffer, classify against the matching baseline index.
-        //   - within-baseline range + same text → unchanged (no bar)
-        //   - within-baseline range + different text → modified (yellow)
-        //   - past baseline range → added (green)
+        // For each current line, classify against the matching
+        // baseline index: same text = no bar, different = modified,
+        // past baseline range = added.
         let maxIdx = current.count
         var i = 0
         let bCount = baseline.count
@@ -1320,9 +1206,8 @@ final class ChangeHistoryGutterOverlay: UIView {
             }
             i += 1
         }
-        // Deleted lines beyond the current end — draw a small red
-        // wedge at the very last current line (or top-of-doc if the
-        // buffer is empty), since there's no row to anchor to.
+        // Anchor the deletion wedge to the last existing row — there
+        // is no row at the deleted lines themselves.
         if bCount > current.count {
             let anchorLine = max(0, current.count - 1)
             addBar(forLine: anchorLine, kind: .deleted, host: host)
@@ -1341,10 +1226,9 @@ final class ChangeHistoryGutterOverlay: UIView {
     }
 
     private func addBar(forLine line: Int, kind: BarKind, host: EditorEngine.TextView) {
-        // Convert 0-based line index → character offset of line start
-        // by scanning the buffer. Cached scan would be faster but
-        // contentSize-driven layout is already throttled by the
-        // engine, so cost stays bounded.
+        // Linear scan to find the line start. The engine's
+        // contentSize-driven layout already throttles us so the cost
+        // stays bounded.
         let nsText = host.text as NSString
         var scan = 0
         var current = 0
