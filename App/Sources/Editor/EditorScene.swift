@@ -25,10 +25,11 @@ struct EditorScene: View {
     /// onAppear fires on every foreground transition; restoration is
     /// a one-shot.
     @State private var didApplySessionRecord = false
-    /// Persistent per-scene id. SwiftUI restores this across launches
-    /// when it brings the scene back; an unrestored value seeds a
-    /// fresh UUID on first `onAppear`.
-    @SceneStorage("ayyyy.sceneUUID") private var sceneUUID: String = ""
+    /// Per-scene id for the `SessionsStore` record. Fresh per launch
+    /// — the restore-queue handles cross-launch identity instead of
+    /// trying to match scenes via `@SceneStorage` (SwiftUI only
+    /// restores one window by default on iOS).
+    @State private var sceneUUID: String = ""
     /// Drives `.preferredColorScheme` so nav bar / sheets tone-match
     /// the editor theme.
     @AppStorage(AppPreferenceKey.themeName) private var themeNamePref: String = AppThemeName.automatic.rawValue
@@ -233,6 +234,10 @@ struct EditorScene: View {
                     )
                 }
             }
+            // Hands the scene's UIWindowScene to SessionsStore so the
+            // `didDisconnectNotification` observer can evict our
+            // record when the user closes this window.
+            .background(SceneRegistrationBridge(sceneUUID: sceneUUID))
             // Each picker attaches to its own invisible background.
             // Stacking `.fileImporter`s on the SAME view silently
             // coalesces to one (only the first binding presents) —
@@ -454,19 +459,30 @@ struct EditorScene: View {
         }
     }
 
-    /// One-shot: applies a stored `SessionRecord` if `sceneUUID`
-    /// matches an entry in `SessionsStore`. Fresh scenes generate a
-    /// UUID for next-launch persistence and leave the default blank
-    /// tab in place.
+    /// One-shot per scene. The first scene to call this seeds the
+    /// `SessionsStore` pending-restore queue from the previous
+    /// launch's records and spawns extra `WindowGroup` scenes for
+    /// any beyond this one — SwiftUI only restores one scene on its
+    /// own. Every scene then pops the next pending record (if any)
+    /// and applies it.
     private func applySessionRestoreIfNeeded() {
         guard !didApplySessionRecord else { return }
         didApplySessionRecord = true
         if sceneUUID.isEmpty {
             sceneUUID = UUID().uuidString
-            return
         }
-        guard let record = SessionsStore.shared.record(forScene: sceneUUID) else { return }
-        SessionRestore.apply(record, to: session)
+        // First caller seeds the queue. Returns the count of records
+        // pending — we need to open `count - 1` extra windows
+        // (the current scene covers the first).
+        let pendingCount = SessionsStore.shared.initiateRestoreSweep()
+        if pendingCount > 1 {
+            for _ in 0..<(pendingCount - 1) {
+                openWindow(id: SceneID.editor.rawValue)
+            }
+        }
+        if let record = SessionsStore.shared.consumePendingRestore() {
+            SessionRestore.apply(record, to: session)
+        }
     }
 
     /// Snapshots current tabs (file bookmarks + draft refs + active

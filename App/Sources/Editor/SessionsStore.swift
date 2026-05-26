@@ -1,4 +1,5 @@
-import Foundation
+import SwiftUI
+import UIKit
 
 /// One tab's restorable state. Bookmark, not raw URL — File Provider
 /// locations (Nextcloud, iCloud) need explicit scope to re-open after
@@ -11,32 +12,109 @@ struct TabSnapshot: Codable {
     var isPinned: Bool
 }
 
-/// One window's restorable tab list. Keyed by the scene's
-/// `@SceneStorage` UUID so SwiftUI's scene restoration drives which
-/// records get applied.
+/// One window's restorable tab list. `launchID` tags every record
+/// saved during a single app run so the next launch can identify
+/// "windows open at last quit" — records from earlier launches still
+/// sit in the store as dormant history until the cap evicts them.
 struct SessionRecord: Codable {
     let sceneUUID: String
     var tabs: [TabSnapshot]
     var activeIndex: Int
     var lastModified: Date
+    var launchID: String
 }
 
 /// Records on disk (UserDefaults `sessionRecords`). The actual draft
 /// bytes live in `DraftsStore`'s files; this layer just remembers
 /// which window owned which tabs and which files they had open.
+///
+/// SwiftUI on iOS only restores one `WindowGroup` scene by default,
+/// so the user's other windows would be lost. The launch-id grouping
+/// + pending-restore queue let the first scene proactively spawn
+/// extras (`openWindow(id:)`) to cover every record from the
+/// previous launch.
 @MainActor
 final class SessionsStore {
 
     static let shared = SessionsStore()
 
-    /// Cap on stored records — orphaned records (scenes the user
-    /// closed) sit here until evicted by newer writes.
-    private let cap = 20
+    /// Cap on stored records — old launch groups sit here until
+    /// evicted by newer writes.
+    private let cap = 60
 
     private(set) var records: [SessionRecord]
 
+    /// Fresh per app launch. Saves tag records with this so the next
+    /// launch can identify the "most recent" group.
+    let currentLaunchID = UUID().uuidString
+
+    /// FIFO queue of records waiting to be applied to scenes. Seeded
+    /// once per launch by `initiateRestoreSweep()`; each scene's
+    /// `onAppear` pops one entry.
+    private var pendingRestores: [SessionRecord] = []
+
+    /// Trips on the first call to `initiateRestoreSweep()` so only
+    /// one scene seeds the queue.
+    private(set) var hasInitiatedRestore = false
+
+    /// Maps a live `UIScene`'s object identity to the `sceneUUID`
+    /// of its `SessionRecord`. Populated by `register(_:sceneUUID:)`
+    /// from `EditorScene`; the `didDisconnectNotification` observer
+    /// uses it to evict records when the user closes a window.
+    private var sceneUUIDsByObjectIdentifier: [ObjectIdentifier: String] = [:]
+
     private init() {
         self.records = Self.load() ?? []
+        NotificationCenter.default.addObserver(
+            forName: UIScene.didDisconnectNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            guard let scene = note.object as? UIScene else { return }
+            let key = ObjectIdentifier(scene)
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                guard let sceneUUID = self.sceneUUIDsByObjectIdentifier.removeValue(forKey: key) else { return }
+                self.remove(forScene: sceneUUID)
+            }
+        }
+    }
+
+    /// Called by `EditorScene` once it has both a `sceneUUID` and a
+    /// live `UIWindowScene`. The disconnect observer above uses this
+    /// mapping to evict the record when the user closes the window.
+    /// Idempotent — repeat calls with the same arguments are no-ops.
+    func register(_ scene: UIScene, sceneUUID: String) {
+        sceneUUIDsByObjectIdentifier[ObjectIdentifier(scene)] = sceneUUID
+    }
+
+    /// First scene to call this seeds `pendingRestores` from the
+    /// previous launch's records and returns the count. Subsequent
+    /// callers receive `0`.
+    @discardableResult
+    func initiateRestoreSweep() -> Int {
+        guard !hasInitiatedRestore else { return 0 }
+        hasInitiatedRestore = true
+        let toRestore = recordsFromPreviousLaunch()
+        pendingRestores = toRestore
+        return toRestore.count
+    }
+
+    func consumePendingRestore() -> SessionRecord? {
+        pendingRestores.isEmpty ? nil : pendingRestores.removeFirst()
+    }
+
+    /// Records sharing the most recent prior-launch `launchID`,
+    /// oldest-first. Returns `[]` when there's nothing to restore.
+    private func recordsFromPreviousLaunch() -> [SessionRecord] {
+        // Find the most recent record whose launchID isn't ours.
+        let priorRecords = records.filter { $0.launchID != currentLaunchID }
+        guard let mostRecent = priorRecords.max(by: { $0.lastModified < $1.lastModified }) else {
+            return []
+        }
+        return priorRecords
+            .filter { $0.launchID == mostRecent.launchID }
+            .sorted { $0.lastModified < $1.lastModified }
     }
 
     func record(forScene sceneUUID: String) -> SessionRecord? {
@@ -90,6 +168,7 @@ extension SessionRecord {
         self.tabs = session.tabs.map(TabSnapshot.init(of:))
         self.activeIndex = session.tabs.firstIndex { $0.id == session.selectedTabID } ?? 0
         self.lastModified = Date()
+        self.launchID = SessionsStore.shared.currentLaunchID
     }
 }
 
@@ -179,5 +258,32 @@ enum SessionRestore {
             bookmarkDataIsStale: &stale
         ) else { return nil }
         return (url, stale)
+    }
+}
+
+/// Bridges `view.window?.windowScene` back into SwiftUI so
+/// `EditorScene` can hand its `UIWindowScene` to `SessionsStore`
+/// for close-detection. SwiftUI doesn't expose the host scene on
+/// iOS, hence the UIKit dip.
+struct SceneRegistrationBridge: UIViewRepresentable {
+
+    let sceneUUID: String
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        // sceneUUID starts empty, becomes non-empty on the first
+        // `onAppear` once `applySessionRestoreIfNeeded` runs. The
+        // dispatch hops past this render so `view.window` is wired.
+        let uuid = sceneUUID
+        guard !uuid.isEmpty else { return }
+        DispatchQueue.main.async {
+            guard let scene = uiView.window?.windowScene else { return }
+            SessionsStore.shared.register(scene, sceneUUID: uuid)
+        }
     }
 }
