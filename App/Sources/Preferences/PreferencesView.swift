@@ -2,10 +2,8 @@ import SwiftUI
 import FileEncoding
 import LineEnding
 
-/// Mac-style multi-select row. Tapping the row flips the bool; the leading
-/// glyph is a filled checkmark when on, an empty square when off. iOS
-/// doesn't ship a stock `.checkbox` Toggle style, so this is a small
-/// composed view.
+/// iOS has no stock `.checkbox` Toggle style — this is the
+/// composed equivalent.
 private struct CheckboxRow: View {
     let label: String
     @Binding var isOn: Bool
@@ -44,16 +42,14 @@ struct PreferencesView: View {
             ToolbarPreferencesTab()
                 .tabItem { Label("Toolbar", systemImage: "rectangle.topthird.inset.filled") }
         }
-        // Minimum frame is iPad-only — iPhone presents as a sheet
-        // where the frame is the screen width; forcing 520pt would
-        // clip on a compact-width device.
+        // iPad-only minimum frame — iPhone presents as a sheet at
+        // screen width, where forcing 520pt would clip.
         .frame(minWidth: DeviceIdiom.isPhone ? nil : 520,
                minHeight: DeviceIdiom.isPhone ? nil : 420)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(DeviceIdiom.isPhone ? .inline : .automatic)
         .toolbar {
-            // Sheet presentation on iPhone needs a Done button —
-            // there's no system-supplied dismiss affordance.
+            // iPhone sheet has no system-supplied dismiss.
             if DeviceIdiom.isPhone {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
@@ -93,9 +89,8 @@ private struct EditorPreferencesTab: View {
     @AppStorage(AppPreferenceKey.launchBehavior) private var launchBehaviorRaw: String = LaunchBehavior.newBlank.rawValue
     @AppStorage(AppPreferenceKey.syntaxLimitBytes) private var syntaxLimitRaw: Int = SyntaxLimit.up5MB.rawValue
 
-    /// Stepper drives an `Int` and we round-trip through the
-    /// `Double`-backed `@AppStorage` so other consumers (live editor
-    /// state, menu zoom commands) keep working unchanged.
+    /// Round-trips Int↔Double so the Double-backed `@AppStorage`
+    /// stays compatible with the live editor / menu zoom callers.
     private var fontSizeBinding: Binding<Int> {
         Binding(
             get: { Int(fontSize.rounded()) },
@@ -165,8 +160,7 @@ private struct EditorPreferencesTab: View {
 
             Section("Display") {
                 Picker("Font", selection: $fontNameRaw) {
-                    // Monospaced faces grouped first since they're
-                    // the typical pick for a code editor.
+                    // Monospaced first — typical code-editor pick.
                     Section("Monospaced") {
                         ForEach(EditorFont.allCases.filter(\.isMonospaced), id: \.rawValue) { face in
                             Text(face.displayName).tag(face.rawValue)
@@ -227,11 +221,6 @@ private struct EditorPreferencesTab: View {
                 Toggle("Insert Closing Brackets / Quotes Automatically", isOn: $insertCharacterPairs)
             }
 
-            // The old app-wide "Open documents in" picker is gone —
-            // the File menu now exposes explicit "Open in New Tab…"
-            // and "Open in New Window…" entries (plus the plain
-            // "Open…" which defaults to a new window on iPad).
-
             Section("Defaults for New Documents") {
                 Picker("Text Encoding", selection: defaultEncodingBinding) {
                     ForEach(commonEncodings, id: \.rawValue) { encoding in
@@ -280,16 +269,11 @@ private struct EditorPreferencesTab: View {
                 Text("Files over the limit open in plain-text mode for snappy typing. Tree-sitter syntax highlighting, code folding, and the Markdown inline decorator are all skipped.")
             }
         }
-        // No .formStyle(.grouped) — that style runs the sections
-        // edge-to-edge with no horizontal margin, which looked bad
-        // on iPhone (sheet width = screen width). The default style
-        // resolves to insetGrouped on iOS, which gives the rounded
-        // cards with comfortable side padding.
+        // No `.formStyle(.grouped)`: it runs sections edge-to-edge
+        // and looks bad on iPhone (sheet = screen width). Default
+        // resolves to `insetGrouped`, which has comfortable padding.
     }
 }
-
-// MARK: - Format (deprecated; merged into Editor)
-
 
 // MARK: - Typing
 
@@ -340,10 +324,8 @@ private struct TypingPreferencesTab: View {
                 Text("Bracket pairs appear in the keyboard's shortcut bar above the soft keyboard. Changes apply the next time the keyboard appears.")
             }
 
-            // Per-app snippet management. The snippet picker (palette
-            // → "Insert Snippet…") pulls from this list; the keyboard
-            // accessory bar and the Edit menu's Save Selection-as-
-            // Snippet write into the same store.
+            // Palette ▸ Insert Snippet, the keyboard accessory bar,
+            // and Edit ▸ Save Selection as Snippet all share this store.
             Section {
                 if snippetsStore.snippets.isEmpty {
                     Text("No snippets yet. Tap **Add Snippet** to create one, or save the current selection from the editor.")
@@ -425,11 +407,9 @@ private struct TypingPreferencesTab: View {
                 Text("Each slot runs a snippet of JavaScript against the document or current selection. Invoke from the **Text ▸ JavaScript Transforms** menu or with ⌃⌥1–⌃⌥9 (⌃⌥0 for slot 10). The script's last expression — or its `output` variable — replaces the target text.")
             }
 
-            // System-level text replacement lives in iOS Settings. We
-            // can't add entries on the user's behalf (no public API),
-            // but `openSettingsURLString` drops them at the app's
-            // Settings page; from there they navigate to General ▸
-            // Keyboard ▸ Text Replacement.
+            // No public API to add Text Replacement entries —
+            // `openSettingsURLString` is the closest we can get, and
+            // lands on the app's Settings page.
             Section {
                 Button {
                     openSystemSettings()
@@ -453,9 +433,7 @@ private struct TypingPreferencesTab: View {
             }
         }
         .sheet(isPresented: $addingSnippet) {
-            // Start with an empty snippet; commit-or-cancel handled
-            // by SnippetEditorSheet — `add` is only called if the
-            // user taps Save.
+            // Empty seed; `add` only fires on Save.
             SnippetEditorSheet(snippet: .constant(Snippet(name: "", content: ""))) { created in
                 snippetsStore.add(created)
             }
@@ -554,11 +532,9 @@ private struct ToolbarPreferencesTab: View {
                 }
             }
         }
-        // No .formStyle(.grouped) — that style runs the sections
-        // edge-to-edge with no horizontal margin, which looked bad
-        // on iPhone (sheet width = screen width). The default style
-        // resolves to insetGrouped on iOS, which gives the rounded
-        // cards with comfortable side padding.
+        // No `.formStyle(.grouped)`: it runs sections edge-to-edge
+        // and looks bad on iPhone (sheet = screen width). Default
+        // resolves to `insetGrouped`, which has comfortable padding.
         .environment(\.editMode, .constant(.active))
         .sheet(isPresented: $addingSlot) {
             ToolbarSlotAdder()
@@ -581,9 +557,8 @@ private struct ToolbarPreferencesTab: View {
     }
 }
 
-/// Sheet for appending a new toolbar slot. Lets the user pick a command
-/// from a fuzzy-searched list and enter an SF Symbol name; on Save the
-/// slot is appended via `ToolbarConfig.insert(_:)`.
+/// Fuzzy-searched command picker + SF Symbol name input. Save
+/// appends via `ToolbarConfig.insert(_:)`.
 private struct ToolbarSlotAdder: View {
 
     @Environment(\.dismiss) private var dismiss
