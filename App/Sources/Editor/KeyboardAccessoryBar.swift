@@ -592,11 +592,6 @@ final class EditorAccessoryView: UIInputView, UIScrollViewDelegate {
         drawerOpen.toggle()
         drawerRow.isHidden = !drawerOpen
         drawerSeparator.isHidden = !drawerOpen
-        // `UIInputView.allowsSelfSizing` only takes effect when the
-        // view is used as a `UIResponder.inputView`, not as an
-        // `inputAccessoryView`. So intrinsic-content-size changes
-        // don't propagate — we have to mutate the frame directly to
-        // grow / shrink the accessory window region.
         let newHeight = drawerOpen ? Self.totalHeightOpen : Self.totalHeightClosed
         var newFrame = frame
         newFrame.size.height = newHeight
@@ -604,6 +599,16 @@ final class EditorAccessoryView: UIInputView, UIScrollViewDelegate {
         invalidateIntrinsicContentSize()
         setNeedsLayout()
         layoutIfNeeded()
+        // Frame-mutation + intrinsic-size invalidation aren't enough
+        // on their own — iOS caches the accessory's height when the
+        // keyboard is up and won't re-measure unless we nil-and-
+        // reassign and explicitly call `reloadInputViews()`. Without
+        // this dance the keyboard window keeps the old slot height
+        // and the drawer row overlaps the main row.
+        guard let host else { return }
+        host.inputAccessoryView = nil
+        host.inputAccessoryView = self
+        host.reloadInputViews()
     }
 
     private func handleEscape() {
