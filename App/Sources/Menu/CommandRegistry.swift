@@ -141,7 +141,6 @@ enum CommandRegistry {
             .init(id: "findPrevSel", title: "Find Previous Occurrence of Selection", category: .search, shortcutHint: "⌥P", action: CommandActions.findPreviousOccurrenceOfSelection),
             .init(id: "replSel",    title: "Replace All in Selection",       category: .search, synonyms: ["replace within selection", "scoped replace all"], action: CommandActions.replaceAllInSelection),
             .init(id: "replEnd",    title: "Replace to End",                 category: .search, synonyms: ["replace from cursor", "replace from here"], action: CommandActions.replaceToEnd),
-            // jumpSel palette entry removed.
             .init(id: "gotoLine",   title: "Go to Line…",                    category: .search, shortcutHint: "⌘L",   action: { CommandActions.presentSheet(.goToLine) }),
             .init(id: "gotoBracket", title: "Go to Matching Bracket",        category: .search, shortcutHint: "⇧⌘\\", action: CommandActions.goToMatchingBracket),
             .init(id: "posBack",    title: "Back",                           category: .navigate, shortcutHint: "⌃⌘←", action: CommandActions.positionBack),
@@ -170,8 +169,6 @@ enum CommandRegistry {
             .init(id: "reflow",       title: "Reflow Paragraph (80 cols)",  category: .format,   shortcutHint: "⌃⌘W", synonyms: ["hard wrap", "rewrap", "paragraph fill", "fill"], action: { CommandActions.reflowParagraph(column: 80) }),
             .init(id: "processLines", title: "Process Lines Containing…",   category: .text, synonyms: ["filter lines", "extract lines", "keep matching", "delete matching"], action: CommandActions.presentProcessLines),
             .init(id: "canonize",     title: "Canonize / Text Merge…",      category: .text, synonyms: ["batch find replace", "lookup table", "table replace"], action: CommandActions.presentCanonize),
-            // charPanel palette entry removed (character panel feature retired).
-            // cyclePaste removed alongside ClipboardHistory.
             .init(id: "copyBookmarks", title: "Copy Bookmarked Lines",      category: .bookmark, synonyms: ["yank bookmarks", "extract bookmarks"], action: CommandActions.copyBookmarkedLines),
             .init(id: "cutBookmarks", title: "Cut Bookmarked Lines",        category: .bookmark, synonyms: ["yank bookmarks", "remove bookmarks"], action: CommandActions.cutBookmarkedLines),
             .init(id: "keepBookmarks", title: "Keep Only Bookmarked Lines", category: .bookmark, synonyms: ["filter to bookmarks", "isolate bookmarks"], action: CommandActions.keepBookmarkedLinesOnly),
@@ -181,7 +178,6 @@ enum CommandRegistry {
             .init(id: "splitView",    title: "Cycle Split View",            category: .view, shortcutHint: "⌥⌘E", synonyms: ["split editor", "split pane", "two panes", "side by side", "vertical split", "horizontal split", "toggle split"], action: CommandActions.cycleSplitView),
             .init(id: "mdTable",      title: "Insert Markdown Table…",      category: .markdown, shortcutHint: "⌃⌘T", synonyms: ["markdown table", "table inserter"], action: CommandActions.presentMarkdownTable),
             .init(id: "mdFootOrg",    title: "Organize Footnotes…",         category: .markdown, synonyms: ["renumber footnotes", "sort footnotes", "footnote cleanup"], action: { CommandActions.presentSheet(.organizeFootnotes) }),
-            // notes palette entry removed.
             .init(id: "openCurNewWin", title: "Open Current File in New Window", category: .file, synonyms: ["split", "side by side", "second window", "duplicate window"], action: CommandActions.openCurrentDocumentInNewWindow),
             .init(id: "moveUp",     title: "Move Line Up",        category: .edit,      shortcutHint: "⌥↑",  synonyms: ["swap with previous line"], action: CommandActions.moveLineUp),
             .init(id: "moveDown",   title: "Move Line Down",      category: .edit,      shortcutHint: "⌥↓",  synonyms: ["swap with next line"], action: CommandActions.moveLineDown),
@@ -271,10 +267,7 @@ enum CommandRegistry {
             .init(id: "insFolder",  title: "Insert Folder Listing…", category: .insert,
                   synonyms: ["directory listing", "tree", "ls"],
                   action: CommandActions.presentInsertFolderListing),
-            // insPageBrk removed.
         ]
-
-        // MARK: Tools
 
         // MARK: Snippets / Clipboard
 
@@ -435,7 +428,6 @@ enum CommandRegistry {
             .init(id: "insDateTime", title: "Insert Date & Time", category: .insert, action: CommandActions.insertDateTime),
             .init(id: "insDate",     title: "Insert Date",        category: .insert, action: CommandActions.insertDate),
             .init(id: "insTime",     title: "Insert Time",        category: .insert, action: CommandActions.insertTime),
-            // insPath / insName removed.
             .init(id: "insTab",      title: "Insert Tab",         category: .insert, action: CommandActions.insertTab),
             .init(id: "insNewline",  title: "Insert Newline",     category: .insert, action: CommandActions.insertNewline)
         ]

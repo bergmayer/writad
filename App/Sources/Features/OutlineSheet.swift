@@ -1,14 +1,7 @@
 import SwiftUI
 
-// (OutlineSheet retired — Show Outline now opens the sidebar
-// directly via `CommandActions.showOutline`. The sidebar IS the
-// outline panel; a bespoke modal duplicated it. `OutlineBuilder`
-// below is kept because `OutlineSidebar` uses it to build the
-// heading list.)
-
-/// Builds an outline of ATX headings from the focused editor's
-/// text. Cheap line scan — runs every time the outline is shown,
-/// no caching needed for documents under ~MB scale.
+/// ATX-heading outline for `OutlineSidebar`. Linear line scan,
+/// rerun on every show — no caching needed under MB scale.
 @MainActor
 enum OutlineBuilder {
 

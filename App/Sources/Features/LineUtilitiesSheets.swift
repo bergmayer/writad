@@ -49,10 +49,6 @@ struct PrefixSuffixLinesSheet: View {
     }
 }
 
-// (SurroundSelectionSheet retired — the command is a Text ▸ Surround
-// Selection submenu with preset wraps now. CommandActions.surroundSelection
-// is still the entry point.)
-
 // MARK: - Lorem Ipsum inserter
 
 struct InsertLoremIpsumSheet: View {

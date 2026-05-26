@@ -952,7 +952,6 @@ struct EditorView: View {
             CanonizeSheet()
         case .characterPanel:
             CharacterPanelSheet()
-        // .notebooks case removed — feature retired.
         case .markdownTable:
             MarkdownTableSheet()
         case .markdownPreview:

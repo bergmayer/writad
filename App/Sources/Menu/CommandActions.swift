@@ -1381,11 +1381,6 @@ enum CommandActions {
     static func presentProcessLines()      { presentSheet(.processLines) }
     static func presentCanonize()          { presentSheet(.canonize) }
     static func presentCharacterPanel()    { presentSheet(.characterPanel) }
-    // (presentOutline retired — Show Outline opens the sidebar
-    // via `showOutline()` instead of a bespoke sheet.)
-    // (presentNotebooks removed — feature retired.)
-
-    // (Multi-clipboards ring removed alongside ClipboardHistory.)
 
     // MARK: - Reflow paragraph (BBEdit hard-wrap)
 

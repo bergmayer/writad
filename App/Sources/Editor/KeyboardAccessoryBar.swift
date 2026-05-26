@@ -62,8 +62,6 @@ enum KeyboardAccessoryBar {
             if defaults.bool(forKey: AppPreferenceKey.keyboardShowsBracketPairs) {
                 trailing.append(Self.makeBracketGroup(textView: textView))
             }
-            // (Markdown helper row retired — the Text ▸ Markdown menu
-            // is the discoverable path for ` ** ` etc. instead.)
             assistant.trailingBarButtonGroups = trailing
         }
     }
@@ -158,9 +156,6 @@ enum KeyboardAccessoryBar {
         return UIBarButtonItemGroup(barButtonItems: items, representativeItem: representative)
     }
 
-    // (Markdown helper group retired — Text ▸ Markdown is the
-    // discoverable surface for those wraps.)
-
     // MARK: - Item factory
 
     private static func item(symbol: String,
@@ -252,7 +247,3 @@ private enum CaretMover {
         textView.selectedRange = NSRange(location: length, length: 0)
     }
 }
-
-// (MarkdownInserter retired with the keyboard's markdown helper row.
-// The Text ▸ Markdown menu items reach into `CommandActions` for
-// bold/italic/list/link wrappers — no need for a UIKit duplicate.)
