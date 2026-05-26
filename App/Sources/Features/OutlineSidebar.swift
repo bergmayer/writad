@@ -33,6 +33,7 @@ struct OutlineSidebar: View {
                 .font(.headline)
             Spacer()
             Button {
+                AppStateBus.shared.scenes.claimFocus(state: state)
                 CommandActions.toggleSidebar()
             } label: {
                 Image(systemName: "sidebar.left")

@@ -121,6 +121,7 @@ struct TabBarView: View {
                 Section("Recently Closed") {
                     ForEach(session.recentlyClosed) { record in
                         Button {
+                            AppStateBus.shared.scenes.claimFocus(session: session)
                             CommandActions.reopenClosedTab(record)
                         } label: {
                             Label(record.displayName, systemImage: record.fileURL == nil ? "doc.text" : "doc")
@@ -138,6 +139,7 @@ struct TabBarView: View {
             // new tab also surfaces the drafts-recovery sheet
             // (max 6 drafts, newest pushes oldest out) — same
             // recovery entry point as ⌘T and ⌘N.
+            AppStateBus.shared.scenes.claimFocus(session: session)
             CommandActions.newTab()
         }
         .menuStyle(.borderlessButton)
@@ -148,6 +150,7 @@ struct TabBarView: View {
     @ViewBuilder
     private var showAllTabsButton: some View {
         Button {
+            AppStateBus.shared.scenes.claimFocus(session: session)
             CommandActions.showTabSwitcher()
         } label: {
             Image(systemName: "square.on.square")

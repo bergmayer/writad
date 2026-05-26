@@ -106,6 +106,34 @@ final class SceneRouter {
         sessionRegistry.compactMap { $0.ref }
     }
 
+    /// Per-window chrome (outline sidebar X, tab bar +, split toggle,
+    /// status-bar buttons) must call this before any CommandActions
+    /// invocation that reads `currentEditor` / `currentSession`. On
+    /// iPad multi-window, scenePhase fires for both visible scenes
+    /// in unpredictable order, so the pointers can be stale at tap
+    /// time — claim-on-tap is the only reliable fix until SwiftUI
+    /// exposes a "this scene gained user input" signal.
+    func claimFocus(session: EditorSession) {
+        if currentSession !== session { currentSession = session }
+        let activeState = session.activeTab.state
+        if currentEditor !== activeState { currentEditor = activeState }
+    }
+
+    /// Same idea, but the caller only has the leaf `EditorState`
+    /// (outline sidebar, info inspector, split panes). Walks the
+    /// registry to find the owning session so the pair stays
+    /// internally consistent.
+    func claimFocus(state: EditorState) {
+        if currentEditor !== state { currentEditor = state }
+        if let session = currentSession, session.tabs.contains(where: { $0.state === state }) {
+            return
+        }
+        for candidate in allOpenSessions where candidate.tabs.contains(where: { $0.state === state }) {
+            currentSession = candidate
+            return
+        }
+    }
+
     /// Resolves a tab id back to its owning session. Cross-window
     /// drag uses this to find the source on drop.
     func session(containing tabID: UUID) -> EditorSession? {

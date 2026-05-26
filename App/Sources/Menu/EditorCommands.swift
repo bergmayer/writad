@@ -31,16 +31,11 @@ struct EditorCommands: Commands {
 
     /// Resyncs the bus to the focused scene before any CommandAction
     /// runs — otherwise actions can target a stale `currentEditor`
-    /// during iPad Stage Manager focus shifts.
+    /// during iPad Stage Manager focus shifts. Delegates to the
+    /// shared `SceneRouter` helper.
     private func claimFocus() {
         guard let session = focusedSession else { return }
-        if AppStateBus.shared.scenes.currentSession !== session {
-            AppStateBus.shared.scenes.currentSession = session
-        }
-        let activeState = session.activeTab.state
-        if AppStateBus.shared.scenes.currentEditor !== activeState {
-            AppStateBus.shared.scenes.currentEditor = activeState
-        }
+        AppStateBus.shared.scenes.claimFocus(session: session)
     }
 
     /// Routes through the focused scene's presenter when available

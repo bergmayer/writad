@@ -586,20 +586,10 @@ struct EditorView: View {
     /// in-scene button fires a presentation action. Works around
     /// the iPad Stage Manager + Split View race where scenePhase
     /// fires late and a sheet would otherwise land on the wrong
-    /// window.
+    /// window. Delegates to the shared `SceneRouter` helper so the
+    /// behaviour matches every other chrome surface.
     private func claimFocus() {
-        bus.scenes.currentEditor = state
-        if let session = bus.scenes.currentSession,
-           !session.tabs.contains(where: { $0.state === state }) {
-            // Stale session pointer (other window's session) — find
-            // the one that actually owns this state.
-            for candidate in bus.scenes.allOpenSessions {
-                if candidate.tabs.contains(where: { $0.state === state }) {
-                    bus.scenes.currentSession = candidate
-                    break
-                }
-            }
-        }
+        bus.scenes.claimFocus(state: state)
     }
 
     @ViewBuilder
