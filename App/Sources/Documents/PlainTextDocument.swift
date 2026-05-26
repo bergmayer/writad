@@ -3,63 +3,45 @@ import UniformTypeIdentifiers
 import FileEncoding
 import LineEnding
 
-/// Mutable text document model that backs an editor scene.
+/// Document model for one open buffer.
 ///
-/// Replaces the prior `FileDocument`/`DocumentGroup` pairing because iOS 26.5
-/// simulator's local-storage FileProvider returns `FP -1005 "The file doesn't
-/// exist"` for bookmarks to files DocumentGroup has just imported. The bug
-/// is verifiable in the log: QuickLook can render the file at the same
-/// `did=N` that DocumentManager reports as nonexistent. Until Apple fixes
-/// that, we manage file I/O ourselves with traditional file paths, which
-/// bypasses the FileProvider entirely.
+/// We don't use `DocumentGroup` / `FileDocument` because of an iOS 26.5
+/// simulator FileProvider bug: bookmarks to just-imported files return
+/// `FP -1005 "doesn't exist"`. Our own load path through `.fileImporter`
+/// + `URLSession` sidesteps it. Once Apple ships the fix this layer can
+/// probably go away.
 @MainActor
 @Observable
 final class PlainTextDocument {
 
-    /// Snapshot of the buffer. NOT the source of truth during
-    /// editing — the engine's `TextView` owns the live buffer.
-    /// This field is updated on load, save, and a 300 ms-debounced
-    /// snapshot pulled from the text view (so things like the
-    /// markdown preview, status-bar counts, etc. see eventually-
-    /// consistent text without paying full-buffer flow per
-    /// keystroke). Read live text via the text view directly when
-    /// the call site cares about strict freshness (transforms,
-    /// snippet inserts, save).
+    /// Debounced snapshot of the buffer. The engine's `TextView` owns
+    /// the live text — read from there when freshness matters (save,
+    /// transforms, snippet inserts). This lags by ~300 ms but lets
+    /// SwiftUI observers (status-bar counts, markdown preview) update
+    /// without paying the per-keystroke cost.
     var text: String = ""
-    /// Tiny counter incremented on every text edit. Observers that
-    /// need to react to "buffer changed" (autosave debounce, change-
-    /// history overlay refresh) observe THIS instead of `text` —
-    /// no full-buffer payload, no observation cascade through
-    /// SwiftUI re-rendering paths.
+
+    /// Bumped on every edit. Observers that just need "something
+    /// changed" (autosave debounce, change-history overlay) watch
+    /// this instead of `text` to avoid invalidating the full buffer.
     var bufferRevision: UInt64 = 0
+
     var fileEncoding: FileEncoding
     var lineEnding: LineEnding
-    /// `nil` for an unsaved scratch buffer; non-nil for any document that
-    /// has been saved to or opened from disk.
     var fileURL: URL?
-    /// Stable identity used by `RevisionStore` to group snapshots.
-    /// Per-document UUID-based key for fresh / untitled buffers; flips
-    /// to a URL-derived key once the document is associated with a file
-    /// on disk (load or save). The UUID variant means revisions track
-    /// the tab's lifetime even before the user picks a save location.
+
+    /// Per-document key for `RevisionStore`. UUID-based for untitled
+    /// buffers, URL-hash-based once saved.
     var revisionKey: String
-    /// Tracks whether `text` differs from what's on disk. Cleared on
-    /// load/save.
+
     var isDirty: Bool = false
-    /// Last-read raw bytes — kept so the encoding picker can re-decode the
-    /// file with a different encoding.
+    /// Raw bytes from the last load — kept so the encoding picker can
+    /// re-decode with a different encoding without re-reading disk.
     var originalData: Data?
-    /// `true` while a load is in flight. EditorView shows a progress
-    /// overlay so the user can see something is happening when a file
-    /// comes from a slow-to-materialise location (Nextcloud, iCloud).
     var isLoading: Bool = false
-    /// Path of the per-document draft file under `Documents/Drafts/`.
-    /// Lazy-populated the first time the buffer is dirty AND has no
-    /// `fileURL`; the autosave path keeps it in sync. Survives app
-    /// quit and resurfaces in the next launch's recovery banner so a
-    /// system-gesture window close doesn't silently lose typed text.
-    /// Cleared (and the on-disk file deleted) once the doc is saved
-    /// to a real URL or explicitly discarded.
+
+    /// `Documents/Drafts/<UUID>.txt` path for crash-recovery. Set on
+    /// first autosave of a dirty doc; cleared on Save-As / Discard.
     var draftURL: URL?
 
     init() {
@@ -68,10 +50,9 @@ final class PlainTextDocument {
         self.revisionKey = RevisionStore.keyForUntitledTab(UUID())
     }
 
-    /// Synchronous load — kept for the legacy "revert to saved" path
-    /// where the buffer is already on disk (no File Provider download
-    /// in flight). New code should use ``loadAsync(from:)`` so the
-    /// async URLSession read with mid-flight cancellation kicks in.
+    /// Synchronous load. Used by Revert-to-Saved; new code should
+    /// prefer ``loadAsync(from:)`` so a slow File Provider can be
+    /// cancelled mid-read.
     func load(from url: URL) throws {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
@@ -80,9 +61,6 @@ final class PlainTextDocument {
         applyPayload(payload, url: url)
     }
 
-    /// Shared decode-and-validate path used by both the sync and async
-    /// loaders. Sniffs for binary content, checks the hard size cap,
-    /// and runs the encoding-detection decoder.
     nonisolated private static func decodePayload(from data: Data) throws -> LoadPayload {
         if data.isEmpty {
             return LoadPayload(data: data, text: "", encoding: FileEncoding(encoding: .utf8))
@@ -113,24 +91,16 @@ final class PlainTextDocument {
         }
     }
 
-    /// Like ``load(from:)`` but reads and decodes via an async URLSession
-    /// so the UI stays responsive. URLSession's async APIs honour
-    /// `Task.cancel()` mid-flight — when the user taps the Cancel
-    /// button in the loading overlay, the in-flight read is genuinely
-    /// interrupted (the previous chunked-FileHandle approach only
-    /// checked cancellation between chunks, so a single slow chunk on
-    /// a sluggish Nextcloud connection blocked Cancel for many seconds).
-    ///
-    /// Refuses files over ``hardSizeCap`` — above that ceiling the
-    /// engine's line-manager initialisation freezes the UI for many
-    /// seconds even in plain-text mode.
+    /// Async load with mid-flight cancellation. URLSession is the
+    /// only Foundation API where `Task.cancel()` genuinely aborts an
+    /// in-flight file read; synchronous `Data(contentsOf:)` only
+    /// checks between chunks.
     func loadAsync(from url: URL) async throws {
         isLoading = true
         defer { isLoading = false }
         let payload = try await Self.readPayload(from: url)
-        // Yield + brief sleep gives SwiftUI a beat to paint the
-        // loading overlay before we commit the text and trigger the
-        // engine's text-assignment pass.
+        // Yield so SwiftUI can paint the loading overlay before the
+        // text-assignment pass kicks the engine.
         await Task.yield()
         try? await Task.sleep(for: Timing.loadOverlayHandoff)
         if Task.isCancelled { throw CancellationError() }
@@ -144,35 +114,24 @@ final class PlainTextDocument {
         self.lineEnding = Self.detectLineEnding(in: payload.text) ?? .lf
         self.fileURL = url
         self.isDirty = false
-        // Promote to a URL-derived revision key so reopening the same
-        // file finds its history. The earlier untitled-UUID key is
-        // discarded — anything snapshotted before the file got a URL
-        // stays under that orphaned UUID but is unreachable from this
-        // document (acceptable tradeoff for simplicity).
+        // URL-derived key — reopening the same file finds its
+        // revision history. Anything captured under the prior
+        // untitled-UUID key is orphaned (acceptable tradeoff).
         self.revisionKey = RevisionStore.key(for: url)
-        // First read of this file (per URL) → seed the "original on
-        // open" revision so a later "Revert to Original" has an
-        // anchor to roll back to. No-op on subsequent reopens.
-        // Revision recording is best-effort: a sandbox write
-        // failure shouldn't fail the document load. Surface it.
+        // Seed an "original on open" revision once per URL so a
+        // later Revert-to-Original has an anchor. Best-effort — a
+        // sandbox write failure doesn't fail the document load.
         recordRevisionOrReport {
             try RevisionStore.shared.recordOriginalIfNeeded(payload.text, forKey: revisionKey)
         }
     }
 
-    /// Plain value type for the data + decoded text we load off-main, then
-    /// assign back on main. Kept as a nonisolated struct so the detached
-    /// task can return it across actor boundaries.
     private struct LoadPayload: Sendable {
         let data: Data
         let text: String
         let encoding: FileEncoding
     }
 
-    /// Reads and decodes a file *without* any main-actor dependencies so
-    /// it can run on a background task. Honours security-scoped URLs
-    /// returned by `UIDocumentPickerViewController` / SwiftUI's
-    /// `.fileImporter`.
     nonisolated private static func readPayload(from url: URL) async throws -> LoadPayload {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
@@ -196,11 +155,9 @@ final class PlainTextDocument {
         return try decodePayload(from: data)
     }
 
-    /// If `url` lives in iCloud Drive and isn't currently materialised
-    /// locally, request the download explicitly and poll for
-    /// completion. Each poll sleeps 200 ms via Swift concurrency, which
-    /// yields the calling actor — main runloop keeps pumping. Times
-    /// out after 90 seconds to match the URLSession resource budget.
+    /// Pull an iCloud-Drive file down if it's not local yet. Polls
+    /// at 200 ms via Task.sleep so the main runloop keeps pumping.
+    /// 90-second timeout matches URLSession's resource budget.
     nonisolated private static func materializeUbiquitousItemIfNeeded(at url: URL) async throws {
         let manager = FileManager.default
         guard manager.isUbiquitousItem(at: url) else { return }
@@ -214,18 +171,14 @@ final class PlainTextDocument {
         }
     }
 
-    /// Saves to `fileURL` (must be non-nil). Use `save(to:)` for first save.
+    /// ⌘S — write to the existing `fileURL`. Use `save(to:)` for first save.
     func save() throws {
-        guard let fileURL else {
-            throw DocumentError.noFileURL
-        }
+        guard let fileURL else { throw DocumentError.noFileURL }
         try save(to: fileURL)
     }
 
-    /// Writes to the given URL, recording it as the document's URL on success.
-    /// `kind` controls whether the resulting revision counts as a manual
-    /// save (always added) or an auto-save (coalesced if the previous
-    /// auto revision was recent).
+    /// Write to `url` and update document state to reflect it.
+    /// Used by ⌘S, Save As, and the post-rename rewrite path.
     func save(to url: URL, revisionKind: RevisionStore.Kind = .manual) throws {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
@@ -236,22 +189,13 @@ final class PlainTextDocument {
         self.fileURL = url
         self.originalData = data
         self.isDirty = false
-        // Source-of-truth file just got the latest bytes — the
-        // scratch shadow is now stale, so delete it. Otherwise a
-        // crash-recovery sweep would resurrect old buffer state on
-        // top of the just-written file.
+        // The just-written file is now canonical; drop the scratch
+        // shadow and the draft entry so neither resurrects stale bytes.
         deleteScratchFile()
-        // Save-As (or save of a recovered untitled draft) promotes
-        // the buffer to a real URL; the per-doc draft file is now
-        // redundant and shouldn't resurface in the recovery banner.
         if let stale = draftURL {
             DraftsStore.shared.discard(stale)
             draftURL = nil
         }
-        // A Save-As that promotes an untitled doc to disk: switch from
-        // the UUID-based key to the URL-derived key so future opens of
-        // the same file find this history, and seed an .original
-        // anchor against the URL so "Revert to Original" works.
         if isFirstSave {
             self.revisionKey = RevisionStore.key(for: url)
             recordRevisionOrReport {
@@ -263,30 +207,15 @@ final class PlainTextDocument {
         }
     }
 
-    /// Mac-style autosave: writes the current buffer to a per-document
-    /// scratch file in Application Support, NOT to `fileURL`. Buys
-    /// crash recovery without touching the user's actual file —
-    /// `save()` (⌘S) is the only path that writes back to the source.
-    /// Records an `.auto` revision so the revision history reflects
-    /// the autosave. Keeps `isDirty` true because the source file
-    /// still differs from the buffer.
-    ///
-    /// Fire-and-forget: snapshots the inputs on the main actor, then
-    /// dispatches the encode + write + revision-record work to a
-    /// background task. The previous fully-synchronous implementation
-    /// ran `replacingLineEndings` and `data.write(options: .atomic)`
-    /// on the main thread; for a 1 MB+ buffer that's 100-500 ms of
-    /// freeze whenever the typing debounce fired. Now the freeze is
-    /// gone and the actual save lands a fraction of a second later.
+    /// Mac-style autosave: write to the scratch shadow + a recoverable
+    /// draft. Never touches `fileURL` — ⌘S is the only path that writes
+    /// back to the source. Off-main so the encode + write don't freeze
+    /// the typing loop (used to be a noticeable hitch on multi-MB files).
     func autoSave() {
-        // Mac-style recoverable draft for ANY dirty buffer — both
-        // untitled bytes and URL-backed dirty edits. The recovery
-        // banner on next launch scans `Documents/Drafts/` and
-        // offers each draft back. For URL-backed docs we stash a
-        // security-scoped bookmark of the source so the recovery
-        // path can re-open the original and apply the drafted text
-        // on top (vs. just opening as Untitled and losing the
-        // association with the original file).
+        // Recoverable draft for any dirty buffer (untitled OR URL-backed).
+        // For URL-backed docs we stash a security-scoped bookmark so the
+        // recovery path can re-open the original and apply the drafted
+        // text on top instead of orphaning a new Untitled.
         if !text.isEmpty {
             var metadata: DraftMetadata?
             if let source = fileURL {
@@ -303,8 +232,7 @@ final class PlainTextDocument {
                 metadata: metadata
             )
         } else if let stale = draftURL {
-            // Empty buffer + still has a draft file → the user
-            // cleared the text. Drop the draft so it doesn't
+            // User cleared the buffer — drop the draft so it doesn't
             // resurface in the recovery banner.
             DraftsStore.shared.discard(stale)
             draftURL = nil
@@ -344,30 +272,22 @@ final class PlainTextDocument {
         }
     }
 
-    /// Untitled-buffer entry point — kept as an alias so existing
-    /// callers don't need to change. The unified `autoSave()` path
-    /// works for untitled docs too (scratch URL is keyed by
-    /// `revisionKey`, which is UUID-based until a Save-As).
-    func autoSnapshot() {
-        autoSave()
-    }
+    /// Alias kept for legacy call sites — the unified `autoSave()`
+    /// already handles untitled buffers.
+    func autoSnapshot() { autoSave() }
 
-    /// Drop the scratch shadow for this document — used by the
-    /// "Discard Changes" close path so a confirmed throw-away doesn't
-    /// leave abandoned bytes on disk.
+    /// Throw away the scratch shadow and draft for this doc — called
+    /// by the Discard close path.
     func deleteScratchFile() {
-        guard let url = Self.scratchURL(for: revisionKey) else { return }
-        try? FileManager.default.removeItem(at: url)
-        // A confirmed Discard tears the recoverable-draft file
-        // down too — the user explicitly threw the bytes away, so
-        // they must not resurrect from the next-launch banner.
+        if let url = Self.scratchURL(for: revisionKey) {
+            try? FileManager.default.removeItem(at: url)
+        }
         DraftsStore.shared.discard(draftURL)
         draftURL = nil
     }
 
-    /// Last 2-3 path components, joined with " / ", for use in the
-    /// recovery sheet's row subtitle. Falls back to the full path
-    /// when the URL has fewer than 2 components.
+    /// Last 2-3 path components joined with " / " for the recovery
+    /// sheet's row subtitle.
     nonisolated static func displayPath(for url: URL) -> String {
         let parts = url.pathComponents.filter { $0 != "/" }
         if parts.count <= 2 { return url.path }
@@ -376,11 +296,6 @@ final class PlainTextDocument {
 
     // MARK: - Scratch storage
 
-    /// URL for the per-document scratch shadow keyed by
-    /// `revisionKey`. Each call ensures the parent directory exists
-    /// so writes can land without a stat-first dance. Returns nil
-    /// only if Application Support itself is unreachable — i.e.
-    /// never on a healthy install.
     private static func scratchURL(for revisionKey: String) -> URL? {
         let fm = FileManager.default
         guard let support = try? fm.url(for: .applicationSupportDirectory,
@@ -389,19 +304,15 @@ final class PlainTextDocument {
                                          create: true) else { return nil }
         let dir = support.appendingPathComponent("AutoSavedDocuments", isDirectory: true)
         try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
-        // Slashes from URL-derived revision keys would create
-        // subdirectories — replace them so every doc lives in one
-        // flat scratch folder.
+        // Slashes in URL-derived keys would create subdirectories.
         let safeName = revisionKey
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: ":", with: "_")
         return dir.appendingPathComponent(safeName).appendingPathExtension("txt")
     }
 
-    /// Revision recording is best-effort — a sandbox / disk failure
-    /// shouldn't fail the underlying save or load. Surface the error
-    /// through `AppStateBus.openErrorMessage` so it reaches the user
-    /// instead of silently disappearing.
+    /// Revision recording is best-effort — a disk failure shouldn't
+    /// fail the save or load, but the user should see it.
     @discardableResult
     private func recordRevisionOrReport(
         _ body: () throws -> RevisionStore.Entry?
