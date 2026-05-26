@@ -51,12 +51,16 @@ enum KeyboardAccessoryBar {
         } else {
             // iPad path: keyboard-attached QuickType bar. Clear any
             // per-window accessory left over from a prior install.
+            // Two groups so modifiers cluster on the right with their
+            // own fixed-space padding, separate from the utilities.
             textView.inputAccessoryView = nil
             let observer = IPadAccessoryObserver(host: textView)
             assistant.leadingBarButtonGroups = [
-                UIBarButtonItemGroup(barButtonItems: observer.items, representativeItem: nil)
+                UIBarButtonItemGroup(barButtonItems: observer.leadingItems, representativeItem: nil)
             ]
-            assistant.trailingBarButtonGroups = []
+            assistant.trailingBarButtonGroups = [
+                UIBarButtonItemGroup(barButtonItems: observer.trailingItems, representativeItem: nil)
+            ]
             attachIPadObserver(observer, to: textView)
         }
     }
@@ -92,7 +96,13 @@ private func detachIPadObserver(from textView: EditorEngine.TextView) {
 private final class IPadAccessoryObserver {
 
     weak var host: EditorEngine.TextView?
-    let items: [UIBarButtonItem]
+    /// Anchored to the left edge of the QuickType bar — esc + the
+    /// line/document caret jumps. The "utilities" cluster.
+    let leadingItems: [UIBarButtonItem]
+    /// Anchored to the right edge — the sticky modifier keys, with
+    /// fixed-space padding between them so they read as a distinct
+    /// group rather than a flush row of glyphs.
+    let trailingItems: [UIBarButtonItem]
     private weak var controlItem: UIBarButtonItem?
     private weak var optionItem: UIBarButtonItem?
     private weak var commandItem: UIBarButtonItem?
@@ -133,8 +143,14 @@ private final class IPadAccessoryObserver {
 
         // No chevron-down on iPad — the system keyboard's own
         // dismiss-keyboard key (bottom-right of the soft keyboard)
-        // covers that.
-        self.items = [escape, control, option, command, lineStart, lineEnd, docStart, docEnd]
+        // covers that. Modifier cluster goes in the trailing group
+        // with extra spacing between glyphs so the user can target
+        // them without squinting.
+        self.leadingItems = [escape, lineStart, lineEnd, docStart, docEnd]
+        let spaceWidth: CGFloat = 18
+        let s1 = UIBarButtonItem(systemItem: .fixedSpace); s1.width = spaceWidth
+        let s2 = UIBarButtonItem(systemItem: .fixedSpace); s2.width = spaceWidth
+        self.trailingItems = [control, s1, option, s2, command]
         self.controlItem = control
         self.optionItem = option
         self.commandItem = command

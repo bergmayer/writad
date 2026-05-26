@@ -543,20 +543,22 @@ struct EditorTextView: UIViewRepresentable {
 
             // 0. Armed accessory modifier — Control / Command /
             // Option from the accessory bar wins over the literal
-            // keystroke. Single-letter ASCII insertions consume the
-            // armed flags and fire the matching command instead.
-            // Shift is read from the case of the incoming letter.
+            // keystroke. Single-letter ASCII insertions fire the
+            // matching command. Shift is read from the case of the
+            // incoming letter. The armed flag intentionally stays
+            // set after consumption — the user toggles it off by
+            // tapping the modifier again (or hits Esc to clear
+            // them all), matching the sticky-key behaviour they
+            // expect.
             if state.armedAccessoryControl
                 || state.armedAccessoryCommand
                 || state.armedAccessoryOption,
                text.count == 1,
                let ascii = text.unicodeScalars.first,
                ascii.isASCII {
-                let consumed = AccessoryKeyboard.handleArmedKey(text, state: state)
-                state.armedAccessoryControl = false
-                state.armedAccessoryCommand = false
-                state.armedAccessoryOption = false
-                if consumed { return false }
+                if AccessoryKeyboard.handleArmedKey(text, state: state) {
+                    return false
+                }
             }
 
             // 1. Dirty flag up front — entry point for "first edit
