@@ -2,34 +2,23 @@ import SwiftUI
 
 // MARK: - Slot model
 
-/// One slot in the in-window toolbar: an SF Symbol name and the id of
-/// the `EditorCommandSpec` it triggers (matched against
-/// `CommandRegistry.all()`).
+/// `commandId` matches `CommandRegistry.all()`.
 struct ToolbarSlot: Codable, Equatable, Identifiable {
     var commandId: String
-    /// SF Symbol name (e.g. `magnifyingglass`) OR a raw-unicode
-    /// reference of the form `u:HEX` (e.g. `u:1F4BE` for the
-    /// floppy-disk codepoint U+1F4BE). The unicode form lets us
-    /// surface non-SF-Symbol glyphs (the classic "Save" floppy in
-    /// particular) at the same point size as the other toolbar
-    /// icons, rendered monochrome via the text-presentation
-    /// variation selector U+FE0E.
+    /// SF Symbol name OR `u:HEX` for a raw codepoint (`u:1F4BE` =
+    /// the floppy disk). The unicode form lets us surface non-SF
+    /// glyphs at the toolbar size in monochrome.
     var symbol: String
     var id: String { commandId + "|" + symbol }
 }
 
-/// Renders a toolbar symbol — either an SF Symbol via name or a
-/// raw Unicode codepoint via the `u:HEX` prefix. The unicode path
-/// appends U+FE0E (variation selector 15, "text presentation") so
-/// codepoints that have an emoji color form (💾) draw in black-
-/// and-white, matching the rest of the SF Symbol-based icons.
+/// SF Symbol via name, or a raw codepoint via the `u:HEX` prefix.
+/// The unicode path appends U+FE0E (text-presentation VS15) so
+/// emoji-form codepoints like 💾 render in monochrome to match the
+/// SF Symbols around them.
 @ViewBuilder
 func toolbarSymbol(_ symbol: String, size: CGFloat, weight: Font.Weight = .regular) -> some View {
     if let scalar = unicodeScalar(forSymbolRef: symbol) {
-        // Text presentation: codepoint + VS15 forces monochrome
-        // rendering on iOS for emoji that have a B&W glyph in the
-        // system font cascade. Non-emoji codepoints render at the
-        // requested point size as normal.
         Text(String(scalar) + "\u{FE0E}")
             .font(.system(size: size * 1.1, weight: weight))
             .foregroundStyle(.primary)
@@ -50,16 +39,14 @@ private func unicodeScalar(forSymbolRef ref: String) -> Unicode.Scalar? {
 
 // MARK: - Config / persistence
 
-/// Persisted ordered list of toolbar slots. Singleton so the toolbar,
-/// the slot editor, and the Settings UI all see the same data.
+/// Shared by the toolbar, slot editor, and Settings UI.
 @MainActor
 @Observable
 final class ToolbarConfig {
 
     static let shared = ToolbarConfig()
 
-    /// Curated defaults — kept to common editing actions. Symbols must
-    /// exist in SF Symbols; broken names render as a placeholder glyph.
+    /// Broken symbol names render as a placeholder glyph at runtime.
     static let defaults: [ToolbarSlot] = [
         .init(commandId: "find",      symbol: "magnifyingglass"),
         .init(commandId: "findRepl",  symbol: "arrow.triangle.2.circlepath"),
@@ -128,38 +115,32 @@ final class ToolbarConfig {
 
 // MARK: - Toolbar view
 
-/// Top-of-window toolbar. Renders the document title on the left and a
-/// horizontal "pill" of SF Symbol buttons on the right — both on the
-/// same line so the toolbar collapses what would otherwise be two
-/// stacked rows (system nav bar + custom toolbar) into one. Items
-/// that don't fit collapse into a "+" `Menu` at the trailing edge
-/// (Freeform pattern).
+/// Title + a horizontal pill of SF Symbol buttons on the same line,
+/// collapsing what would otherwise be two stacked rows (system nav
+/// bar + custom toolbar). Overflow folds into a trailing `+` menu.
 struct WindowToolbar: View {
 
     let title: String
     let subtitle: String
-    /// Closure the hosting scene installs to claim focus on the bus
-    /// — fires on every WindowToolbar button tap so a stale
-    /// `currentEditor` doesn't cause sheets / pickers to land on the
-    /// wrong window. The trailing palette / undo and the toolbar
-    /// pill buttons all wrap their actions with this.
+    /// Claims focus on the bus before any toolbar action fires, so
+    /// a stale `currentEditor` doesn't land sheets / pickers in the
+    /// wrong window.
     let onInteraction: (() -> Void)?
 
     @State private var config = ToolbarConfig.shared
     @State private var editing: EditingSlot?
 
-    /// Visual size of each button glyph. The touch target is larger —
-    /// see the `.contentShape` in `ToolbarSlotButton`.
+    /// Glyph size; touch target is bigger (see `ToolbarSlotButton`).
     static let buttonSize: CGFloat = 30
-    /// Minimum touch target per the iPad HIG (44×44 pt).
+    /// iPad HIG minimum — 44×44 pt would also be valid; 38 reads
+    /// better in the pill at our point size.
     static let touchTarget: CGFloat = 38
     private static let buttonSpacing: CGFloat = 2
     private static let pillInsetH: CGFloat = 6
     private static let pillInsetV: CGFloat = 4
     private static let outerPadding: CGFloat = 12
     private static let verticalPadding: CGFloat = 6
-    /// Reserved width inside the pill for the overflow `+` button so the
-    /// last visible item doesn't butt against the chevron.
+    /// Keeps the last visible item from butting against the `+`.
     private static let overflowSlot: CGFloat = touchTarget + buttonSpacing
 
     init(title: String, subtitle: String, onInteraction: (() -> Void)? = nil) {
@@ -171,25 +152,17 @@ struct WindowToolbar: View {
     var body: some View {
         let registry = CommandRegistry.all()
         GeometryReader { proxy in
-            // The iPad scene chrome ("●●●" stoplight) overlaps the
-            // top-left of our content. Hardcode an inset so the title
-            // never sits behind it. Stage Manager's chrome is around
-            // 60 pt wide; we add a little breathing room.
+            // iPad scene chrome (●●● stoplight) takes the top-left
+            // — ~60 pt + breathing room so the title isn't behind it.
             let stoplightInset: CGFloat = 70
-            // Width consumed by the fixed trailing controls (undo +
-            // palette + their outer padding). The pill cap subtracts
-            // 2× this so the centered pill stays symmetric around the
-            // screen midpoint without crashing into the trailing zone.
+            // Mirror inset for the centered pill: 2× this keeps the
+            // pill symmetric around the midpoint without crashing
+            // into the undo + palette cluster.
             let trailingZone = Self.touchTarget * 2 + Self.buttonSpacing + Self.outerPadding
-            // Below this we collapse every visible slot into the
-            // overflow menu — the centered pill would otherwise
-            // overlap the title at Stage-Manager-skinny / Slide-Over
-            // widths, since `estimatedPill` claims 60 % of the width
-            // and the title's flex zone goes negative. Threshold
-            // mirrors the iPhone Plus landscape width — anything
-            // narrower than this can't host both a pill *and* a
-            // readable title alongside the stoplight + trailing
-            // controls.
+            // 600 = iPhone Plus landscape. Below that the centered
+            // pill would overlap the title (it claims 60% of width
+            // and the title's flex zone goes negative), so collapse
+            // every slot into the overflow.
             let compact = proxy.size.width < 600
             if compact {
                 compactBody(proxy: proxy,
@@ -209,9 +182,7 @@ struct WindowToolbar: View {
         }
     }
 
-    /// Wide-iPad layout — centered configurable pill flanked by the
-    /// title block and the trailing palette / undo cluster. The
-    /// original behaviour before the compact-width fork.
+    /// Centered pill flanked by title + trailing controls.
     @ViewBuilder
     private func regularBody(
         proxy: GeometryProxy,
@@ -247,12 +218,8 @@ struct WindowToolbar: View {
         .padding(.vertical, Self.verticalPadding)
     }
 
-    /// Narrow / Split-View / Stage-Manager-skinny layout — drops the
-    /// centered configurable pill entirely; every slot folds into a
-    /// single overflow menu pinned to the trailing edge. The title
-    /// now owns the full middle, the stoplight inset is shrunk
-    /// (system chrome is narrower in compact widths), and only the
-    /// essentials sit alongside it.
+    /// Narrow / Split-View / Stage-Manager-skinny — drops the pill;
+    /// every slot folds into a single trailing-edge overflow menu.
     @ViewBuilder
     private func compactBody(
         proxy: GeometryProxy,
@@ -260,10 +227,8 @@ struct WindowToolbar: View {
         trailingZone: CGFloat,
         registry: [EditorCommandSpec]
     ) -> some View {
-        // Compact width has no stoplight chrome (system chrome moves
-        // into a single icon in this configuration), so we don't
-        // need the wide leading inset — a small breathing space is
-        // enough.
+        // No stoplight chrome in compact widths — system chrome
+        // collapses to a single icon.
         let compactLeading: CGFloat = 8
         HStack(spacing: 6) {
             sidebarButton
@@ -271,10 +236,6 @@ struct WindowToolbar: View {
             titleBlock
                 .layoutPriority(1)
             Spacer(minLength: 0)
-            // Every configurable slot collapses into a single
-            // overflow chevron + Menu. Same menu the wide layout's
-            // overflow uses when slots don't fit the pill — pulls
-            // the slot list from `config.slots`.
             if !config.slots.isEmpty {
                 compactOverflowMenu(registry: registry)
             }
@@ -309,9 +270,8 @@ struct WindowToolbar: View {
         .accessibilityLabel("More toolbar actions")
     }
 
-    /// Title + subtitle column. Tap / context-menu / inline-rename
-    /// behaviour lives in the shared `EditableTitleView` so the
-    /// iPhone nav-bar principal item gets the same affordances.
+    /// Tap / context-menu / inline-rename behaviour is shared with
+    /// the iPhone nav-bar principal item via `EditableTitleView`.
     @ViewBuilder
     private var titleBlock: some View {
         EditableTitleView(
@@ -320,21 +280,13 @@ struct WindowToolbar: View {
             titleFont: .system(size: Self.buttonSize * 0.45, weight: .semibold),
             subtitleFont: .caption,
             maxRenameWidth: 280,
-            // Pass the per-window focus-claim closure so a tap on
-            // the title (which fires Save As for untitled docs, or
-            // opens the inline rename for saved docs) lands in
-            // THIS window — same fix the toolbar buttons already
-            // had. Without this, the picker showed up in whichever
-            // scene `currentEditor` happened to point at, often a
-            // background window.
+            // Same per-window focus claim as the toolbar buttons —
+            // without this, title-tap Save As lands in whichever
+            // window `currentEditor` happens to point at.
             onInteraction: onInteraction
         )
     }
 
-    /// Leading sidebar toggle — opens the outline / navigation
-    /// sidebar on the left of the document. Mirrors the position of
-    /// the Mail / Notes / Files sidebar button on iPad (right of the
-    /// stoplight chrome, immediately left of the document title).
     @ViewBuilder
     private var sidebarButton: some View {
         bareButton(symbol: "sidebar.left", help: "Toggle Sidebar") {
@@ -342,8 +294,7 @@ struct WindowToolbar: View {
         }
     }
 
-    /// Fixed pair of buttons anchored to the trailing edge: undo, then
-    /// command palette. Not customizable — these are part of the chrome.
+    /// Undo + Command Palette — chrome, not customizable.
     @ViewBuilder
     private var trailingControls: some View {
         HStack(spacing: Self.buttonSpacing) {
@@ -359,9 +310,8 @@ struct WindowToolbar: View {
     @ViewBuilder
     private func bareButton(symbol: String, help: String, action: @escaping () -> Void) -> some View {
         Button(action: {
-            // Claim focus on the bus before the action fires so the
-            // sheet / window the action presents lands on this scene
-            // and not whichever scene was last in scenePhase.active.
+            // Claim focus first so the action's sheet/window lands
+            // on this scene and not whichever was last in scenePhase.
             onInteraction?()
             action()
         }) {
@@ -399,10 +349,9 @@ struct WindowToolbar: View {
         )
     }
 
-    /// Number of customizable items that fit inside the pill given
-    /// `interior` points of usable horizontal space. Reserves room for
-    /// the overflow `+` button when there's truly more than what fits;
-    /// returns the full count when everything fits so `+` doesn't show.
+    /// Reserves space for the `+` button only when the slots
+    /// actually overflow; otherwise returns the full count so the
+    /// `+` doesn't render.
     private func visibleCount(forPillInteriorWidth interior: CGFloat) -> Int {
         let total = config.slots.count
         guard total > 0, interior > 0 else { return 0 }
@@ -475,9 +424,8 @@ private struct ToolbarSlotButton: View {
         .opacity(isEnabled ? 1 : 0.4)
         .disabled(!isEnabled)
         .help(command?.title ?? slot.commandId)
-        // Long-press still routes to the per-slot editor as an interim
-        // affordance. Phase 3 adds the canonical customization UI under
-        // Settings ▸ Toolbar.
+        // Long-press opens the per-slot editor. Settings ▸ Toolbar
+        // is the canonical customization UI.
         .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.5).onEnded { _ in onLongPress() }
         )
@@ -486,17 +434,12 @@ private struct ToolbarSlotButton: View {
 
 // MARK: - SF Symbol picker
 
-/// Curated SF Symbol library appropriate for text-editor commands.
-/// Apple doesn't ship a picker UI, so we maintain our own short list
-/// rather than scrape the full ~6 000-symbol catalogue (which would be
-/// scrollable to the point of uselessness). The list is organized by
-/// rough usage category so the grid feels browsable. Users can also
-/// type a symbol name manually via the search field — anything in the
-/// system catalogue is selectable, not just what we enumerate here.
+/// A curated picker — Apple doesn't ship one, and the full ~6 000-
+/// symbol catalogue would be unbrowsable. Users can still enter any
+/// name manually; the library is just the discoverable shortlist.
 enum ToolbarSymbolLibrary {
 
-    /// `(category, symbols)` pairs rendered as separate sections in the
-    /// picker grid. Order is intentional — most-used categories first.
+    /// Order is intentional — most-used categories first.
     static let groups: [(String, [String])] = [
         ("Find & Navigate", [
             "magnifyingglass", "text.magnifyingglass", "arrow.triangle.2.circlepath",
@@ -543,10 +486,8 @@ enum ToolbarSymbolLibrary {
             "square.and.arrow.up", "square.and.arrow.down",
             "tray", "tray.full", "paperplane", "paperclip",
             "link", "rectangle.and.paperclip",
-            // 💾 — classic "save" floppy disk. Rendered through the
-            // toolbarSymbol helper's `u:HEX` path, which appends the
-            // text-presentation variation selector so it draws in
-            // monochrome at the same point size as the SF Symbols.
+            // 💾 — classic floppy via toolbarSymbol's `u:HEX` path
+            // (VS15 forces monochrome).
             "u:1F4BE"
         ]),
         ("View", [
@@ -570,14 +511,12 @@ enum ToolbarSymbolLibrary {
         ])
     ]
 
-    /// Flat list of every curated symbol — used by the search filter.
+    /// Flat list, used by the search filter.
     static let all: [String] = groups.flatMap(\.1)
 }
 
-/// Modal sheet that renders the curated symbol library in a search +
-/// grid layout. `selected` is set to the tapped symbol's name and the
-/// sheet auto-dismisses. A free-text "Use exact name" row at the
-/// bottom lets the user pick any system symbol not in the library.
+/// Tap commits + dismisses. The free-text row at the bottom takes
+/// any system symbol name, not just what's in the library.
 struct ToolbarSymbolPicker: View {
 
     @Environment(\.dismiss) private var dismiss
@@ -725,9 +664,7 @@ struct ToolbarSymbolPicker: View {
     }
 }
 
-/// Form row shared by `ToolbarSlotEditor` and `ToolbarSlotAdder` —
-/// shows a large preview of the current symbol and a "Choose Symbol…"
-/// button that opens `ToolbarSymbolPicker`.
+/// Shared by `ToolbarSlotEditor` and `ToolbarSlotAdder`.
 @ViewBuilder
 func iconPickerRow(symbol: Binding<String>, pickingSymbol: Binding<Bool>) -> some View {
     HStack(spacing: 16) {
