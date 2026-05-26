@@ -393,6 +393,7 @@ final class EditorAccessoryView: UIInputView, UIScrollViewDelegate {
 
     private let mainRow: AccessoryRow
     private let drawerRow: AccessoryRow
+    private let drawerSeparator = UIView()
     private var drawerOpen: Bool
     private weak var controlButton: AccessoryButton?
     private weak var commandButton: AccessoryButton?
@@ -440,11 +441,10 @@ final class EditorAccessoryView: UIInputView, UIScrollViewDelegate {
     private static let totalHeightOpen: CGFloat = mainRowHeight + drawerRowHeight + 1
 
     private func layout() {
-        let separator = UIView()
-        separator.backgroundColor = UIColor.separator.withAlphaComponent(0.4)
-        separator.translatesAutoresizingMaskIntoConstraints = false
+        drawerSeparator.backgroundColor = UIColor.separator.withAlphaComponent(0.4)
+        drawerSeparator.translatesAutoresizingMaskIntoConstraints = false
 
-        let stack = UIStackView(arrangedSubviews: [drawerRow, separator, mainRow])
+        let stack = UIStackView(arrangedSubviews: [drawerRow, drawerSeparator, mainRow])
         stack.axis = .vertical
         stack.spacing = 0
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -457,10 +457,10 @@ final class EditorAccessoryView: UIInputView, UIScrollViewDelegate {
             stack.bottomAnchor.constraint(equalTo: bottomAnchor),
             drawerRow.heightAnchor.constraint(equalToConstant: Self.drawerRowHeight),
             mainRow.heightAnchor.constraint(equalToConstant: Self.mainRowHeight),
-            separator.heightAnchor.constraint(equalToConstant: 1)
+            drawerSeparator.heightAnchor.constraint(equalToConstant: 1)
         ])
         drawerRow.isHidden = !drawerOpen
-        separator.isHidden = !drawerOpen
+        drawerSeparator.isHidden = !drawerOpen
     }
 
     // MARK: Row builders
@@ -591,10 +591,19 @@ final class EditorAccessoryView: UIInputView, UIScrollViewDelegate {
     private func toggleDrawer() {
         drawerOpen.toggle()
         drawerRow.isHidden = !drawerOpen
-        if let separator = drawerRow.superview?.subviews.compactMap({ $0 as? UIStackView }).first?.arrangedSubviews[safe: 1] {
-            separator.isHidden = !drawerOpen
-        }
+        drawerSeparator.isHidden = !drawerOpen
+        // `UIInputView.allowsSelfSizing` only takes effect when the
+        // view is used as a `UIResponder.inputView`, not as an
+        // `inputAccessoryView`. So intrinsic-content-size changes
+        // don't propagate — we have to mutate the frame directly to
+        // grow / shrink the accessory window region.
+        let newHeight = drawerOpen ? Self.totalHeightOpen : Self.totalHeightClosed
+        var newFrame = frame
+        newFrame.size.height = newHeight
+        frame = newFrame
         invalidateIntrinsicContentSize()
+        setNeedsLayout()
+        layoutIfNeeded()
     }
 
     private func handleEscape() {
