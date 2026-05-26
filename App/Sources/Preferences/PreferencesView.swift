@@ -67,6 +67,7 @@ private struct EditorPreferencesTab: View {
     @AppStorage(AppPreferenceKey.fontSize) private var fontSize: Double = 14
     @AppStorage(AppPreferenceKey.showLineNumbers) private var showLineNumbers: Bool = true
     @AppStorage(AppPreferenceKey.wrapLines) private var wrapLines: Bool = true
+    @AppStorage(AppPreferenceKey.overscroll) private var overscroll: Bool = true
     @AppStorage(AppPreferenceKey.showInvisibles) private var showInvisibles: Bool = false
     @AppStorage(AppPreferenceKey.showInvisibleSpace) private var showInvisibleSpace: Bool = true
     @AppStorage(AppPreferenceKey.showInvisibleTab) private var showInvisibleTab: Bool = true
@@ -181,6 +182,7 @@ private struct EditorPreferencesTab: View {
                 }
                 Toggle("Show Line Numbers", isOn: $showLineNumbers)
                 Toggle("Wrap Lines", isOn: $wrapLines)
+                Toggle("Scroll Past Last Line", isOn: $overscroll)
                 Toggle("Show Page Guide", isOn: $showPageGuide)
                 LabeledContent("Page Guide Column") {
                     Stepper(value: $pageGuideColumn, in: 20...200, step: 1) {

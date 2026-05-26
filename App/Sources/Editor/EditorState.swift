@@ -46,6 +46,9 @@ final class EditorState {
     /// lookups grow with line count, and `Timing
     /// .changeHistoryGutterByteLimit` short-circuits past the ceiling.
     var showChangeHistoryGutter: Bool
+    /// Adds a 5-line scrollable cushion below the last line so it
+    /// isn't pinned to the window's bottom edge.
+    var overscroll: Bool
     var themeName: AppThemeName
     /// Non-nil → per-window theme picked via the info inspector,
     /// wins over Settings. Lives in memory only; cleared with the tab.
@@ -148,6 +151,7 @@ final class EditorState {
         self.showPageGuide                 = d.bool(forKey: AppPreferenceKey.showPageGuide)
         self.pageGuideColumn               = d.integer(forKey: AppPreferenceKey.pageGuideColumn)
         self.showChangeHistoryGutter       = d.bool(forKey: AppPreferenceKey.showChangeHistoryGutter)
+        self.overscroll                    = d.bool(forKey: AppPreferenceKey.overscroll)
         self.showStatusBar                 = d.bool(forKey: AppPreferenceKey.showStatusBar)
         self.showToolbar                   = d.bool(forKey: AppPreferenceKey.showToolbar)
         self.liveMatchHighlight            = d.bool(forKey: AppPreferenceKey.liveMatchHighlight)

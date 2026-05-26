@@ -32,6 +32,11 @@ enum AppPreferenceKey {
     /// hard byte ceiling (`changeHistoryGutterByteLimit`) on top of
     /// the per-window preference.
     static let showChangeHistoryGutter = "showChangeHistoryGutter"
+    /// Extra scrollable space below the last line, sized as five
+    /// lines of the current font/line height. On by default — keeps
+    /// the last line from being pinned to the bottom edge of the
+    /// window.
+    static let overscroll              = "overscroll"
 
     // MARK: Invisible characters (granular — master toggle + per-kind)
     static let showInvisibles         = "showInvisibles"
@@ -134,6 +139,7 @@ enum AppPreferenceDefaults {
             AppPreferenceKey.showToolbar: true,
             AppPreferenceKey.liveMatchHighlight: true,
             AppPreferenceKey.showChangeHistoryGutter: false,
+            AppPreferenceKey.overscroll: true,
 
             // Invisibles
             AppPreferenceKey.showInvisibles: false,

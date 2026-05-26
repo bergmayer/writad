@@ -72,6 +72,7 @@ struct EditorTextView: UIViewRepresentable {
 
         applyTypingPreferences(to: textView)
         applyViewSettings(to: textView)
+        applyOverscroll(to: textView)
         applyLanguage(to: textView, identifier: state.languageIdentifier, coordinator: context.coordinator)
         applyIndentStrategy(to: textView)
         applyCharacterPairs(to: textView)
@@ -118,6 +119,7 @@ struct EditorTextView: UIViewRepresentable {
         }
         applyTypingPreferences(to: textView)
         applyViewSettings(to: textView)
+        applyOverscroll(to: textView)
         let themeKey = Coordinator.ThemeCacheKey(
             name: state.themeName,
             font: state.font,
@@ -260,6 +262,22 @@ struct EditorTextView: UIViewRepresentable {
             var inset = textView.textContainerInset
             inset.right = neededRightInset
             textView.textContainerInset = inset
+        }
+    }
+
+    /// Five-line scrollable cushion below the last line so the
+    /// final line isn't pinned to the bottom of the window. Uses
+    /// the current font's line height × multiplier — matches what
+    /// the engine actually lays out, not a fixed point value. Set
+    /// on `contentInset.bottom` (UIScrollView's standard hook); the
+    /// existing keyboard-avoidance code only touches the iOS-managed
+    /// `additionalSafeAreaInsets`, so the two don't fight.
+    private func applyOverscroll(to textView: EditorEngine.TextView) {
+        let font = state.font.uiFont(size: CGFloat(state.fontSize))
+        let perLine = font.lineHeight * CGFloat(state.lineHeight)
+        let target: CGFloat = state.overscroll ? perLine * 5 : 0
+        if abs(textView.contentInset.bottom - target) > 0.5 {
+            textView.contentInset.bottom = target
         }
     }
 

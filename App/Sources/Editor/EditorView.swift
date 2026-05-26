@@ -339,6 +339,7 @@ struct EditorView: View {
         _ = state.autoLinkDetection
         _ = state.savedBaselineText
         _ = state.showChangeHistoryGutter
+        _ = state.overscroll
         _ = state.sidebarOpen
         _ = state.splitOpen
         _ = state.splitFraction
@@ -1016,11 +1017,11 @@ struct EditorView: View {
     }
 }
 
-/// Mirrors typing-helper UserDefaults values into the live
-/// `EditorState`. `EditorState` seeds these once at init, so without
-/// this bridge a Settings toggle wouldn't reach a long-lived tab
-/// until the tab was closed and reopened — the bug that kept live
-/// spell-check highlights invisible after toggling the pref on.
+/// Mirrors UserDefaults values into the live `EditorState`.
+/// `EditorState` seeds these once at init, so without this bridge a
+/// Settings toggle wouldn't reach a long-lived tab until the tab was
+/// closed and reopened — the bug that kept live spell-check
+/// highlights invisible after toggling the pref on.
 private struct TypingPrefSync: ViewModifier {
     let state: EditorState
     @AppStorage(AppPreferenceKey.spellCheck) private var spellCheckPref: Bool = false
@@ -1028,6 +1029,7 @@ private struct TypingPrefSync: ViewModifier {
     @AppStorage(AppPreferenceKey.autoCapitalize) private var autoCapitalizePref: Bool = false
     @AppStorage(AppPreferenceKey.smartQuotes) private var smartQuotesPref: Bool = false
     @AppStorage(AppPreferenceKey.autoLinkDetection) private var autoLinkDetectionPref: Bool = false
+    @AppStorage(AppPreferenceKey.overscroll) private var overscrollPref: Bool = true
 
     func body(content: Content) -> some View {
         content
@@ -1036,6 +1038,7 @@ private struct TypingPrefSync: ViewModifier {
             .onChange(of: autoCapitalizePref) { _, v in state.autoCapitalize = v }
             .onChange(of: smartQuotesPref) { _, v in state.smartQuotes = v }
             .onChange(of: autoLinkDetectionPref) { _, v in state.autoLinkDetection = v }
+            .onChange(of: overscrollPref) { _, v in state.overscroll = v }
             // Seed on appear too — the @AppStorage value beats the
             // state's init-time snapshot if Settings changed before
             // this tab had a chance to mount.
@@ -1045,6 +1048,7 @@ private struct TypingPrefSync: ViewModifier {
                 state.autoCapitalize = autoCapitalizePref
                 state.smartQuotes = smartQuotesPref
                 state.autoLinkDetection = autoLinkDetectionPref
+                state.overscroll = overscrollPref
             }
     }
 }
