@@ -561,17 +561,11 @@ final class EditorAccessoryView: UIInputView, UIScrollViewDelegate {
     }
 
     private func drawerRowButtons() -> [AccessoryButton] {
-        // Only chars that AREN'T already on the iOS keyboard's `123`
-        // page (one tap from ABC). Punctuation reachable there —
-        // ( ) / ? - ' " @ $ & ; : — would just duplicate keys.
+        // Only chars that are NOT directly typable from the iOS
+        // keyboard's `123` or `#+=` pages. Backtick is the lone
+        // survivor — it only appears under a long-press on `'`.
         let chars: [(String, String)] = [
-            ("`", "Backtick"), ("~", "Tilde"), ("^", "Caret"),
-            ("_", "Underscore"), ("\\", "Backslash"), ("|", "Pipe"),
-            ("{", "Left Brace"), ("}", "Right Brace"),
-            ("[", "Left Bracket"), ("]", "Right Bracket"),
-            ("<", "Less Than"), (">", "Greater Than"),
-            ("=", "Equals"),
-            ("#", "Hash"), ("%", "Percent"), ("*", "Asterisk")
+            ("`", "Backtick")
         ]
 
         return chars.map { (glyph, label) in
