@@ -2,25 +2,18 @@ import SwiftUI
 import WebKit
 import UniformTypeIdentifiers
 
-/// Markdown preview, rendered the same way regardless of host. iPad
-/// presents this inside a dedicated WindowGroup scene; iPhone (which
-/// can't host extra windows) presents it as a dismissable sheet —
-/// see `MarkdownPreviewSheet` and `MarkdownPreviewScene` below. Output
-/// is a WKWebView hosting an HTML scaffold built by `MarkdownRenderer`.
-///
-/// Toolbar exposes a Share button — the system share sheet's "Print"
-/// flow includes "Save as PDF", which is the iPad-native way to turn
-/// the preview into a PDF.
+/// WKWebView host for the rendered markdown. iPad opens it as a
+/// dedicated scene; iPhone presents it as a sheet (no second
+/// window). Share → Print → "Save as PDF" is the iPad-native PDF
+/// export.
 struct MarkdownPreviewContent: View {
 
-    /// How to dismiss this view. Scene version calls `dismissWindow`;
-    /// sheet version calls SwiftUI's `dismiss`. Optional Done button
-    /// is hidden when nil — useful if the host already has its own.
+    /// Scene host passes `dismissWindow`; sheet host passes
+    /// SwiftUI's `dismiss`. `nil` hides the Done button.
     var onDone: (() -> Void)?
 
     @State private var renderedHTML: String = ""
-    /// Snapshot of the markdown source we last rendered — used to
-    /// throttle re-renders when the editor text changes.
+    /// Last rendered source — throttles re-renders while typing.
     @State private var lastSource: String = ""
 
     var body: some View {
@@ -42,11 +35,9 @@ struct MarkdownPreviewContent: View {
                 }
         }
         .onAppear { rerender() }
-        // Pick up changes to the underlying document. EditorState is
-        // a class so `text` mutations don't drive SwiftUI directly;
-        // we re-read from `AppStateBus` on a short timer instead.
-        // 600 ms is far enough below typing speed to feel "live" but
-        // doesn't thrash the WebView while the user is typing fast.
+        // `EditorState` is a class — its `text` mutations don't
+        // drive SwiftUI, so a 600 ms timer is the cheapest hook for
+        // "live" preview without thrashing the WebView mid-typing.
         .task(id: lastSource) {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(600))
@@ -70,10 +61,8 @@ struct MarkdownPreviewContent: View {
             .lastPathComponent ?? "Untitled"
     }
 
-    /// Temporary URL that ShareLink hands the system — backs an
-    /// `.html` file written into the scratch sandbox each time the
-    /// share sheet is opened. The system's Print → Save as PDF flow
-    /// in the share sheet renders the HTML to PDF.
+    /// Scratch-sandbox `.html` written each time the share sheet
+    /// opens. System Print → Save as PDF renders it to PDF.
     private var htmlExportURL: URL {
         let dir = FileManager.default.temporaryDirectory
         let url = dir.appendingPathComponent("\(currentTitle).html")
@@ -85,8 +74,7 @@ struct MarkdownPreviewContent: View {
     }
 }
 
-/// iPad/multi-window host for the preview. Opened via
-/// `openWindow(id: SceneID.markdownPreview.rawValue)`.
+/// iPad host — opened via `openWindow(id: .markdownPreview)`.
 struct MarkdownPreviewScene: View {
 
     @Environment(\.dismissWindow) private var dismissWindow
@@ -96,8 +84,8 @@ struct MarkdownPreviewScene: View {
             dismissWindow(id: SceneID.markdownPreview.rawValue)
         })
         .onAppear {
-            // Guard the same way the file browser does — if iPadOS
-            // restored the preview window after a quit, drop it.
+            // Same restore guard the file browser uses — drop the
+            // window if iPadOS restored it after a quit.
             if !AppStateBus.shared.scenes.consumeOpen(.markdownPreview) {
                 dismissWindow(id: SceneID.markdownPreview.rawValue)
             }
@@ -105,9 +93,8 @@ struct MarkdownPreviewScene: View {
     }
 }
 
-/// iPhone host for the preview. Routed via `.sheet(item:)` because
-/// iPhone is single-window — `openWindow` is a no-op there. The user
-/// dismisses with the toolbar Done button or a swipe.
+/// iPhone host — `openWindow` is a no-op on phone, so this is a
+/// `.sheet(item:)`.
 struct MarkdownPreviewSheet: View {
 
     @Environment(\.dismiss) private var dismiss
@@ -125,8 +112,6 @@ private struct MarkdownWebView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
-        // No JS bridge needed — the markdown rendering runs entirely
-        // inside the HTML scaffold via `marked.js`.
         let view = WKWebView(frame: .zero, configuration: config)
         view.isOpaque = false
         view.backgroundColor = .systemBackground
@@ -141,10 +126,8 @@ private struct MarkdownWebView: UIViewRepresentable {
 
 // MARK: - Renderer
 
-/// Wraps the markdown source in a self-contained HTML document that
-/// pulls in `marked.js` (vendored as a string at the bottom) and runs
-/// it against the source. Styles match the active color scheme so
-/// the preview tracks dark/light mode.
+/// Wraps the rendered body in a self-contained HTML document.
+/// `color-scheme: light dark` tracks the system tonality.
 enum MarkdownRenderer {
 
     static func html(for source: String, title: String) -> String {
@@ -221,18 +204,11 @@ enum MarkdownRenderer {
 
 // MARK: - SwiftMarkdown
 
-/// A small, self-contained Markdown → HTML converter. Covers the
-/// subset every casual markdown user writes: ATX headers, bold /
-/// italic / strike / inline code, fenced + indented code, ordered &
-/// unordered lists, blockquotes, horizontal rules, inline links &
-/// images, hard line-breaks, and the GFM-style footnote extension
-/// (`[^id]` references with matching `[^id]:` definitions).
-///
-/// Intentionally NOT a full CommonMark implementation — tables,
-/// nested-list indentation rules, HTML inlining and reference-style
-/// links are skipped. Good enough for a live preview while typing;
-/// users who want bit-perfect rendering can Share → Open the
-/// `.html` in Safari or use a dedicated previewer.
+/// Covers the casual subset: ATX headers, bold / italic / strike /
+/// code, fenced + indented blocks, ordered/unordered lists,
+/// blockquotes, HRs, inline links/images, hard breaks, and GFM
+/// footnotes. NOT CommonMark — no tables, nested-list rules, HTML
+/// inlining, or reference-style links. Good enough for live preview.
 enum SwiftMarkdown {
 
     static func render(_ source: String) -> String {
@@ -257,9 +233,8 @@ enum SwiftMarkdown {
         }
 
         mutating func parse() {
-            // Pass 1: extract footnote definitions (`[^id]: …`) so
-            // they don't appear inline in the body and so the
-            // references in pass 2 know what's defined.
+            // Pass 1: lift footnote definitions out so pass 2 can
+            // wire references to them and they don't leak inline.
             var bodyLines: [String] = []
             var i = 0
             while i < lines.count {
@@ -465,26 +440,24 @@ enum SwiftMarkdown {
         // MARK: Inline
 
         private func inline(_ source: String) -> String {
-            // Escape HTML first; markdown markers are still detectable
-            // in the escaped string because we only escape `<>&"`.
+            // Safe to escape first — we only escape `<>&"`, and
+            // markdown markers don't overlap.
             var text = htmlEscape(source)
-            // Images then links (order matters — image `![…](…)`
-            // contains the link pattern).
+            // Image before link: `![…](…)` contains the link pattern.
             text = applyPattern(text, pattern: #"!\[([^\]]*)\]\(([^)]+)\)"#) { groups in
                 "<img alt=\"\(groups[1])\" src=\"\(groups[2])\">"
             }
             text = applyPattern(text, pattern: #"\[([^\]]+)\]\(([^)]+)\)"#) { groups in
                 "<a href=\"\(groups[2])\">\(groups[1])</a>"
             }
-            // Footnote references (after links so `[^id]` doesn't get
-            // grabbed by the link pattern — the link pattern needs
-            // `(`, footnotes don't).
+            // After links — `[^id]` lacks the `(` the link pattern
+            // requires, so order matters.
             text = applyPattern(text, pattern: #"\[\^([^\]]+)\]"#) { groups in
                 let safe = htmlEscape(groups[1])
                 return "<sup id=\"fnref-\(safe)\"><a href=\"#fn-\(safe)\">\(safe)</a></sup>"
             }
-            // Bold then italic — `**` before `*` so the longer marker
-            // wins; same for `__` vs `_`.
+            // Longer marker first so `**bold**` doesn't get chewed
+            // by the `*italic*` pattern.
             text = applyPattern(text, pattern: #"\*\*([^*]+)\*\*"#) { "<strong>\($0[1])</strong>" }
             text = applyPattern(text, pattern: #"__([^_]+)__"#)     { "<strong>\($0[1])</strong>" }
             text = applyPattern(text, pattern: #"\*([^*]+)\*"#)     { "<em>\($0[1])</em>" }
