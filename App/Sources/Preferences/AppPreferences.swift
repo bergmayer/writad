@@ -90,9 +90,6 @@ enum AppPreferenceKey {
     /// Whether the per-window in-app toolbar is rendered at the top of
     /// every editor scene.
     static let showToolbar  = "showToolbar"
-    /// Whether the keyboard accessory's drawer (punctuation palette
-    /// above the main row) is expanded when the keyboard appears.
-    static let accessoryDrawerOpenByDefault = "accessoryDrawerOpenByDefault"
 
     // MARK: Snippets
     /// JSON-encoded `[Snippet]` — user-defined named text macros.

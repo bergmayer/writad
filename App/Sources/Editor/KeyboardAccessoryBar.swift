@@ -2,10 +2,11 @@ import UIKit
 import EditorEngine
 import GameController
 
-/// Two-row keyboard accessory: a collapsible drawer above a fixed
-/// main row, sized so it sits flush above the iOS soft keyboard.
+/// Single-row keyboard accessory shown above the iOS soft keyboard.
 ///
-///   * **iPhone (soft keyboard)** — full two-row accessory view.
+///   * **iPhone (soft keyboard)** — custom horizontal-scrolling row
+///     with esc, ⌃/⌥/⌘ sticky modifiers, line/document caret jumps,
+///     pan-gesture joystick, and a dismiss-keyboard button.
 ///   * **iPad (soft keyboard)** — uses the system `inputAssistantItem`
 ///     shortcut bar instead, because a free-floating
 ///     `inputAccessoryView` on iPad bleeds into our status-bar overlay
@@ -30,8 +31,8 @@ enum KeyboardAccessoryBar {
             // Suppress the iOS default `inputAssistantItem` strip
             // (clipboard / history / edit actions glyphs) — iPhone
             // would otherwise render it above our accessory, eating
-            // ~44 pt of vertical space and pushing our main row
-            // behind the keyboard.
+            // ~44 pt of vertical space and pushing our row behind
+            // the keyboard.
             let assistant = textView.inputAssistantItem
             assistant.leadingBarButtonGroups = []
             assistant.trailingBarButtonGroups = []
@@ -384,45 +385,35 @@ enum AccessoryKeyboard {
 
 // MARK: - Accessory view (iPhone)
 
-/// Two-row input accessory view. Drawer row (collapsible) sits above
-/// the main row; both scroll horizontally if content overflows.
 @MainActor
-final class EditorAccessoryView: UIInputView, UIScrollViewDelegate {
+final class EditorAccessoryView: UIInputView {
 
     weak var host: EditorEngine.TextView?
 
-    private let mainRow: AccessoryRow
-    private let drawerRow: AccessoryRow
-    private let drawerSeparator = UIView()
-    private var drawerOpen: Bool
+    private let row = AccessoryRow()
     private weak var controlButton: AccessoryButton?
     private weak var commandButton: AccessoryButton?
     private weak var optionButton: AccessoryButton?
 
+    private static let rowHeight: CGFloat = 44
+
     init(host: EditorEngine.TextView) {
         self.host = host
-        self.drawerOpen = UserDefaults.standard.bool(
-            forKey: AppPreferenceKey.accessoryDrawerOpenByDefault
-        )
-        self.mainRow = AccessoryRow(style: .main)
-        self.drawerRow = AccessoryRow(style: .drawer)
-        let initialHeight = drawerOpen ? Self.totalHeightOpen : Self.totalHeightClosed
         // `.default` style + an explicit background colour gives a
         // flush fit against the keyboard. `.keyboard` style adds a
         // blur material with internal padding that introduces a
         // ~20 pt gap above the keys.
         super.init(frame: CGRect(x: 0, y: 0,
                                  width: UIScreen.main.bounds.width,
-                                 height: initialHeight),
+                                 height: Self.rowHeight),
                    inputViewStyle: .default)
         backgroundColor = UIColor { trait in
             trait.userInterfaceStyle == .dark
                 ? UIColor.secondarySystemBackground
                 : UIColor(white: 0.82, alpha: 1.0)
         }
-        allowsSelfSizing = true
         autoresizingMask = [.flexibleWidth]
-        buildRows()
+        row.setButtons(makeButtons())
         layout()
         refreshModifierVisuals()
         startStateObserver()
@@ -431,57 +422,33 @@ final class EditorAccessoryView: UIInputView, UIScrollViewDelegate {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     override var intrinsicContentSize: CGSize {
-        CGSize(width: UIView.noIntrinsicMetric,
-               height: drawerOpen ? Self.totalHeightOpen : Self.totalHeightClosed)
+        CGSize(width: UIView.noIntrinsicMetric, height: Self.rowHeight)
     }
-
-    private static let mainRowHeight: CGFloat = 44
-    private static let drawerRowHeight: CGFloat = 38
-    private static let totalHeightClosed: CGFloat = mainRowHeight
-    private static let totalHeightOpen: CGFloat = mainRowHeight + drawerRowHeight + 1
 
     private func layout() {
-        drawerSeparator.backgroundColor = UIColor.separator.withAlphaComponent(0.4)
-        drawerSeparator.translatesAutoresizingMaskIntoConstraints = false
-
-        let stack = UIStackView(arrangedSubviews: [drawerRow, drawerSeparator, mainRow])
-        stack.axis = .vertical
-        stack.spacing = 0
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(stack)
-
+        row.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(row)
         NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: topAnchor),
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor),
-            drawerRow.heightAnchor.constraint(equalToConstant: Self.drawerRowHeight),
-            mainRow.heightAnchor.constraint(equalToConstant: Self.mainRowHeight),
-            drawerSeparator.heightAnchor.constraint(equalToConstant: 1)
+            row.topAnchor.constraint(equalTo: topAnchor),
+            row.leadingAnchor.constraint(equalTo: leadingAnchor),
+            row.trailingAnchor.constraint(equalTo: trailingAnchor),
+            row.bottomAnchor.constraint(equalTo: bottomAnchor),
+            row.heightAnchor.constraint(equalToConstant: Self.rowHeight)
         ])
-        drawerRow.isHidden = !drawerOpen
-        drawerSeparator.isHidden = !drawerOpen
     }
 
-    // MARK: Row builders
-
-    private func buildRows() {
-        mainRow.setButtons(mainRowButtons())
-        drawerRow.setButtons(drawerRowButtons())
-    }
-
-    private func mainRowButtons() -> [AccessoryButton] {
+    private func makeButtons() -> [AccessoryButton] {
         var buttons: [AccessoryButton] = []
 
-        // Escape leads the row — clears armed modifiers / dismisses
-        // sheet / collapses selection.
+        // Escape leads — clears armed modifiers / dismisses sheet /
+        // collapses selection.
         buttons.append(button(symbol: "escape", label: "Escape") { [weak self] in
             self?.handleEscape()
         })
 
         // Sticky modifier cluster (⌃ ⌥ ⌘): tap arms; consumed by the
         // next key on the iOS keyboard. Tapping a different modifier
-        // disarms the others. Shift isn't a button: the iOS
+        // disarms the others. Shift isn't a button — the iOS
         // keyboard's own shift handles capitalization and the
         // engine reads the resulting case to detect ⌘⇧ shortcuts.
         // IMPORTANT: hold each button in a local `let` before writing
@@ -520,16 +487,10 @@ final class EditorAccessoryView: UIInputView, UIScrollViewDelegate {
             CaretMover.moveToDocumentEnd(in: self?.host)
         })
 
-        // Joystick — pan-gesture trackpad on the button itself
+        // Joystick — pan-gesture trackpad on the button itself.
         buttons.append(joystickButton())
 
-        // Drawer toggle
-        buttons.append(button(symbol: "ellipsis", label: "Toggle Drawer") { [weak self] in
-            self?.toggleDrawer()
-        })
-
-        // Dismiss keyboard, tail position so it doesn't take the
-        // prime leading slot.
+        // Dismiss keyboard at the tail.
         buttons.append(button(symbol: "chevron.down", label: "Hide Keyboard") { [weak self] in
             self?.host?.resignFirstResponder()
         })
@@ -560,47 +521,6 @@ final class EditorAccessoryView: UIInputView, UIScrollViewDelegate {
         }
     }
 
-    private func drawerRowButtons() -> [AccessoryButton] {
-        // Only chars that are NOT directly typable from the iOS
-        // keyboard's `123` or `#+=` pages. Backtick is the lone
-        // survivor — it only appears under a long-press on `'`.
-        let chars: [(String, String)] = [
-            ("`", "Backtick")
-        ]
-
-        return chars.map { (glyph, label) in
-            button(title: glyph, label: label) { [weak self] in
-                guard let host = self?.host else { return }
-                host.replace(host.selectedRange, withText: glyph)
-            }
-        }
-    }
-
-    // MARK: Actions
-
-    private func toggleDrawer() {
-        drawerOpen.toggle()
-        drawerRow.isHidden = !drawerOpen
-        drawerSeparator.isHidden = !drawerOpen
-        let newHeight = drawerOpen ? Self.totalHeightOpen : Self.totalHeightClosed
-        var newFrame = frame
-        newFrame.size.height = newHeight
-        frame = newFrame
-        invalidateIntrinsicContentSize()
-        setNeedsLayout()
-        layoutIfNeeded()
-        // Frame-mutation + intrinsic-size invalidation aren't enough
-        // on their own — iOS caches the accessory's height when the
-        // keyboard is up and won't re-measure unless we nil-and-
-        // reassign and explicitly call `reloadInputViews()`. Without
-        // this dance the keyboard window keeps the old slot height
-        // and the drawer row overlaps the main row.
-        guard let host else { return }
-        host.inputAccessoryView = nil
-        host.inputAccessoryView = self
-        host.reloadInputViews()
-    }
-
     private func handleEscape() {
         // Order: clear armed modifiers → dismiss sheet → clear
         // selection. Each step short-circuits if it had work to do.
@@ -624,14 +544,6 @@ final class EditorAccessoryView: UIInputView, UIScrollViewDelegate {
         }
     }
 
-    private func claimFocus() {
-        // The accessory's host is the current scene's textView, so
-        // claim that as currentEditor before triggering anything
-        // that reads the bus pointers.
-        guard let host, let state = host.editorState else { return }
-        AppStateBus.shared.scenes.currentEditor = state
-    }
-
     private func refreshModifierVisuals() {
         let state = host?.editorState
         controlButton?.isToggled = state?.armedAccessoryControl ?? false
@@ -639,9 +551,9 @@ final class EditorAccessoryView: UIInputView, UIScrollViewDelegate {
         optionButton?.isToggled  = state?.armedAccessoryOption ?? false
     }
 
-    /// Polls the host state's armed flags so the engine clearing them
-    /// (after consuming a key) updates the button visuals. CADisplay-
-    /// Link is overkill; a 100 ms timer is invisible to the user.
+    /// Polls so the engine clearing the armed flags (after consuming
+    /// a key) refreshes the button visuals. CADisplayLink is overkill
+    /// for a 100 ms cadence.
     private func startStateObserver() {
         let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refreshModifierVisuals() }
@@ -665,17 +577,8 @@ final class EditorAccessoryView: UIInputView, UIScrollViewDelegate {
     private func button(symbol: String,
                         label: String,
                         action: @escaping () -> Void) -> AccessoryButton {
-        let btn = AccessoryButton(style: .main)
+        let btn = AccessoryButton()
         btn.configure(symbol: symbol, accessibility: label)
-        btn.tapAction = action
-        return btn
-    }
-
-    private func button(title: String,
-                        label: String,
-                        action: @escaping () -> Void) -> AccessoryButton {
-        let btn = AccessoryButton(style: .drawer)
-        btn.configure(title: title, accessibility: label)
         btn.tapAction = action
         return btn
     }
@@ -688,14 +591,10 @@ private nonisolated(unsafe) var observerTimerKey: UInt8 = 0
 @MainActor
 private final class AccessoryRow: UIView {
 
-    enum Style { case main, drawer }
-    let style: Style
-
     private let scroll = UIScrollView()
     private let stack = UIStackView()
 
-    init(style: Style) {
-        self.style = style
+    init() {
         super.init(frame: .zero)
         scroll.translatesAutoresizingMaskIntoConstraints = false
         scroll.showsHorizontalScrollIndicator = false
@@ -704,9 +603,7 @@ private final class AccessoryRow: UIView {
         stack.axis = .horizontal
         stack.spacing = 6
         stack.alignment = .center
-        let hInset: CGFloat = 8
-        let vInset: CGFloat = style == .main ? 4 : 2
-        stack.layoutMargins = UIEdgeInsets(top: vInset, left: hInset, bottom: vInset, right: hInset)
+        stack.layoutMargins = UIEdgeInsets(top: 4, left: 8, bottom: 4, right: 8)
         stack.isLayoutMarginsRelativeArrangement = true
         addSubview(scroll)
         scroll.addSubview(stack)
@@ -736,10 +633,6 @@ private final class AccessoryRow: UIView {
 @MainActor
 class AccessoryButton: UIControl {
 
-    enum Style { case main, drawer }
-    private let style: Style
-
-    private let label = UILabel()
     private let symbolView = UIImageView()
     var tapAction: (() -> Void)?
 
@@ -747,34 +640,22 @@ class AccessoryButton: UIControl {
         didSet { updateBackground() }
     }
 
-    init(style: Style) {
-        self.style = style
+    init() {
         super.init(frame: .zero)
         translatesAutoresizingMaskIntoConstraints = false
-        layer.cornerRadius = style == .main ? 8 : 6
+        layer.cornerRadius = 8
         layer.cornerCurve = .continuous
         clipsToBounds = true
-        label.font = style == .main
-            ? .systemFont(ofSize: 17, weight: .regular)
-            : .systemFont(ofSize: 16, weight: .regular)
-        label.textAlignment = .center
-        label.textColor = .label
-        label.translatesAutoresizingMaskIntoConstraints = false
         symbolView.contentMode = .scaleAspectFit
         symbolView.tintColor = .label
         symbolView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(
-            pointSize: style == .main ? 17 : 14, weight: .regular
+            pointSize: 17, weight: .regular
         )
         symbolView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(label)
         addSubview(symbolView)
-        let minWidth: CGFloat = style == .main ? 38 : 30
-        let minHeight: CGFloat = style == .main ? 36 : 32
         NSLayoutConstraint.activate([
-            widthAnchor.constraint(greaterThanOrEqualToConstant: minWidth),
-            heightAnchor.constraint(greaterThanOrEqualToConstant: minHeight),
-            label.centerXAnchor.constraint(equalTo: centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: centerYAnchor),
+            widthAnchor.constraint(greaterThanOrEqualToConstant: 38),
+            heightAnchor.constraint(greaterThanOrEqualToConstant: 36),
             symbolView.centerXAnchor.constraint(equalTo: centerXAnchor),
             symbolView.centerYAnchor.constraint(equalTo: centerYAnchor)
         ])
@@ -786,16 +667,6 @@ class AccessoryButton: UIControl {
 
     func configure(symbol: String, accessibility: String) {
         symbolView.image = UIImage(systemName: symbol)
-        symbolView.isHidden = false
-        label.isHidden = true
-        accessibilityLabel = accessibility
-        isAccessibilityElement = true
-    }
-
-    func configure(title: String, accessibility: String) {
-        label.text = title
-        label.isHidden = false
-        symbolView.isHidden = true
         accessibilityLabel = accessibility
         isAccessibilityElement = true
     }
@@ -833,41 +704,33 @@ final class JoystickButton: AccessoryButton {
     weak var host: EditorEngine.TextView?
 
     /// Tracked drag offset since the last fire, per axis. Each time
-    /// `|offset|` crosses the per-axis step, we fire one move and
+    /// `|offset|` crosses the per-axis step we fire one move and
     /// subtract that step — the user can keep dragging to keep moving.
-    private var startTranslation: CGPoint = .zero
     private var firedOffset: CGPoint = .zero
 
     /// Pixels of drag = one cursor step. Chars move smaller than
-    /// lines (~half) because lines are taller than character cells.
+    /// lines because lines are taller than character cells.
     private static let charStep: CGFloat = 11
     private static let lineStep: CGFloat = 18
 
-    init() {
-        super.init(style: .main)
+    override init() {
+        super.init()
         let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan))
         pan.minimumNumberOfTouches = 1
         pan.maximumNumberOfTouches = 1
         pan.cancelsTouchesInView = false
         addGestureRecognizer(pan)
-        // The drag below would otherwise also fire the inherited
-        // touchUpInside tap. With no tap action set on the joystick
-        // (we only react to drag), `handleTap` is a no-op anyway.
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     @objc private func handlePan(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
-        case .began:
-            startTranslation = .zero
+        case .began, .ended, .cancelled, .failed:
             firedOffset = .zero
         case .changed:
             let translation = recognizer.translation(in: self)
             consumeAxis(translation: translation)
-        case .ended, .cancelled, .failed:
-            startTranslation = .zero
-            firedOffset = .zero
         default:
             break
         }
@@ -875,16 +738,16 @@ final class JoystickButton: AccessoryButton {
 
     private func consumeAxis(translation: CGPoint) {
         // Horizontal — characters
-        let dxRemainder = translation.x - firedOffset.x
-        if abs(dxRemainder) >= Self.charStep {
-            let steps = Int((dxRemainder / Self.charStep).rounded(.towardZero))
+        let dx = translation.x - firedOffset.x
+        if abs(dx) >= Self.charStep {
+            let steps = Int((dx / Self.charStep).rounded(.towardZero))
             CaretMover.move(in: host, by: steps)
             firedOffset.x += CGFloat(steps) * Self.charStep
         }
         // Vertical — lines
-        let dyRemainder = translation.y - firedOffset.y
-        if abs(dyRemainder) >= Self.lineStep {
-            let lineSteps = Int((dyRemainder / Self.lineStep).rounded(.towardZero))
+        let dy = translation.y - firedOffset.y
+        if abs(dy) >= Self.lineStep {
+            let lineSteps = Int((dy / Self.lineStep).rounded(.towardZero))
             CaretMover.moveCursor(in: host, byLines: lineSteps)
             firedOffset.y += CGFloat(lineSteps) * Self.lineStep
         }
@@ -895,18 +758,11 @@ final class JoystickButton: AccessoryButton {
 
 private extension EditorEngine.TextView {
     /// Reach back to the `EditorState` the host owns. The accessory
-    /// needs it to toggle armed modifiers and read tab-switcher
-    /// targets.
+    /// needs it to toggle armed modifiers.
     var editorState: EditorState? {
         AppStateBus.shared.scenes.allOpenSessions
             .flatMap(\.tabs)
             .first(where: { $0.state.textView === self })?
             .state
-    }
-}
-
-private extension Array {
-    subscript(safe index: Int) -> Element? {
-        indices.contains(index) ? self[index] : nil
     }
 }

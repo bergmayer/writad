@@ -284,7 +284,6 @@ private struct TypingPreferencesTab: View {
     @AppStorage(AppPreferenceKey.smartQuotes) private var smartQuotes: Bool = false
     @AppStorage(AppPreferenceKey.spellCheck) private var spellCheck: Bool = false
     @AppStorage(AppPreferenceKey.autoContinueLists) private var autoContinueLists: Bool = true
-    @AppStorage(AppPreferenceKey.accessoryDrawerOpenByDefault) private var accessoryDrawerOpen: Bool = false
 
     @State private var snippetsStore = SnippetsStore.shared
     @State private var editingSnippet: Snippet?
@@ -314,14 +313,6 @@ private struct TypingPreferencesTab: View {
                 Text("Editing Helpers")
             } footer: {
                 Text("Pressing return on a list line repeats the bullet (-, *, +) or increments the number on the next line. Pressing return on an empty list line drops the marker.")
-            }
-
-            Section {
-                Toggle("Open Drawer by Default", isOn: $accessoryDrawerOpen)
-            } header: {
-                Text("Keyboard Accessory")
-            } footer: {
-                Text("The accessory bar above the soft keyboard has a punctuation drawer (` ~ ^ _ \\ | () {} [] / ?  …) that toggles via the ⋯ button. Turn this on to keep it expanded.")
             }
 
             // Palette ▸ Insert Snippet, the keyboard accessory bar,
