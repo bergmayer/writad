@@ -198,13 +198,8 @@ struct SnippetEditorSheet: View {
 
 // MARK: - Snippets manager sheet
 
-/// Full CRUD sheet for the snippet library: list the saved entries,
-/// add new ones with `+`, edit an entry by tapping its row, delete
-/// with swipe-to-delete or the Edit-mode `−` buttons, reorder with
-/// the drag handle. Routed from the Edit ▸ Snippets ▸ Manage Snippets
-/// menu item; replaces the previous behaviour where "Manage Snippets"
-/// opened Preferences (which only exposed editing of pre-existing
-/// snippets, not creation).
+/// Full CRUD for the snippet library — Edit ▸ Snippets ▸ Manage
+/// Snippets opens here instead of bouncing into Preferences.
 struct SnippetsManagerSheet: View {
 
     @Environment(\.dismiss) private var dismiss
