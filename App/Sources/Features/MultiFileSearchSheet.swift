@@ -1,20 +1,12 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Multi-file search. Lives in its own WindowGroup ("multi-file-search")
-/// so it stays on screen while results are opened in editor tabs.
-///
-/// Three search scopes:
-///   - **Folder** — picked from Files (sandboxed). Recursive walk.
-///   - **Tabs in Foreground Window** — every tab's in-memory buffer of
-///     whatever window was active when the search window opened.
-///   - **All Open Windows** — every tab of every editor window.
-///
-/// Tap a result row → spawns a new editor tab/window (per the user's
-/// "Open documents in…" pref) and jumps to the matching line. Tabs/
-/// windows whose text isn't yet saved to disk also surface as results,
-/// but tapping them is a no-op (we don't yet round-trip back into a
-/// specific in-memory buffer — that would need a session/tab id route).
+/// Own `WindowGroup` so it stays open while results are routed into
+/// editor tabs. Scopes: a picked folder (recursive), the foreground
+/// window's tabs, or every tab of every open window. Tapping a row
+/// opens the file and jumps to the line. Unsaved-buffer hits surface
+/// but aren't tappable — there's no route to jump into a specific
+/// in-memory buffer yet.
 struct MultiFileSearchSheet: View {
 
     @Environment(\.dismiss) private var dismiss
@@ -26,9 +18,8 @@ struct MultiFileSearchSheet: View {
         case windows
         var id: String { rawValue }
 
-        /// Human label for the picker. The "tabs" wording shifts on
-        /// iPhone (one window only) to avoid the redundant "in
-        /// Foreground Window" phrasing.
+        /// Wording shifts on iPhone (single-window) to drop the
+        /// redundant "in Foreground Window" suffix.
         var label: String {
             switch self {
             case .folder:  return "Folder…"
@@ -38,8 +29,7 @@ struct MultiFileSearchSheet: View {
         }
     }
 
-    /// Scopes presented to the user. iPhone drops "All Open Windows"
-    /// since iOS allows only one scene at a time on phone.
+    /// iPhone is single-scene, so "All Open Windows" is hidden.
     private static var availableScopes: [Scope] {
         DeviceIdiom.isPhone ? [.folder, .tabs] : Scope.allCases
     }
@@ -55,26 +45,22 @@ struct MultiFileSearchSheet: View {
     @State private var groups: [ResultGroup] = []
     @State private var errorText: String?
     @State private var seenFirstAppear: Bool = false
-    /// Flat index into `results` for the currently-shown row. -1 means
-    /// "nothing selected yet"; Next/Prev wrap around the list.
+    /// -1 = nothing selected yet; Next/Prev wrap.
     @State private var currentResultIndex: Int = -1
-    /// Replace-All confirmation gate. Reading + writing every result
-    /// source is destructive and can touch dozens of files, so we
-    /// require an explicit second tap before doing it.
+    /// Gates a destructive write across every matched source —
+    /// requires an explicit second tap.
     @State private var pendingReplaceAllConfirm: Bool = false
-    /// Query-mode replace cursor: index of the next result to prompt
-    /// the user about. `nil` when query mode is inactive.
+    /// Cursor into `results` for the next per-match prompt; `nil`
+    /// when query mode is inactive.
     @State private var queryCursor: Int?
-    /// Human-readable summary printed below the controls after the
-    /// most recent Replace All or Query session ends.
+    /// Footer text after a Replace All or Query session ends.
     @State private var replaceSummary: String?
 
-    /// Browser cap. Past ~10 k results the list becomes unwieldy and
-    /// memory grows linearly with preview strings — stop early and
-    /// tell the user.
+    /// Past ~10k matches the list becomes unwieldy and previews grow
+    /// linearly in memory.
     private static let maxResults = 10_000
-    /// Anything larger almost never holds text the user wants to grep
-    /// through; skipping keeps the scan from stalling on a 200 MB log.
+    /// Above 5 MB almost never holds text the user wants to grep —
+    /// skips a 200 MB log from stalling the scan.
     private static let maxFileBytes = 5 * 1024 * 1024
 
     var body: some View {
@@ -111,8 +97,7 @@ struct MultiFileSearchSheet: View {
                 if !seenFirstAppear {
                     seenFirstAppear = true
                     // Same dismiss-on-restore guard the palette uses
-                    // so iPadOS doesn't relaunch the app into this
-                    // window after the user quit while it was open.
+                    // so iPadOS doesn't relaunch into this window.
                     if !AppStateBus.shared.scenes.consumeOpen(.multiFileSearch) {
                         AppStateBus.shared.scenes.openWindowAction?(.editor)
                         close()
@@ -178,8 +163,8 @@ struct MultiFileSearchSheet: View {
             }
             .pickerStyle(.segmented)
             .onChange(of: scope) { _, _ in
-                // Reset progress when scope changes so stale numbers
-                // don't leak across modes.
+                // Clear stale progress so the previous scope's
+                // counts don't leak.
                 results = []
                 groups = []
                 sourcesScanned = 0
@@ -286,12 +271,10 @@ struct MultiFileSearchSheet: View {
                     }
                     .buttonStyle(.borderedProminent)
                 }
-                // Replace controls — only surfaced after a search
-                // returns matches, so the user sees the scope of
-                // damage before the destructive action. Query mode
-                // walks matches one at a time with a per-match
-                // confirm; Replace All commits everything in one
-                // pass after a final confirmation.
+                // Replace surfaces only after a search returns —
+                // user sees the scope of damage first. Query walks
+                // per-match; Replace All commits in one pass after
+                // the final confirm.
                 HStack(spacing: 12) {
                     Button {
                         beginQueryReplace()
@@ -390,10 +373,8 @@ struct MultiFileSearchSheet: View {
         }
     }
 
-    /// Spawn a fresh editor window for the picked result. The new
-    /// scene consumes `pendingNewWindowURL` on first appear; the
-    /// `pendingGoToLine` is consumed inside `openURL` once the buffer
-    /// is loaded.
+    /// The new scene consumes `newWindow` on first appear; the
+    /// `goToLine` lands once the buffer finishes loading.
     private func open(_ match: SearchResult) {
         guard let url = match.url else { return }
         bus.pending.goToLine = match.line
@@ -401,8 +382,7 @@ struct MultiFileSearchSheet: View {
         bus.scenes.openWindowAction?(.editor)
     }
 
-    /// Advance / retreat the active result index and open whatever
-    /// the new index points to. Wraps both directions.
+    /// Wraps in both directions.
     private func stepResult(by delta: Int) {
         guard !results.isEmpty else { return }
         if currentResultIndex < 0 {
@@ -430,8 +410,8 @@ struct MultiFileSearchSheet: View {
         )
         let scopeCopy = scope
         let folderCopy = folder
-        // Snapshot tabs/windows up front so concurrent edits don't
-        // shift offsets out from under us mid-scan.
+        // Snapshot before the scan so concurrent edits don't shift
+        // offsets out from under us.
         let inMemorySources: [InMemorySource]
         switch scopeCopy {
         case .folder:  inMemorySources = []
@@ -449,7 +429,7 @@ struct MultiFileSearchSheet: View {
                     try runInMemorySearch(sources: inMemorySources, matcher: matcher)
                 }
             } catch is CancellationError {
-                // Expected on Stop.
+                // Stop button.
             } catch {
                 errorText = error.localizedDescription
             }
@@ -715,13 +695,9 @@ struct MultiFileSearchSheet: View {
 
     // MARK: - Replace
 
-    /// Rewrite every matched source with `query → replacement`.
-    /// Per-source: pull current text (live engine buffer for open
-    /// tabs, on-disk bytes for folder hits), apply the matcher's
-    /// replacement (regex template or literal), and commit back.
     /// File-backed sources go through `PlainTextDocument.save(to:)`
-    /// so the user's encoding + line endings + revision history are
-    /// preserved.
+    /// so encoding / line endings / revision history are preserved.
+    /// Open tabs pull from the live engine buffer.
     private func performReplaceAll() {
         let ctx = bus.find.context
         guard !ctx.query.isEmpty else { return }
@@ -743,9 +719,8 @@ struct MultiFileSearchSheet: View {
         if !errors.isEmpty {
             errorText = errors.prefix(3).joined(separator: " — ")
         }
-        // Results are stale after a replace (line numbers shifted,
-        // matches gone). Re-run the search so the user sees the new
-        // state, or close manually.
+        // Results are stale after a replace — line numbers shifted,
+        // matches gone. The user re-runs the search or closes.
         results.removeAll()
         groups.removeAll()
         currentResultIndex = -1
@@ -807,10 +782,8 @@ struct MultiFileSearchSheet: View {
         currentResultIndex = -1
     }
 
-    /// Apply the replacement to the source identified by `key`. Returns
-    /// the number of replacements made. `limitToFirst` caps the call
-    /// to a single replacement (used by Query mode's per-match
-    /// confirm).
+    /// `limitToFirst` caps to one replacement — Query mode's
+    /// per-match confirm.
     private func applyReplacement(
         in key: ResultGroupKey,
         query: String,
@@ -869,8 +842,7 @@ struct MultiFileSearchSheet: View {
         return count
     }
 
-    /// String-level replace that honours the find context's regex /
-    /// case / whole-word flags. Returns `(replacedText, count)`.
+    /// Returns `(replacedText, count)`.
     private func replaceInString(
         _ text: String,
         query: String,
