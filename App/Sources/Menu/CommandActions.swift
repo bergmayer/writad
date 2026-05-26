@@ -23,24 +23,18 @@ enum CommandActions {
         Self.context.scenes.openWindowAction?(.editor)
     }
 
-    /// Dev-only: snapshot every open session into the session store,
-    /// flush dirty drafts to disk, then `exit(0)`. Bypasses graceful
-    /// UIKit teardown — that's the point (force-quit simulates a real
-    /// kill so the next launch exercises the restore path).
+    /// Dev-only: terminate the process so the next launch exercises
+    /// the restore path. `_exit` skips atexit handlers — more
+    /// aggressive than `exit()` in case something in the SwiftUI
+    /// teardown chain was blocking the latter.
+    ///
+    /// For accurate restore testing, send the app to background
+    /// first (Home gesture) so `scenePhase == .background` fires the
+    /// normal save path — then come back and hit ⌘⇧Q. Saving inline
+    /// here was blocking on `URL.bookmarkData` for File Provider URLs,
+    /// preventing the quit from ever happening.
     static func devQuit() {
-        for openSession in Self.context.scenes.allOpenSessions {
-            guard !openSession.sceneUUID.isEmpty else { continue }
-            for tab in openSession.tabs where tab.document.isDirty {
-                if let live = tab.state.textView?.text {
-                    tab.document.text = live
-                }
-                tab.document.autoSave()
-            }
-            SessionsStore.shared.save(
-                SessionRecord(scene: openSession.sceneUUID, session: openSession)
-            )
-        }
-        exit(0)
+        _exit(0)
     }
 
     /// Every user-initiated new tab/window offers drafts recovery so
