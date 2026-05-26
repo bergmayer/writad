@@ -464,7 +464,9 @@ struct EditorScene: View {
     /// launch's records and spawns extra `WindowGroup` scenes for
     /// any beyond this one — SwiftUI only restores one scene on its
     /// own. Every scene then pops the next pending record (if any)
-    /// and applies it.
+    /// and applies it. Fresh scenes (no record popped) ask the
+    /// system for a prominent placement so a brand-new window
+    /// doesn't slam flat on top of its siblings.
     private func applySessionRestoreIfNeeded() {
         guard !didApplySessionRecord else { return }
         didApplySessionRecord = true
@@ -482,6 +484,18 @@ struct EditorScene: View {
         }
         if let record = SessionsStore.shared.consumePendingRestore() {
             SessionRestore.apply(record, to: session)
+        } else if !isColdLaunchFirstScene {
+            // No record + not the cold-launch baseline = user just
+            // spawned this window (⌘N, "New Window" menu, etc.).
+            // Hop past `onAppear` so the UIWindowScene is wired.
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(80))
+                let active = UIApplication.shared.connectedScenes
+                    .compactMap { $0 as? UIWindowScene }
+                    .first { $0.activationState == .foregroundActive }
+                guard let active else { return }
+                WindowPlacement.requestProminentPlacement(for: active)
+            }
         }
     }
 
