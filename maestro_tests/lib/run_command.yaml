@@ -1,0 +1,20 @@
+appId: com.palefire.ayyyy
+---
+# Open the Command Palette (⌘⇧P), type the COMMAND query, press Enter to
+# invoke the first match. Critically, after the action runs we tap back
+# into the editor to make sure focus returns there — otherwise subsequent
+# `clear_buffer` ⌘A's land in some other responder.
+#
+# Required env:
+#   COMMAND — substring of the palette title, e.g. "UPPERCASE"
+- runScript:
+    file: shortcut.js
+    env: { KEY: "p", MODS: "cmd,shift" }
+- waitForAnimationToEnd:
+    timeout: 2000
+- inputText: ${COMMAND}
+- pressKey: Enter
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn:
+    point: "50%,55%"

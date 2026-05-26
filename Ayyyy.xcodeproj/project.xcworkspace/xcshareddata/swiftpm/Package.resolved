@@ -1,0 +1,151 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "TreeSitter",
+        "repositoryURL": "https://github.com/tree-sitter/tree-sitter",
+        "state": {
+          "branch": null,
+          "revision": "98be227227af10cc7a269cb3ffb23686c0610b17",
+          "version": "0.20.9"
+        }
+      },
+      {
+        "package": "TreeSitterBash",
+        "repositoryURL": "https://github.com/tree-sitter/tree-sitter-bash",
+        "state": {
+          "branch": null,
+          "revision": "a06c2e4415e9bc0346c6b86d401879ffb44058f7",
+          "version": "0.25.1"
+        }
+      },
+      {
+        "package": "TreeSitterC",
+        "repositoryURL": "https://github.com/tree-sitter/tree-sitter-c",
+        "state": {
+          "branch": null,
+          "revision": "b780e47fc780ddc8da13afa35a3f4ed5c157823d",
+          "version": "0.24.2"
+        }
+      },
+      {
+        "package": "TreeSitterCPP",
+        "repositoryURL": "https://github.com/tree-sitter/tree-sitter-cpp",
+        "state": {
+          "branch": null,
+          "revision": "f41e1a044c8a84ea9fa8577fdd2eab92ec96de02",
+          "version": "0.23.4"
+        }
+      },
+      {
+        "package": "TreeSitterCSS",
+        "repositoryURL": "https://github.com/1024jp/tree-sitter-css",
+        "state": {
+          "branch": "swiftPackage",
+          "revision": "c094c8650aebcb653b51152f6cc13853b8db1a6f",
+          "version": null
+        }
+      },
+      {
+        "package": "TreeSitterGo",
+        "repositoryURL": "https://github.com/tree-sitter/tree-sitter-go",
+        "state": {
+          "branch": null,
+          "revision": "1547678a9da59885853f5f5cc8a99cc203fa2e2c",
+          "version": "0.25.0"
+        }
+      },
+      {
+        "package": "TreeSitterHTML",
+        "repositoryURL": "https://github.com/tree-sitter/tree-sitter-html",
+        "state": {
+          "branch": null,
+          "revision": "5a5ca8551a179998360b4a4ca2c0f366a35acc03",
+          "version": "0.23.2"
+        }
+      },
+      {
+        "package": "TreeSitterJava",
+        "repositoryURL": "https://github.com/tree-sitter/tree-sitter-java",
+        "state": {
+          "branch": null,
+          "revision": "94703d5a6bed02b98e438d7cad1136c01a60ba2c",
+          "version": "0.23.5"
+        }
+      },
+      {
+        "package": "TreeSitterJavaScript",
+        "repositoryURL": "https://github.com/1024jp/tree-sitter-javascript",
+        "state": {
+          "branch": "swiftPackage",
+          "revision": "0f459c8e007c8ab6488577e0877ee27df0ddcdfc",
+          "version": null
+        }
+      },
+      {
+        "package": "TreeSitterLatex",
+        "repositoryURL": "https://github.com/1024jp/tree-sitter-latex",
+        "state": {
+          "branch": "swiftPackage",
+          "revision": "e27d10e475cb091fb15df58a0d055ff6464e6024",
+          "version": null
+        }
+      },
+      {
+        "package": "TreeSitterMarkdown",
+        "repositoryURL": "https://github.com/tree-sitter-grammars/tree-sitter-markdown",
+        "state": {
+          "branch": null,
+          "revision": "f969cd3ae3f9fbd4e43205431d0ae286014c05b5",
+          "version": "0.5.3"
+        }
+      },
+      {
+        "package": "TreeSitterPython",
+        "repositoryURL": "https://github.com/1024jp/tree-sitter-python",
+        "state": {
+          "branch": "swiftPackage",
+          "revision": "42b752e6e26c901f39e96fb0163bbdd4a36058a4",
+          "version": null
+        }
+      },
+      {
+        "package": "TreeSitterRuby",
+        "repositoryURL": "https://github.com/tree-sitter/tree-sitter-ruby",
+        "state": {
+          "branch": null,
+          "revision": "71bd32fb7607035768799732addba884a37a6210",
+          "version": "0.23.1"
+        }
+      },
+      {
+        "package": "TreeSitterRust",
+        "repositoryURL": "https://github.com/tree-sitter/tree-sitter-rust",
+        "state": {
+          "branch": null,
+          "revision": "77a3747266f4d621d0757825e6b11edcbf991ca5",
+          "version": "0.24.2"
+        }
+      },
+      {
+        "package": "TreeSitterSwift",
+        "repositoryURL": "https://github.com/alex-pinkus/tree-sitter-swift",
+        "state": {
+          "branch": "with-generated-files",
+          "revision": "7b7909f2f6b9414be0958275f4c8e5d69c3bca43",
+          "version": null
+        }
+      },
+      {
+        "package": "TreeSitterTypeScript",
+        "repositoryURL": "https://github.com/tree-sitter/tree-sitter-typescript",
+        "state": {
+          "branch": null,
+          "revision": "f975a621f4e7f532fe322e13c4f79495e0a7b2e7",
+          "version": "0.23.2"
+        }
+      }
+    ]
+  },
+  "version": 1
+}

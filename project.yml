@@ -1,0 +1,53 @@
+# XcodeGen spec — fallback if Ayyyy.xcodeproj fails to open.
+#
+# Install XcodeGen via Homebrew (brew install xcodegen), then:
+#   rm -rf Ayyyy.xcodeproj
+#   xcodegen generate
+#
+name: Ayyyy
+options:
+  bundleIdPrefix: com.bergmayer
+  deploymentTarget:
+    iOS: "26.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+
+packages:
+  EditorCore:
+    path: Packages/EditorCore
+  Runestone:
+    path: Packages/Runestone
+
+targets:
+  Ayyyy:
+    type: application
+    platform: iOS
+    sources:
+      - path: App/Sources
+      - path: App/Resources/Assets.xcassets
+    info:
+      path: App/Resources/Info.plist
+    entitlements:
+      path: App/Resources/Ayyyy.entitlements
+    dependencies:
+      - package: EditorCore
+        product: FileEncoding
+      - package: EditorCore
+        product: LineEnding
+      - package: EditorCore
+        product: LineSort
+      - package: EditorCore
+        product: CharacterInfo
+      - package: Runestone
+        product: Runestone
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.bergmayer.Ayyyy
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "6.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
+        GENERATE_INFOPLIST_FILE: "NO"

@@ -1,0 +1,9 @@
+appId: com.palefire.ayyyy
+---
+# Open the in-app command palette (⌘⇧P). The palette's search field
+# auto-focuses, so subsequent inputText lands in it.
+- runScript:
+    file: shortcut.js
+    env: { KEY: "p", MODS: "cmd,shift" }
+- waitForAnimationToEnd:
+    timeout: 3000

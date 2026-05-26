@@ -1,0 +1,12 @@
+appId: com.palefire.ayyyy
+---
+# Focus the editor and empty the buffer. Deliberately does NOT relaunch
+# the app — relaunching between every flow makes the Simulator window
+# thrash and ends up wedging the iOS driver. Each test file is expected
+# to launchApp ONCE at its top.
+- tapOn:
+    point: "50%,55%"
+- runScript:
+    file: shortcut.js
+    env: { KEY: "a", MODS: "cmd" }
+- pressKey: Backspace

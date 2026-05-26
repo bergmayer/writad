@@ -1,0 +1,700 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 70;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B2000001 /* AyyyyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001 /* AyyyyApp.swift */; };
+		B2000002 /* PlainTextDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002 /* PlainTextDocument.swift */; };
+		B2000003 /* EditorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000003 /* EditorState.swift */; };
+		B2000004 /* EditorTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000004 /* EditorTextView.swift */; };
+		B2000005 /* EditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000005 /* EditorView.swift */; };
+		B2000006 /* EditorCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000006 /* EditorCommands.swift */; };
+		B2000007 /* EncodingPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000007 /* EncodingPickerSheet.swift */; };
+		B2000008 /* LineEndingPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000008 /* LineEndingPickerSheet.swift */; };
+		B2000009 /* LanguagePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000009 /* LanguagePickerSheet.swift */; };
+		B200000A /* CharacterInspectorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000A /* CharacterInspectorSheet.swift */; };
+		B200000B /* SortLinesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000B /* SortLinesSheet.swift */; };
+		B200000C /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000C /* AppTheme.swift */; };
+		B200000D /* LanguageRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000D /* LanguageRegistry.swift */; };
+		B200000E /* EditorActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000E /* EditorActions.swift */; };
+		B200000F /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000F /* AppPreferences.swift */; };
+		B2000010 /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000010 /* PreferencesView.swift */; };
+		B2000011 /* GoToLineSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000011 /* GoToLineSheet.swift */; };
+		B2000012 /* Transformations.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000012 /* Transformations.swift */; };
+		B2000013 /* AppStateBus.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000013 /* AppStateBus.swift */; };
+		B2000014 /* CommandActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000014 /* CommandActions.swift */; };
+		B2000015 /* CommandRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000015 /* CommandRegistry.swift */; };
+		B2000016 /* CommandPaletteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000016 /* CommandPaletteSheet.swift */; };
+		B2000017 /* SelectLinesContainingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000017 /* SelectLinesContainingSheet.swift */; };
+		B2000018 /* EditorSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000018 /* EditorSupport.swift */; };
+		B200001A /* FindReplaceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100001A /* FindReplaceSheet.swift */; };
+		B200001B /* RecentFilesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100001B /* RecentFilesStore.swift */; };
+		B200001C /* KeyboardAccessoryBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100001C /* KeyboardAccessoryBar.swift */; };
+		B200001D /* FoldPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100001D /* FoldPersistence.swift */; };
+		B200001E /* FoldDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100001E /* FoldDiscovery.swift */; };
+		B200001F /* MarkdownInlineHighlighter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100001F /* MarkdownInlineHighlighter.swift */; };
+		B2000020 /* WindowToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000020 /* WindowToolbar.swift */; };
+		B2000021 /* InfoInspectorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000021 /* InfoInspectorSheet.swift */; };
+		B2000022 /* LineUtilitiesSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000022 /* LineUtilitiesSheets.swift */; };
+		B2000023 /* Snippets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000023 /* Snippets.swift */; };
+		B2000024 /* DeveloperToolsSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000024 /* DeveloperToolsSheets.swift */; };
+		B2000019 /* MultiFileSearchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000019 /* MultiFileSearchSheet.swift */; };
+		B2000025 /* ZapGremlinsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000025 /* ZapGremlinsSheet.swift */; };
+		B2000026 /* RevisionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000026 /* RevisionStore.swift */; };
+		B2000027 /* RevisionsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000027 /* RevisionsSheet.swift */; };
+		B2000028 /* DocumentPickerBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000028 /* DocumentPickerBridge.swift */; };
+		B2000029 /* FileBrowserScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000029 /* FileBrowserScene.swift */; };
+		B200002A /* Timing.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100002A /* Timing.swift */; };
+		B200002B /* TextFileWrapperProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100002B /* TextFileWrapperProxy.swift */; };
+		B200002C /* EditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100002C /* EditorSheet.swift */; };
+		B200002D /* TabBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100002D /* TabBarView.swift */; };
+		B200002E /* EditorScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100002E /* EditorScene.swift */; };
+		B200002F /* DocumentLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100002F /* DocumentLocation.swift */; };
+		B2000030 /* DeviceIdiom.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000030 /* DeviceIdiom.swift */; };
+		B2000031 /* FocusedSceneValues.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000031 /* FocusedSceneValues.swift */; };
+		B2000032 /* TabSwitcherSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000032 /* TabSwitcherSheet.swift */; };
+		B2000033 /* PortedThemes.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000033 /* PortedThemes.swift */; };
+		B2000034 /* EditableTitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000034 /* EditableTitleView.swift */; };
+		B2000035 /* MarkdownPreviewScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000035 /* MarkdownPreviewScene.swift */; };
+		B2000036 /* JSTransform.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000036 /* JSTransform.swift */; };
+		B2000037 /* Wave1Sheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000037 /* Wave1Sheets.swift */; };
+		B2000038 /* OutlineSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000038 /* OutlineSheet.swift */; };
+		B200003A /* OutlineSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100003A /* OutlineSidebar.swift */; };
+		B2010001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1010001 /* Assets.xcassets */; };
+		B2020001 /* FileEncoding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000001 /* FileEncoding */; };
+		B2020002 /* LineEnding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000002 /* LineEnding */; };
+		B2020003 /* LineSort in Frameworks */ = {isa = PBXBuildFile; productRef = B4000003 /* LineSort */; };
+		B2020004 /* CharacterInfo in Frameworks */ = {isa = PBXBuildFile; productRef = B4000004 /* CharacterInfo */; };
+		B2020005 /* EditorEngine in Frameworks */ = {isa = PBXBuildFile; productRef = B4000005 /* EditorEngine */; };
+		B2020006 /* AyyyySyntax in Frameworks */ = {isa = PBXBuildFile; productRef = B4000006 /* AyyyySyntax */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		B1000000 /* Ayyyy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ayyyy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1000001 /* AyyyyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AyyyyApp.swift; sourceTree = "<group>"; };
+		B1000002 /* PlainTextDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainTextDocument.swift; sourceTree = "<group>"; };
+		B1000003 /* EditorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorState.swift; sourceTree = "<group>"; };
+		B1000004 /* EditorTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorTextView.swift; sourceTree = "<group>"; };
+		B1000005 /* EditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorView.swift; sourceTree = "<group>"; };
+		B1000006 /* EditorCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorCommands.swift; sourceTree = "<group>"; };
+		B1000007 /* EncodingPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EncodingPickerSheet.swift; sourceTree = "<group>"; };
+		B1000008 /* LineEndingPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineEndingPickerSheet.swift; sourceTree = "<group>"; };
+		B1000009 /* LanguagePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguagePickerSheet.swift; sourceTree = "<group>"; };
+		B100000A /* CharacterInspectorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterInspectorSheet.swift; sourceTree = "<group>"; };
+		B100000B /* SortLinesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SortLinesSheet.swift; sourceTree = "<group>"; };
+		B100000C /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
+		B100000D /* LanguageRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageRegistry.swift; sourceTree = "<group>"; };
+		B100000E /* EditorActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorActions.swift; sourceTree = "<group>"; };
+		B100000F /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
+		B1000010 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
+		B1000011 /* GoToLineSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoToLineSheet.swift; sourceTree = "<group>"; };
+		B1000012 /* Transformations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transformations.swift; sourceTree = "<group>"; };
+		B1000013 /* AppStateBus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateBus.swift; sourceTree = "<group>"; };
+		B1000014 /* CommandActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandActions.swift; sourceTree = "<group>"; };
+		B1000015 /* CommandRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandRegistry.swift; sourceTree = "<group>"; };
+		B1000016 /* CommandPaletteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPaletteSheet.swift; sourceTree = "<group>"; };
+		B1000017 /* SelectLinesContainingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectLinesContainingSheet.swift; sourceTree = "<group>"; };
+		B1000018 /* EditorSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSupport.swift; sourceTree = "<group>"; };
+		B100001A /* FindReplaceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindReplaceSheet.swift; sourceTree = "<group>"; };
+		B100001B /* RecentFilesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentFilesStore.swift; sourceTree = "<group>"; };
+		B100001C /* KeyboardAccessoryBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardAccessoryBar.swift; sourceTree = "<group>"; };
+		B100001D /* FoldPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoldPersistence.swift; sourceTree = "<group>"; };
+		B100001E /* FoldDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoldDiscovery.swift; sourceTree = "<group>"; };
+		B100001F /* MarkdownInlineHighlighter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownInlineHighlighter.swift; sourceTree = "<group>"; };
+		B1000020 /* WindowToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowToolbar.swift; sourceTree = "<group>"; };
+		B1000021 /* InfoInspectorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoInspectorSheet.swift; sourceTree = "<group>"; };
+		B1000022 /* LineUtilitiesSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineUtilitiesSheets.swift; sourceTree = "<group>"; };
+		B1000023 /* Snippets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snippets.swift; sourceTree = "<group>"; };
+		B1000024 /* DeveloperToolsSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeveloperToolsSheets.swift; sourceTree = "<group>"; };
+		B1000019 /* MultiFileSearchSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiFileSearchSheet.swift; sourceTree = "<group>"; };
+		B1000025 /* ZapGremlinsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZapGremlinsSheet.swift; sourceTree = "<group>"; };
+		B1000026 /* RevisionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevisionStore.swift; sourceTree = "<group>"; };
+		B1000027 /* RevisionsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevisionsSheet.swift; sourceTree = "<group>"; };
+		B1000028 /* DocumentPickerBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentPickerBridge.swift; sourceTree = "<group>"; };
+		B1000029 /* FileBrowserScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileBrowserScene.swift; sourceTree = "<group>"; };
+		B100002A /* Timing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Timing.swift; sourceTree = "<group>"; };
+		B100002B /* TextFileWrapperProxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextFileWrapperProxy.swift; sourceTree = "<group>"; };
+		B100002C /* EditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSheet.swift; sourceTree = "<group>"; };
+		B100002D /* TabBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarView.swift; sourceTree = "<group>"; };
+		B100002E /* EditorScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorScene.swift; sourceTree = "<group>"; };
+		B100002F /* DocumentLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentLocation.swift; sourceTree = "<group>"; };
+		B1000030 /* DeviceIdiom.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceIdiom.swift; sourceTree = "<group>"; };
+		B1000031 /* FocusedSceneValues.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusedSceneValues.swift; sourceTree = "<group>"; };
+		B1000032 /* TabSwitcherSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabSwitcherSheet.swift; sourceTree = "<group>"; };
+		B1000033 /* PortedThemes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortedThemes.swift; sourceTree = "<group>"; };
+		B1000034 /* EditableTitleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableTitleView.swift; sourceTree = "<group>"; };
+		B1000035 /* MarkdownPreviewScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownPreviewScene.swift; sourceTree = "<group>"; };
+		B1000036 /* JSTransform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSTransform.swift; sourceTree = "<group>"; };
+		B1000037 /* Wave1Sheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wave1Sheets.swift; sourceTree = "<group>"; };
+		B1000038 /* OutlineSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutlineSheet.swift; sourceTree = "<group>"; };
+		B100003A /* OutlineSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutlineSidebar.swift; sourceTree = "<group>"; };
+		B1010001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B1010002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B1010003 /* Ayyyy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ayyyy.entitlements; sourceTree = "<group>"; };
+		B1020001 /* EditorKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = EditorKit; path = Packages/EditorKit; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B3000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B2020001 /* FileEncoding in Frameworks */,
+				B2020002 /* LineEnding in Frameworks */,
+				B2020003 /* LineSort in Frameworks */,
+				B2020004 /* CharacterInfo in Frameworks */,
+				B2020005 /* EditorEngine in Frameworks */,
+				B2020006 /* AyyyySyntax in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		B5000001 = {
+			isa = PBXGroup;
+			children = (
+				B5000010 /* App */,
+				B5000020 /* Packages */,
+				B5000030 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		B5000010 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				B5000011 /* Sources */,
+				B5000012 /* Resources */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		B5000011 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				B5000013 /* App */,
+				B5000014 /* Documents */,
+				B5000015 /* Editor */,
+				B5000016 /* Menu */,
+				B5000017 /* Features */,
+				B5000019 /* Preferences */,
+				B5000018 /* Support */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		B5000012 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				B1010001 /* Assets.xcassets */,
+				B1010002 /* Info.plist */,
+				B1010003 /* Ayyyy.entitlements */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		B5000013 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				B1000001 /* AyyyyApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		B5000014 /* Documents */ = {
+			isa = PBXGroup;
+			children = (
+				B1000002 /* PlainTextDocument.swift */,
+				B100001B /* RecentFilesStore.swift */,
+				B1000026 /* RevisionStore.swift */,
+				B1000028 /* DocumentPickerBridge.swift */,
+				B100002B /* TextFileWrapperProxy.swift */,
+			);
+			path = Documents;
+			sourceTree = "<group>";
+		};
+		B5000015 /* Editor */ = {
+			isa = PBXGroup;
+			children = (
+				B1000003 /* EditorState.swift */,
+				B100000E /* EditorActions.swift */,
+				B1000013 /* AppStateBus.swift */,
+				B1000004 /* EditorTextView.swift */,
+				B1000018 /* EditorSupport.swift */,
+				B100001C /* KeyboardAccessoryBar.swift */,
+				B100001D /* FoldPersistence.swift */,
+				B100001E /* FoldDiscovery.swift */,
+				B100001F /* MarkdownInlineHighlighter.swift */,
+				B1000005 /* EditorView.swift */,
+				B100002E /* EditorScene.swift */,
+				B1000029 /* FileBrowserScene.swift */,
+				B100002C /* EditorSheet.swift */,
+				B100002D /* TabBarView.swift */,
+				B100002F /* DocumentLocation.swift */,
+				B1000031 /* FocusedSceneValues.swift */,
+				B1000034 /* EditableTitleView.swift */,
+			);
+			path = Editor;
+			sourceTree = "<group>";
+		};
+		B5000016 /* Menu */ = {
+			isa = PBXGroup;
+			children = (
+				B1000006 /* EditorCommands.swift */,
+				B1000014 /* CommandActions.swift */,
+				B1000015 /* CommandRegistry.swift */,
+			);
+			path = Menu;
+			sourceTree = "<group>";
+		};
+		B5000017 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				B1000007 /* EncodingPickerSheet.swift */,
+				B1000008 /* LineEndingPickerSheet.swift */,
+				B1000009 /* LanguagePickerSheet.swift */,
+				B100000A /* CharacterInspectorSheet.swift */,
+				B100000B /* SortLinesSheet.swift */,
+				B1000011 /* GoToLineSheet.swift */,
+				B1000016 /* CommandPaletteSheet.swift */,
+				B1000017 /* SelectLinesContainingSheet.swift */,
+				B100001A /* FindReplaceSheet.swift */,
+				B1000019 /* MultiFileSearchSheet.swift */,
+				B1000020 /* WindowToolbar.swift */,
+				B1000021 /* InfoInspectorSheet.swift */,
+				B1000022 /* LineUtilitiesSheets.swift */,
+				B1000023 /* Snippets.swift */,
+				B1000024 /* DeveloperToolsSheets.swift */,
+				B1000025 /* ZapGremlinsSheet.swift */,
+				B1000027 /* RevisionsSheet.swift */,
+				B1000032 /* TabSwitcherSheet.swift */,
+				B1000035 /* MarkdownPreviewScene.swift */,
+				B1000036 /* JSTransform.swift */,
+				B1000037 /* Wave1Sheets.swift */,
+				B1000038 /* OutlineSheet.swift */,
+				B100003A /* OutlineSidebar.swift */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		B5000018 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				B100000C /* AppTheme.swift */,
+				B100000D /* LanguageRegistry.swift */,
+				B1000012 /* Transformations.swift */,
+				B100002A /* Timing.swift */,
+				B1000030 /* DeviceIdiom.swift */,
+				B1000033 /* PortedThemes.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+		B5000019 /* Preferences */ = {
+			isa = PBXGroup;
+			children = (
+				B100000F /* AppPreferences.swift */,
+				B1000010 /* PreferencesView.swift */,
+			);
+			path = Preferences;
+			sourceTree = "<group>";
+		};
+		B5000020 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				B1020001 /* EditorKit */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		B5000030 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B1000000 /* Ayyyy.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B6000001 /* Ayyyy */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B7000002 /* Build configuration list for PBXNativeTarget "Ayyyy" */;
+			buildPhases = (
+				B3000003 /* Sources */,
+				B3000004 /* Frameworks */,
+				B3000005 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Ayyyy;
+			packageProductDependencies = (
+				B4000001 /* FileEncoding */,
+				B4000002 /* LineEnding */,
+				B4000003 /* LineSort */,
+				B4000004 /* CharacterInfo */,
+				B4000005 /* EditorEngine */,
+				B4000006 /* AyyyySyntax */,
+			);
+			productName = Ayyyy;
+			productReference = B1000000 /* Ayyyy.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B8000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					B6000001 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+				};
+			};
+			buildConfigurationList = B7000001 /* Build configuration list for PBXProject "Ayyyy" */;
+			compatibilityVersion = "Xcode 16.0.Superseded.1";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = B5000001;
+			packageReferences = (
+				B9000001 /* XCLocalSwiftPackageReference "Packages/EditorKit" */,
+			);
+			productRefGroup = B5000030 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B6000001 /* Ayyyy */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B3000005 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B2010001 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		B3000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B2000001 /* AyyyyApp.swift in Sources */,
+				B2000002 /* PlainTextDocument.swift in Sources */,
+				B2000003 /* EditorState.swift in Sources */,
+				B2000004 /* EditorTextView.swift in Sources */,
+				B200000E /* EditorActions.swift in Sources */,
+				B200000F /* AppPreferences.swift in Sources */,
+				B2000010 /* PreferencesView.swift in Sources */,
+				B2000011 /* GoToLineSheet.swift in Sources */,
+				B2000012 /* Transformations.swift in Sources */,
+				B2000013 /* AppStateBus.swift in Sources */,
+				B2000014 /* CommandActions.swift in Sources */,
+				B2000015 /* CommandRegistry.swift in Sources */,
+				B2000016 /* CommandPaletteSheet.swift in Sources */,
+				B2000005 /* EditorView.swift in Sources */,
+				B2000006 /* EditorCommands.swift in Sources */,
+				B2000007 /* EncodingPickerSheet.swift in Sources */,
+				B2000008 /* LineEndingPickerSheet.swift in Sources */,
+				B2000009 /* LanguagePickerSheet.swift in Sources */,
+				B200000A /* CharacterInspectorSheet.swift in Sources */,
+				B200000B /* SortLinesSheet.swift in Sources */,
+				B200000C /* AppTheme.swift in Sources */,
+				B200000D /* LanguageRegistry.swift in Sources */,
+				B2000017 /* SelectLinesContainingSheet.swift in Sources */,
+				B2000018 /* EditorSupport.swift in Sources */,
+				B200001A /* FindReplaceSheet.swift in Sources */,
+				B2000019 /* MultiFileSearchSheet.swift in Sources */,
+				B2000025 /* ZapGremlinsSheet.swift in Sources */,
+				B2000026 /* RevisionStore.swift in Sources */,
+				B2000027 /* RevisionsSheet.swift in Sources */,
+				B2000028 /* DocumentPickerBridge.swift in Sources */,
+				B2000029 /* FileBrowserScene.swift in Sources */,
+				B200002A /* Timing.swift in Sources */,
+				B200002B /* TextFileWrapperProxy.swift in Sources */,
+				B200002C /* EditorSheet.swift in Sources */,
+				B200002D /* TabBarView.swift in Sources */,
+				B200002E /* EditorScene.swift in Sources */,
+				B200002F /* DocumentLocation.swift in Sources */,
+				B2000030 /* DeviceIdiom.swift in Sources */,
+				B2000031 /* FocusedSceneValues.swift in Sources */,
+				B2000032 /* TabSwitcherSheet.swift in Sources */,
+				B2000033 /* PortedThemes.swift in Sources */,
+				B2000034 /* EditableTitleView.swift in Sources */,
+				B2000035 /* MarkdownPreviewScene.swift in Sources */,
+				B2000036 /* JSTransform.swift in Sources */,
+				B2000037 /* Wave1Sheets.swift in Sources */,
+				B2000038 /* OutlineSheet.swift in Sources */,
+				B200003A /* OutlineSidebar.swift in Sources */,
+				B200001B /* RecentFilesStore.swift in Sources */,
+				B200001C /* KeyboardAccessoryBar.swift in Sources */,
+				B200001D /* FoldPersistence.swift in Sources */,
+				B200001E /* FoldDiscovery.swift in Sources */,
+				B200001F /* MarkdownInlineHighlighter.swift in Sources */,
+				B2000020 /* WindowToolbar.swift in Sources */,
+				B2000021 /* InfoInspectorSheet.swift in Sources */,
+				B2000022 /* LineUtilitiesSheets.swift in Sources */,
+				B2000023 /* Snippets.swift in Sources */,
+				B2000024 /* DeveloperToolsSheets.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		BA000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		BA000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 6.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		BA000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = App/Resources/Ayyyy.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = 2T9LB27UWT;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Resources/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.palefire.ayyyy;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		BA000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = App/Resources/Ayyyy.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = 2T9LB27UWT;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.palefire.ayyyy;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		B7000001 /* Build configuration list for PBXProject "Ayyyy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BA000001 /* Debug */,
+				BA000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B7000002 /* Build configuration list for PBXNativeTarget "Ayyyy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BA000003 /* Debug */,
+				BA000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		B9000001 /* XCLocalSwiftPackageReference "Packages/EditorKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/EditorKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B4000001 /* FileEncoding */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FileEncoding;
+		};
+		B4000002 /* LineEnding */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LineEnding;
+		};
+		B4000003 /* LineSort */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LineSort;
+		};
+		B4000004 /* CharacterInfo */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CharacterInfo;
+		};
+		B4000005 /* EditorEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = EditorEngine;
+		};
+		B4000006 /* AyyyySyntax */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AyyyySyntax;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = B8000001 /* Project object */;
+}

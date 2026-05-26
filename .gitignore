@@ -1,0 +1,11 @@
+.DS_Store
+.swiftpm/
+.build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.xcuserdatad
+.idea/
+*.swp
+build/
+App/Sources/**/.draftsentinel

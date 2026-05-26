@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+
+	<!-- System-wide registration for text & Markdown. Each
+	     CFBundleDocumentTypes entry tells Springboard and the Files
+	     app "Ayyyy can edit these UTIs"; with
+	     LSSupportsOpeningDocumentsInPlace = YES (below) we accept the
+	     URL hand-off directly instead of forcing an import-and-copy.
+	     The DocumentGroup-era FP -1005 bug that previously kept this
+	     off only fired inside DocumentGroup's bookmark dance — our
+	     custom .fileImporter + URLSession load path doesn't go
+	     through that codepath, so the regression risk is gone. -->
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Plain Text</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.plain-text</string>
+				<string>public.text</string>
+				<string>public.utf8-plain-text</string>
+				<string>public.utf16-plain-text</string>
+				<string>public.delimited-values-text</string>
+				<string>public.comma-separated-values-text</string>
+				<string>public.tab-separated-values-text</string>
+				<string>public.source-code</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Markdown</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>net.daringfireball.markdown</string>
+			</array>
+		</dict>
+	</array>
+	<!-- Imported UTI declaration for Markdown — Apple doesn't ship a
+	     system UTI for .md / .markdown, so we declare the community
+	     standard (`net.daringfireball.markdown`, also exported by iA
+	     Writer, Bear, Drafts, etc.) and map both extensions to it.
+	     "Imported" rather than "Exported" so we coexist peacefully
+	     with apps that own the type. -->
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>net.daringfireball.markdown</string>
+			<key>UTTypeDescription</key>
+			<string>Markdown</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.plain-text</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>md</string>
+					<string>markdown</string>
+					<string>mdown</string>
+					<string>mkd</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>text/markdown</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<!-- Now ON: system-wide handler. Files app, share sheets, and the
+	     "Open with…" path will offer Ayyyy for any registered UTI and
+	     hand us the file URL directly. `.onOpenURL` in EditorScene
+	     receives it and routes through `route(open:)`. -->
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<!-- Allow the user to browse the app's Documents/ in Files (so
+	     drafts and saved-as files are reachable from outside the app)
+	     while still owning the document browser surface ourselves. -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<true/>
+	</dict>
+
+	<!-- Home Screen Quick Actions: long-press the app icon (or right-click
+	     in macOS dock) to get straight to New File / Command Palette
+	     without going through the editor first. The handler in the SwiftUI
+	     scene observes the matching `UIApplicationShortcutItem.type` and
+	     fires the corresponding command. -->
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.palefire.ayyyy.shortcut.newFile</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>New File</string>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeAdd</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.palefire.ayyyy.shortcut.commandPalette</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Command Palette</string>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeSearch</string>
+		</dict>
+	</array>
+</dict>
+</plist>

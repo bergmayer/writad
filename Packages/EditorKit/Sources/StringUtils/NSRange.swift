@@ -1,0 +1,239 @@
+//
+//  NSRange.swift
+//  StringUtils
+//
+//  CotEditor
+//  https://coteditor.com
+//
+//  Created by 1024jp on 2023-02-15.
+//
+//  ---------------------------------------------------------------------------
+//
+//  © 2023-2026 1024jp
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//  https://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+//
+
+public import Foundation
+
+public extension NSRange {
+    
+    static let notFound = NSRange(location: NSNotFound, length: 0)
+    
+    
+    /// A boolean value indicating whether the range contains no elements.
+    var isEmpty: Bool {
+        
+        self.length == 0
+    }
+    
+    
+    /// A boolean value indicating whether the range is not found.
+    var isNotFound: Bool {
+        
+        self.location == NSNotFound
+    }
+    
+    
+    /// Checks if the given index is in the receiver or touches to one of the receiver's bounds.
+    ///
+    /// - Parameter index: The index to test.
+    /// - Returns: `true` if the receiver contains or touches `index`; otherwise, `false`.
+    func touches(_ index: Int) -> Bool {
+        
+        self.lowerBound <= index && index <= self.upperBound
+    }
+    
+    
+    /// Returns a boolean indicating whether the specified range intersects the receiver’s range.
+    ///
+    /// - Parameter other: The other range.
+    /// - Returns: `true` if `other` intersects the receiver; otherwise, `false`.
+    func intersects(_ other: NSRange) -> Bool {
+        
+        self.intersection(other) != nil
+    }
+    
+    
+    /// Checks if the two ranges overlap or touch each other.
+    ///
+    /// - Note: Unlike Swift.Range's `overlaps(_:)`, this method returns `true` when a range length is 0.
+    /// 
+    /// - Parameter range: The range to test.
+    /// - Returns: `true` if the ranges overlap or touch each other; otherwise, `false`.
+    func touches(_ range: NSRange) -> Bool {
+        
+        if self.location == NSNotFound { return false }
+        if range.location == NSNotFound { return false }
+        if self.upperBound < range.lowerBound { return false }
+        if range.upperBound < self.lowerBound { return false }
+        
+        return true
+    }
+    
+    
+    /// Returns a copied NSRange but whose location is shifted toward the given `offset`.
+    ///
+    /// - Parameter offset: The offset to shift.
+    /// - Returns: A new NSRange.
+    func shifted(by offset: Int) -> NSRange {
+        
+        NSRange(location: self.location + offset, length: self.length)
+    }
+    
+    
+    /// Returns a subrange clamped to `maxLength` around the given `target` range.
+    ///
+    /// The returned range is always a subrange of `self` and includes `target` as much as possible,
+    /// with up to `headPadding` characters preserved before `target`.
+    ///
+    /// - Parameters:
+    ///   - target: The range to keep visible.
+    ///   - maxLength: The maximum length of the returned range.
+    ///   - headPadding: The preferred number of characters to keep before `target`.
+    /// - Returns: A clamped subrange, or `self` if already within `maxLength`.
+    func clamped(around target: NSRange, maxLength: Int, headPadding: Int = 64) -> NSRange {
+        
+        assert(maxLength > 0)
+        assert(headPadding >= 0)
+        assert(self.lowerBound <= target.lowerBound && target.lowerBound <= self.upperBound)
+        
+        guard self.length > maxLength else { return self }
+        
+        let effectiveHead = min(headPadding, target.location - self.location)
+        let fragmentStart = max(self.location, target.location - effectiveHead)
+        let fragmentEnd = min(self.upperBound, fragmentStart + maxLength)
+        
+        return NSRange(fragmentStart..<fragmentEnd)
+    }
+    
+    
+    /// Returns the union of this range with the given optional ranges.
+    ///
+    /// - Parameter ranges: Optional ranges to union onto this range.
+    /// - Returns: The combined range.
+    func union(with ranges: [NSRange?]) -> NSRange {
+        
+        ranges
+            .compactMap(\.self)
+            .reduce(self) { $0.union($1) }
+    }
+}
+
+
+public extension NSRange {
+    
+    struct InsertionItem: Equatable, Sendable {
+        
+        public var string: String
+        public var location: Int
+        public var forward: Bool
+        
+        
+        public init(string: String, location: Int, forward: Bool) {
+            
+            self.string = string
+            self.location = location
+            self.forward = forward
+        }
+    }
+    
+    
+    /// Returns a new range by assuming the indices of the given items are inserted.
+    ///
+    /// - Parameter items: Insertion items to be inserted, sorted by `location` in ascending order.
+    /// - Returns: A new range that the receiver moved.
+    func inserted(items: [Self.InsertionItem]) -> NSRange {
+        
+        assert(items == items.sorted(using: KeyPathComparator(\.location)))
+        
+        let location = items
+            .prefix { (self.isEmpty && $0.forward) ? $0.location <= self.lowerBound : $0.location < self.lowerBound }
+            .map(\.string.length)
+            .reduce(self.location, +)
+        let length = items
+            .filter { (self.isEmpty || !$0.forward) ? self.lowerBound < $0.location : self.lowerBound <= $0.location }
+            .filter { (self.isEmpty || $0.forward) ? $0.location < self.upperBound : $0.location <= self.upperBound }
+            .map(\.string.length)
+            .reduce(self.length, +)
+        
+        return NSRange(location: location, length: length)
+    }
+    
+    
+    /// Returns a new range by assuming the indexes in the given ranges are removed.
+    ///
+    /// - Parameter ranges: An array of NSRange where the indexes are removed.
+    /// - Returns: A new range that the receiver moved.
+    func removed(ranges: [NSRange]) -> NSRange {
+        
+        let indices = IndexSet(integersIn: ranges)
+        let location = self.location - indices.count(in: ..<self.lowerBound)
+        let length = self.length - indices.count(in: Range(self)!)
+        
+        return NSRange(location: location, length: length)
+    }
+}
+
+
+public extension Sequence<NSRange> {
+    
+    /// The reduced ranges by merging all overlapping ranges.
+    var merged: [NSRange] {
+        
+        self
+            .sorted(using: KeyPathComparator(\.location))
+            .reduce(into: []) { ranges, range in
+                if let last = ranges.last, last.touches(range) {
+                    ranges[ranges.count - 1] = last.union(range)
+                } else {
+                    ranges.append(range)
+                }
+            }
+    }
+}
+
+
+public extension IndexSet {
+    
+    /// Initializes an index set with multiple NSRanges.
+    ///
+    /// - Parameter ranges: The ranges to insert.
+    init(integersIn ranges: [NSRange]) {
+        
+        assert(!ranges.contains(.notFound))
+        
+        self.init()
+        
+        for range in ranges.compactMap(Range.init) {
+            self.insert(integersIn: range)
+        }
+    }
+}
+
+
+extension Sequence<NSRange> {
+    
+    /// The range that contains all ranges.
+    var union: NSRange? {
+        
+        let ranges = self.filter { !$0.isNotFound }
+        
+        guard
+            let lowerBound = ranges.map(\.lowerBound).min(),
+            let upperBound = ranges.map(\.upperBound).max()
+        else { return nil }
+        
+        return NSRange(lowerBound..<upperBound)
+    }
+}

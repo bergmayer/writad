@@ -1,0 +1,31 @@
+appId: com.palefire.ayyyy
+---
+# Robustly reset the buffer between test sections WITHOUT re-launching
+# the app. Defensive in three ways:
+#   1. Escape twice — close any sheet that's still open from the prior
+#      section.
+#   2. Tap firmly into the editor area, wait, tap again. The second tap
+#      is what reliably restores first-responder focus after a sheet
+#      dismissed it.
+#   3. ⌘A + Backspace, then a second ⌘A + Backspace as belt-and-braces
+#      so a single missed modifier doesn't leak state into the next test.
+- runScript:
+    file: shortcut.js
+    env: { KEY: "esc", MODS: "" }
+- runScript:
+    file: shortcut.js
+    env: { KEY: "esc", MODS: "" }
+- tapOn:
+    point: "50%,55%"
+- waitForAnimationToEnd:
+    timeout: 400
+- tapOn:
+    point: "50%,55%"
+- runScript:
+    file: shortcut.js
+    env: { KEY: "a", MODS: "cmd" }
+- pressKey: Backspace
+- runScript:
+    file: shortcut.js
+    env: { KEY: "a", MODS: "cmd" }
+- pressKey: Backspace
