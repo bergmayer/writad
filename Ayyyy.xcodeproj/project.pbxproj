@@ -70,6 +70,9 @@
 		B2000043 /* OrganizeFootnotesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000043 /* OrganizeFootnotesSheet.swift */; };
 		B2000044 /* MarkdownTableSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000044 /* MarkdownTableSheet.swift */; };
 		B2000045 /* DraftsRecoverySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000045 /* DraftsRecoverySheet.swift */; };
+		B2000046 /* CommandActions+Find.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000046 /* CommandActions+Find.swift */; };
+		B2000047 /* CommandActions+Folding.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000047 /* CommandActions+Folding.swift */; };
+		B2000048 /* CommandActions+Markdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000048 /* CommandActions+Markdown.swift */; };
 		B2010001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1010001 /* Assets.xcassets */; };
 		B2020001 /* FileEncoding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000001 /* FileEncoding */; };
 		B2020002 /* LineEnding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000002 /* LineEnding */; };
@@ -144,6 +147,9 @@
 		B1000043 /* OrganizeFootnotesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrganizeFootnotesSheet.swift; sourceTree = "<group>"; };
 		B1000044 /* MarkdownTableSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownTableSheet.swift; sourceTree = "<group>"; };
 		B1000045 /* DraftsRecoverySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftsRecoverySheet.swift; sourceTree = "<group>"; };
+		B1000046 /* CommandActions+Find.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CommandActions+Find.swift"; sourceTree = "<group>"; };
+		B1000047 /* CommandActions+Folding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CommandActions+Folding.swift"; sourceTree = "<group>"; };
+		B1000048 /* CommandActions+Markdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CommandActions+Markdown.swift"; sourceTree = "<group>"; };
 		B1010001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B1010002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B1010003 /* Ayyyy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ayyyy.entitlements; sourceTree = "<group>"; };
@@ -258,6 +264,9 @@
 			children = (
 				B1000006 /* EditorCommands.swift */,
 				B1000014 /* CommandActions.swift */,
+				B1000046 /* CommandActions+Find.swift */,
+				B1000047 /* CommandActions+Folding.swift */,
+				B1000048 /* CommandActions+Markdown.swift */,
 				B1000015 /* CommandRegistry.swift */,
 			);
 			path = Menu;
@@ -480,6 +489,9 @@
 				B2000043 /* OrganizeFootnotesSheet.swift in Sources */,
 				B2000044 /* MarkdownTableSheet.swift in Sources */,
 				B2000045 /* DraftsRecoverySheet.swift in Sources */,
+				B2000046 /* CommandActions+Find.swift in Sources */,
+				B2000047 /* CommandActions+Folding.swift in Sources */,
+				B2000048 /* CommandActions+Markdown.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
