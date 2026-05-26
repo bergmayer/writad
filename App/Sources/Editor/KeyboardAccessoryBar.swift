@@ -2,13 +2,23 @@ import UIKit
 import EditorEngine
 import GameController
 
-/// Single-row keyboard accessory shown above the iOS soft keyboard
-/// on both iPhone and iPad — same custom row everywhere, with esc,
-/// ⌃/⌥/⌘ sticky modifiers, line/document caret jumps, and a
-/// dismiss-keyboard button. The system `inputAssistantItem` strip
-/// is always suppressed so ours is the only thing the user sees.
-/// Hardware-keyboard attached → both surfaces cleared, observed via
-/// `GameController` so the bar reappears the moment the user unplugs.
+/// Keyboard accessory for the iOS soft keyboard.
+///
+///   * **iPhone (soft keyboard)** — custom `EditorAccessoryView` set
+///     as `inputAccessoryView` on the text view. The accessory
+///     pins above the keyboard via the system's accessory plumbing;
+///     fine on iPhone because it's single-window.
+///   * **iPad (soft keyboard)** — buttons live in the keyboard's
+///     own QuickType strip via `inputAssistantItem`. The same set
+///     as iPhone (esc, ⌃/⌥/⌘ sticky modifiers, line/document
+///     caret jumps), minus the dismiss-keyboard button since iPad's
+///     keyboard already has one built-in. An `inputAccessoryView`
+///     on iPad would attach to the specific window and bleed over
+///     the per-window status bar in Stage Manager / Slide Over —
+///     keyboard-attached is the correct anchor.
+///   * **Hardware keyboard attached** — both surfaces cleared,
+///     observed via `GameController` so the bar reappears the
+///     moment the user unplugs.
 @MainActor
 enum KeyboardAccessoryBar {
 
@@ -18,22 +28,36 @@ enum KeyboardAccessoryBar {
     }
 
     private static func refresh(_ textView: EditorEngine.TextView) {
-        // Hardware keyboard attached → no soft accessory anywhere.
         let hasHardwareKeyboard = GCKeyboard.coalesced != nil
         let assistant = textView.inputAssistantItem
-        assistant.leadingBarButtonGroups = []
-        assistant.trailingBarButtonGroups = []
 
         if hasHardwareKeyboard {
             textView.inputAccessoryView = nil
+            assistant.leadingBarButtonGroups = []
+            assistant.trailingBarButtonGroups = []
+            detachIPadObserver(from: textView)
             return
         }
 
-        // Same custom row on iPhone and iPad — the system
-        // `inputAssistantItem` strip is always suppressed above so
-        // ours is the only thing the user sees.
-        if !(textView.inputAccessoryView is EditorAccessoryView) {
-            textView.inputAccessoryView = EditorAccessoryView(host: textView)
+        if DeviceIdiom.isPhone {
+            // iPhone path: custom inputAccessoryView. Suppress the
+            // system QuickType strip so ours is the only thing showing.
+            if !(textView.inputAccessoryView is EditorAccessoryView) {
+                textView.inputAccessoryView = EditorAccessoryView(host: textView)
+            }
+            assistant.leadingBarButtonGroups = []
+            assistant.trailingBarButtonGroups = []
+            detachIPadObserver(from: textView)
+        } else {
+            // iPad path: keyboard-attached QuickType bar. Clear any
+            // per-window accessory left over from a prior install.
+            textView.inputAccessoryView = nil
+            let observer = IPadAccessoryObserver(host: textView)
+            assistant.leadingBarButtonGroups = [
+                UIBarButtonItemGroup(barButtonItems: observer.items, representativeItem: nil)
+            ]
+            assistant.trailingBarButtonGroups = []
+            attachIPadObserver(observer, to: textView)
         }
     }
 
@@ -48,6 +72,144 @@ enum KeyboardAccessoryBar {
 }
 
 private nonisolated(unsafe) var observerKey: UInt8 = 0
+private nonisolated(unsafe) var ipadObserverKey: UInt8 = 0
+
+@MainActor
+private func attachIPadObserver(_ observer: IPadAccessoryObserver, to textView: EditorEngine.TextView) {
+    objc_setAssociatedObject(textView, &ipadObserverKey, observer, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+}
+
+@MainActor
+private func detachIPadObserver(from textView: EditorEngine.TextView) {
+    objc_setAssociatedObject(textView, &ipadObserverKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+}
+
+/// Owns the iPad QuickType-bar items and the timer that mirrors
+/// `EditorState.armedAccessory*` flags onto the modifier items'
+/// tint. Retained via objc associated object on the text view so
+/// it lives exactly as long as the text view does.
+@MainActor
+private final class IPadAccessoryObserver {
+
+    weak var host: EditorEngine.TextView?
+    let items: [UIBarButtonItem]
+    private weak var controlItem: UIBarButtonItem?
+    private weak var optionItem: UIBarButtonItem?
+    private weak var commandItem: UIBarButtonItem?
+    /// `nonisolated(unsafe)` because the nonisolated deinit needs to
+    /// release the timer; Timer isn't Sendable, but we only mutate
+    /// it from the main actor (init / DispatchQueue.main from deinit).
+    nonisolated(unsafe) private var timer: Timer?
+
+    init(host: EditorEngine.TextView) {
+        self.host = host
+
+        let escape = Self.barItem(symbol: "escape", accessibility: "Escape") { [weak host] _ in
+            Self.handleEscape(host: host)
+        }
+
+        let control = Self.barItem(symbol: "control", accessibility: "Control") { [weak host] _ in
+            Self.toggleModifier(\.armedAccessoryControl, host: host)
+        }
+        let option = Self.barItem(symbol: "option", accessibility: "Option") { [weak host] _ in
+            Self.toggleModifier(\.armedAccessoryOption, host: host)
+        }
+        let command = Self.barItem(symbol: "command", accessibility: "Command") { [weak host] _ in
+            Self.toggleModifier(\.armedAccessoryCommand, host: host)
+        }
+
+        let lineStart = Self.barItem(symbol: "arrow.left.to.line", accessibility: "Start of Line") { [weak host] _ in
+            CaretMover.moveToLineStart(in: host)
+        }
+        let lineEnd = Self.barItem(symbol: "arrow.right.to.line", accessibility: "End of Line") { [weak host] _ in
+            CaretMover.moveToLineEnd(in: host)
+        }
+        let docStart = Self.barItem(symbol: "arrow.up.to.line", accessibility: "Start of Document") { [weak host] _ in
+            CaretMover.moveToDocumentStart(in: host)
+        }
+        let docEnd = Self.barItem(symbol: "arrow.down.to.line", accessibility: "End of Document") { [weak host] _ in
+            CaretMover.moveToDocumentEnd(in: host)
+        }
+
+        // No chevron-down on iPad — the system keyboard's own
+        // dismiss-keyboard key (bottom-right of the soft keyboard)
+        // covers that.
+        self.items = [escape, control, option, command, lineStart, lineEnd, docStart, docEnd]
+        self.controlItem = control
+        self.optionItem = option
+        self.commandItem = command
+
+        refreshModifierVisuals()
+        // Same 100 ms polling cadence as the iPhone EditorAccessoryView:
+        // catches the engine clearing the armed flag after consuming a
+        // key without us needing an observation channel.
+        let t = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.refreshModifierVisuals() }
+        }
+        t.tolerance = 0.04
+        self.timer = t
+    }
+
+    deinit {
+        // Timer must be invalidated on the thread that scheduled it
+        // (main). The hop also keeps the nonisolated deinit happy
+        // about touching the Timer reference.
+        let captured = timer
+        DispatchQueue.main.async { captured?.invalidate() }
+    }
+
+    private func refreshModifierVisuals() {
+        guard let state = host?.editorState else { return }
+        controlItem?.tintColor = state.armedAccessoryControl ? .systemBlue : nil
+        optionItem?.tintColor = state.armedAccessoryOption ? .systemBlue : nil
+        commandItem?.tintColor = state.armedAccessoryCommand ? .systemBlue : nil
+    }
+
+    private static func barItem(
+        symbol: String,
+        accessibility: String,
+        handler: @escaping (UIAction) -> Void
+    ) -> UIBarButtonItem {
+        let action = UIAction(title: accessibility, image: UIImage(systemName: symbol), handler: handler)
+        let bar = UIBarButtonItem(primaryAction: action)
+        bar.accessibilityLabel = accessibility
+        return bar
+    }
+
+    private static func toggleModifier(
+        _ keyPath: ReferenceWritableKeyPath<EditorState, Bool>,
+        host: EditorEngine.TextView?
+    ) {
+        guard let state = host?.editorState else { return }
+        let arming = !state[keyPath: keyPath]
+        let others: [ReferenceWritableKeyPath<EditorState, Bool>] = [
+            \.armedAccessoryControl,
+            \.armedAccessoryOption,
+            \.armedAccessoryCommand,
+        ]
+        for path in others where path != keyPath { state[keyPath: path] = false }
+        state[keyPath: keyPath] = arming
+    }
+
+    private static func handleEscape(host: EditorEngine.TextView?) {
+        guard let host else { return }
+        if let state = host.editorState,
+           state.armedAccessoryControl || state.armedAccessoryCommand || state.armedAccessoryOption {
+            state.armedAccessoryControl = false
+            state.armedAccessoryCommand = false
+            state.armedAccessoryOption = false
+            return
+        }
+        let bus = AppStateBus.shared
+        if bus.editing.presentedSheet != nil {
+            bus.editing.presentedSheet = nil
+            return
+        }
+        if host.selectedRange.length > 0 {
+            host.selectedRange = NSRange(location: host.selectedRange.location, length: 0)
+        }
+    }
+}
 
 /// Holds the GameController notification tokens; released alongside
 /// the text view it's bound to via objc associated objects.
