@@ -97,6 +97,9 @@ enum AppPreferenceKey {
     /// JSON-encoded `[ClosedTabRecord]` — closed-tab recovery
     /// pool that survives window close and app restart.
     static let closedTabRecords = "closedTabRecords"
+    /// JSON-encoded `[SessionRecord]` — open-window roster (tab list
+    /// + file bookmarks + draft refs) so windows resume on next launch.
+    static let sessionRecords = "sessionRecords"
     static let canonizePairs = "canonizePairs"
     static let canonizeRegex = "canonizeRegex"
     static let notebookNotes = "notebookNotes"

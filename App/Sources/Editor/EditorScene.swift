@@ -17,6 +17,18 @@ struct EditorScene: View {
     /// stops a re-appearance from re-offering the drafts sheet after
     /// the user already dismissed it.
     @State private var didOfferDraftsForThisScene = false
+    /// Set from `.onOpenURL` so URL-launched scenes (Files app, share
+    /// sheet) skip the drafts banner — the user already declared
+    /// intent for a specific file, no need to surface unsaved work.
+    @State private var sceneReceivedOpenURL = false
+    /// Tracks whether we've already applied a stored `SessionRecord`.
+    /// onAppear fires on every foreground transition; restoration is
+    /// a one-shot.
+    @State private var didApplySessionRecord = false
+    /// Persistent per-scene id. SwiftUI restores this across launches
+    /// when it brings the scene back; an unrestored value seeds a
+    /// fresh UUID on first `onAppear`.
+    @SceneStorage("ayyyy.sceneUUID") private var sceneUUID: String = ""
     /// Drives `.preferredColorScheme` so nav bar / sheets tone-match
     /// the editor theme.
     @AppStorage(AppPreferenceKey.themeName) private var themeNamePref: String = AppThemeName.automatic.rawValue
@@ -146,13 +158,16 @@ struct EditorScene: View {
                     return
                 }
                 // Background autosave; snapshot engine-live first
-                // since the debounce may be stale.
+                // since the debounce may be stale. `persistSessionRecord`
+                // re-runs the same loop, but going through it here gets
+                // drafts on disk before the OS suspends us.
                 for tab in session.tabs where tab.document.isDirty {
                     if let live = tab.state.textView?.text {
                         tab.document.text = live
                     }
                     tab.document.autoSave()
                 }
+                persistSessionRecord()
             }
             .onAppear {
                 AppStateBus.shared.scenes.currentSession = session
@@ -170,18 +185,24 @@ struct EditorScene: View {
                     try? tab.document.save()
                 }
                 let wasFirstScene = isColdLaunchFirstScene
+                applySessionRestoreIfNeeded()
                 applyLaunchBehaviorIfFirstScene()
                 consumePendingNewWindowURL()
                 adoptPendingTabIfAvailable()
-                // Any scene other than the cold-launch first is
-                // user-spawned (or restored) — offer recovery before
-                // a blank surface buries the draft.
-                offerDraftsIfNotFirstScene(wasFirstScene: wasFirstScene)
+                // Drafts banner only on brand-new blank scenes —
+                // restored or URL-launched scenes already have intent.
+                // Defer past one runloop so `.onOpenURL` has a chance
+                // to set its flag before the gate evaluates.
+                Task { @MainActor in
+                    try? await Task.sleep(for: Timing.paletteHandoff)
+                    offerDraftsIfNotFirstScene(wasFirstScene: wasFirstScene)
+                }
             }
             // Files app "Open in Ayyyy", share sheet, and the
             // `LSSupportsOpeningDocumentsInPlace` plumbing all
             // funnel through here.
             .onOpenURL { url in
+                sceneReceivedOpenURL = true
                 route(open: url)
             }
             .onDisappear {
@@ -190,6 +211,9 @@ struct EditorScene: View {
                 // self-nils on dealloc, and onDisappear also fires
                 // on focus change, which would strand menu commands.
                 AppStateBus.shared.editing.saveCurrentDocument = nil
+                // Final session snapshot before any cancel/teardown so
+                // a kill mid-disappear still restores correctly.
+                persistSessionRecord()
                 // Cancel in-flight loads — otherwise closing during
                 // a slow File Provider pull keeps the Task pinned on
                 // the main actor until URLSession finishes.
@@ -412,10 +436,14 @@ struct EditorScene: View {
     }
 
     /// `didOfferDraftsForThisScene` stops re-prompting after a
-    /// foreground re-enter dismisses the sheet.
+    /// foreground re-enter dismisses the sheet. URL-launched scenes
+    /// and scenes built from a restored `SessionRecord` skip the
+    /// banner — both already have clear intent.
     private func offerDraftsIfNotFirstScene(wasFirstScene: Bool) {
         guard !wasFirstScene,
               !didOfferDraftsForThisScene,
+              !sceneReceivedOpenURL,
+              !didApplySessionRecord,
               !DraftsStore.shared.loadAll().isEmpty
         else { return }
         didOfferDraftsForThisScene = true
@@ -424,6 +452,39 @@ struct EditorScene: View {
             AppStateBus.shared.scenes.currentEditor = session.activeTab.state
             AppStateBus.shared.editing.presentedSheet = .draftsRecovery
         }
+    }
+
+    /// One-shot: applies a stored `SessionRecord` if `sceneUUID`
+    /// matches an entry in `SessionsStore`. Fresh scenes generate a
+    /// UUID for next-launch persistence and leave the default blank
+    /// tab in place.
+    private func applySessionRestoreIfNeeded() {
+        guard !didApplySessionRecord else { return }
+        didApplySessionRecord = true
+        if sceneUUID.isEmpty {
+            sceneUUID = UUID().uuidString
+            return
+        }
+        guard let record = SessionsStore.shared.record(forScene: sceneUUID) else { return }
+        SessionRestore.apply(record, to: session)
+    }
+
+    /// Snapshots current tabs (file bookmarks + draft refs + active
+    /// index) under the scene's UUID. Re-saves on every background
+    /// transition so a force-quit picks up the latest state.
+    private func persistSessionRecord() {
+        guard !sceneUUID.isEmpty else { return }
+        // Pull engine-live text into drafts so the snapshot's
+        // `draftFilename` references current bytes, not a 300 ms-old
+        // debounce.
+        for tab in session.tabs where tab.document.isDirty {
+            if let live = tab.state.textView?.text {
+                tab.document.text = live
+            }
+            tab.document.autoSave()
+        }
+        let record = SessionRecord(scene: sceneUUID, session: session)
+        SessionsStore.shared.save(record)
     }
 
     /// "Move Tab to New Window" hands the tab off through
