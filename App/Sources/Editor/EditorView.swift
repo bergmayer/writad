@@ -10,92 +10,56 @@ struct EditorView: View {
 
     @Bindable private var bus = AppStateBus.shared
     @Environment(\.openWindow) private var openWindow
-    // `showingInfo` lives on EditorState now (state.inspectorOpen)
-    // so menu commands (View ▸ Show File Information) and the
-    // status-bar ⓘ button hit the same source of truth.
-    /// Read directly from `@AppStorage` (not the per-window
-    /// `EditorState.showToolbar` mirror) so the View → Show Toolbar
-    /// toggle propagates to *every* open window, not just the one that
-    /// was active when the user flipped it.
+    /// Read straight from `@AppStorage` (not the per-window mirror)
+    /// so View ▸ Show Toolbar toggles every window, not just the
+    /// one that was active when the user flipped it.
     @AppStorage(AppPreferenceKey.showToolbar) private var showToolbarPref: Bool = true
-    /// Per-process theme preference. Synced into `state.themeName`
-    /// on change so existing scenes pick up Settings ▸ Editor ▸
-    /// Appearance changes immediately — without this, state.themeName
-    /// only matched the pref at scene init.
+    /// Synced into `state.themeName` via `.onChange` so a Settings
+    /// change reaches every open scene, not just newly-spawned ones.
     @AppStorage(AppPreferenceKey.themeName) private var themeNamePref: String = AppThemeName.automatic.rawValue
-    /// Same pattern for the body font size and font face — Settings
-    /// changes should hit every open window, not just newly-spawned
-    /// ones. The Stepper / Picker in Preferences writes UserDefaults;
-    /// the `.onChange` below syncs each into `state`, which the
-    /// engine then picks up via `observeStateForEngineUpdates`.
     @AppStorage(AppPreferenceKey.fontSize) private var fontSizePref: Double = 14
     @AppStorage(AppPreferenceKey.fontName) private var fontNamePref: String = EditorFont.systemMono.rawValue
-    /// `.compact` when the host window is too narrow for the wide iPad
-    /// chrome — happens in iPad Split View, Slide Over, and Stage
-    /// Manager's skinny side panel, where each status-bar label would
-    /// otherwise wrap glyph-by-glyph into a vertical column. Drives
-    /// the choice between `statusBar` and the overflow-menu `phoneStatusBar`.
+    /// `.compact` in iPad Split View / Slide Over / skinny Stage
+    /// Manager — drives the wide-vs-overflow status-bar choice.
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    /// True when the scene is wider than ~phone width. Anything narrower
-    /// (Stage Manager skinny, Split View ⅓, etc.) collapses into the
-    /// compact phone-style chrome regardless of device idiom.
     private var isCompactWidth: Bool {
         horizontalSizeClass == .compact
     }
 
     var body: some View {
         observeStateForEngineUpdates()
-        // Layout reasoning:
+        // Editor ignores the keyboard safe area and lets UITextView's
+        // own contentInset scroll the cursor into view — the trick
+        // Notes / Mail / Safari use. The status bar is a separate
+        // ZStack layer that respects the keyboard safe area, so
+        // SwiftUI auto-lifts it above the keyboard without resizing
+        // the editor.
         //
-        // The previous design (VStack + .padding(.bottom, keyboardOverlap))
-        // lifted the *entire* editor stack by the on-screen keyboard's
-        // height. That kept the status bar above the keyboard but
-        // shrank the editor body — on iPad portrait the editor ended
-        // up squashed into the top ~30 % of the window while the
-        // accessory bar sat just above the keyboard. The user's
-        // complaint was exactly that: the keyboard area looked like
-        // it took over the window.
-        //
-        // New layout: the editor extends full height (ignores the
-        // keyboard safe area), so UITextView's own contentInset is
-        // what scrolls the cursor into view — same trick Notes /
-        // Mail / Safari use. The status bar is a separate ZStack
-        // layer that respects the keyboard safe area, so SwiftUI's
-        // automatic avoidance lifts it above the keyboard without
-        // resizing the editor underneath.
+        // The earlier VStack + bottom-padding design lifted the
+        // entire stack by keyboard height and visibly squashed the
+        // editor on iPad portrait.
         return ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
-                // WindowToolbar lives in EditorScene now (above the
-                // TabBarView, Safari-style). EditorView only owns the
-                // text view and the status bar overlay.
                 splitOrSingleEditor
                     .frame(maxHeight: .infinity)
             }
             .ignoresSafeArea(.keyboard, edges: .bottom)
 
             if state.showStatusBar {
-                // Compact width = iPhone OR narrow iPad multitasking
-                // slot. The wide `statusBar` wraps every label
-                // glyph-by-glyph at sub-tablet widths; the compact
-                // variant folds the per-document settings (encoding,
-                // line endings, syntax) into an overflow menu so the
-                // bar stays one line tall.
+                // The wide bar wraps glyph-by-glyph at sub-tablet
+                // widths; the compact variant folds encoding /
+                // line-endings / syntax into an overflow menu.
                 if DeviceIdiom.isPhone || isCompactWidth {
                     phoneStatusBar
                 } else {
                     statusBar
                 }
             }
-            // Floating status bar — sits on top of the editor's
-            // lowest ~40 pt when the keyboard is down, and gets
-            // automatically pushed above the keyboard when it's up.
-            // No explicit padding / notification observers needed.
         }
-        // CotEditor-style side inspector. Slides in from the trailing
-        // edge of this scene (not modal), so the editor stays editable
-        // while the user reads the file metadata or jumps through the
-        // outline. Triggered by the ⓘ button in the bottom-right status bar.
+        // CotEditor-style side inspector — slides in non-modally so
+        // the editor stays editable while the user browses metadata
+        // or jumps through the outline. Triggered by the ⓘ button.
         .inspector(isPresented: Binding(
             get: { state.inspectorOpen },
             set: { state.inspectorOpen = $0 }
@@ -103,28 +67,16 @@ struct EditorView: View {
             InfoInspectorSheet(document: document, state: state, onJump: { goToLine($0) })
                 .inspectorColumnWidth(min: 260, ideal: 320, max: 420)
         }
-        // Lightweight overlay while a load is in flight — covers the
-        // editor surface so the user can't type into a buffer that's
-        // about to be replaced, and signals that the file (which may be
-        // downloading from a File Provider) is on its way.
+        // Covers the editor while a load is in flight so the user
+        // can't type into a buffer that's about to be replaced.
         .overlay {
             if document.isLoading { loadingOverlay }
         }
-        // Sheets and file pickers gate on `isActive` so they only present
-        // on the window the user is interacting with — not every window
-        // bound to the shared AppStateBus.
+        // Gate sheets/pickers on isActive so the shared bus flag only
+        // surfaces them on the focused window.
         .sheet(item: isActive ? $bus.editing.presentedSheet : .constant(nil)) { sheet in
             sheetContent(for: sheet)
         }
-        // (Per-scene SheetPresenter was here; moved to EditorScene
-        // where the session is in scope, so the closure can update
-        // both `currentEditor` and `currentSession` — sheets that
-        // read either now consistently land on the foreground
-        // window.)
-        // Error alert for load failures (file too large, decode error,
-        // security-scoped resource denied, etc.) — only fires on the
-        // currently active editor so a popup doesn't appear in every
-        // open window.
         .alert(
             "Couldn't open file",
             isPresented: openErrorAlertBinding,
@@ -134,26 +86,20 @@ struct EditorView: View {
         } message: { message in
             Text(message)
         }
-        // Unsaved-changes confirmation. Hosted on every editor scene
-        // (gated by `isActive`) so a stray prompt from a background
-        // window doesn't surface on the wrong scene. The pending
-        // record carries its source session id, so the discard /
-        // save paths target the right window regardless.
-        // Centered modal alert instead of a popover-style
-        // confirmationDialog — on iPad the dialog rendered as a
-        // popover with an arrow tail pointing back to whatever
-        // close control fired it, which made no sense in this app
-        // (the close paths originate from disparate places: tab
-        // strip, switcher, ⌘W, command palette). An alert always
-        // centers and never grows a tail.
+        // `.alert`, not `.confirmationDialog`: on iPad the latter
+        // renders as a popover with an arrow tail pointing back at
+        // whatever close control fired it. Close paths here come
+        // from disparate places (tab strip, switcher, ⌘W, palette)
+        // and no single anchor makes sense. The pending record
+        // carries its source session id so discard / save still
+        // target the right window when focus shifts mid-prompt.
         .alert(
             "Close \(bus.editing.pendingClose?.displayName ?? "tab")?",
             isPresented: pendingCloseBinding,
             presenting: bus.editing.pendingClose
         ) { pending in
-            // For saved files this writes back to the existing URL;
-            // for untitled buffers it opens Save As (the user picks
-            // a location, then we close the tab).
+            // Saved files write back to the existing URL; untitled
+            // buffers open Save As, then the tab closes.
             Button(pending.isUntitled ? "Save…" : "Save and Close") {
                 CommandActions.confirmSaveAndClose(pending)
             }
@@ -174,29 +120,23 @@ struct EditorView: View {
                 AppStateBus.shared.scenes.registerSession(session)
             }
         }
-        // No `.onDisappear` clearing `currentEditor`: SwiftUI fires
-        // `onDisappear` whenever the scene loses focus (palette window,
-        // preferences, multi-tasking swipe). Nil'ing the weak ref here
-        // left the menu bar dimmed even though the editor was still
-        // alive behind another window. `currentEditor` is a `weak var`,
-        // so it auto-nils when the `EditorState` is genuinely
-        // deallocated (the user actually closed every window).
+        // No matching `.onDisappear` to clear `currentEditor` —
+        // SwiftUI fires onDisappear on any focus loss (palette,
+        // preferences, multitasking swipe), which left the menu bar
+        // dimmed despite a live editor behind another window.
+        // `currentEditor` is `weak`, so it nils when the
+        // `EditorState` is actually deallocated.
         .onChange(of: state.fileEncoding) { _, newValue in document.fileEncoding = newValue }
         .onChange(of: state.lineEnding)   { _, newValue in document.lineEnding = newValue }
-        // Theme preference → per-window state. The engine recreates
-        // the theme from `state.themeName`; the sync makes a Settings
-        // change apply to every open scene, not just newly-spawned ones.
         .onChange(of: themeNamePref) { _, raw in
-            // Per-window override wins — global Settings changes
-            // don't clobber a theme the user set locally via the
-            // info inspector's Window Theme picker.
+            // Per-window override wins — info-inspector pick must
+            // outrank global Settings.
             guard state.themeOverride == nil else { return }
             state.themeName = AppThemeName(stored: raw)
         }
         .onChange(of: fontSizePref) { _, newValue in
-            // Stepper writes 9–96; ignore zero in case UserDefaults
-            // briefly returns 0 during a write race. Per-window
-            // override wins — global Settings doesn't clobber it.
+            // Stepper writes 9–96; ignore 0 in case UserDefaults
+            // returns 0 mid-write.
             guard state.fontSizeOverride == nil else { return }
             if newValue > 0 { state.fontSize = newValue }
         }
@@ -204,42 +144,31 @@ struct EditorView: View {
             guard state.fontOverride == nil else { return }
             state.font = EditorFont(stored: newRaw)
         }
-        // Autosave runs on a buffer-changed signal, not on full text
-        // observation. `document.bufferRevision` is a tiny UInt64
-        // bumped by the engine's text-view coordinator on every edit;
-        // observing it avoids re-evaluating the body — and re-running
-        // every observed sub-view's body modifiers — on every
-        // keystroke. The previous `onChange(of: document.text)`
-        // pattern pulled the full buffer (a Swift String reference
-        // copy is cheap, but observation invalidation on a 1 MB+
-        // value cascading through the SwiftUI rendering graph is
-        // not) — that was the per-keystroke freeze on McCartney.
+        // Watching `bufferRevision` (a UInt64 bumped per edit) is
+        // O(1); watching `document.text` cascades a 1 MB+ String
+        // through SwiftUI's observation graph on every keystroke —
+        // the McCartney-file freeze.
         .onChange(of: document.bufferRevision) { _, _ in
             scheduleAutoSave()
         }
-        // External writers (load, revert, restore-from-revisions) DO
-        // change `document.text` wholesale. The engine text view's
-        // `updateUIView` already detects those via its
-        // `lastPushedDocumentText` cache and pushes them; nothing
-        // else needs to observe `document.text` per render here.
-        // No `.task(id:)` for the debounce — using a stored Task on
-        // EditorState gives us cooperative cancellation across rapid
-        // edits without restarting from SwiftUI's identity machinery.
+        // Wholesale text replacements (load / revert / restore)
+        // come in through `document.text`; the engine's
+        // `updateUIView` catches those via its `lastPushedDocumentText`
+        // cache and pushes them — nothing else needs to observe.
         .navigationTitle(documentTitle)
         .navigationSubtitle(documentSubtitle)
         .navigationBarTitleDisplayMode(.inline)
-        // iPad: hide the system nav bar when the custom WindowToolbar
-        // pill is up (title is shown there). iPhone: always show the
-        // system nav bar — that's where the filename lives.
+        // iPad hides the system nav bar in favour of the custom
+        // WindowToolbar pill; iPhone keeps the system bar — that's
+        // where the filename lives.
         .toolbar(
             (DeviceIdiom.supportsMultipleWindows && showToolbarPref) ? .hidden : .visible,
             for: .navigationBar
         )
         .toolbar {
-            // iPhone-only nav bar buttons. Leading edge: gear (Settings),
-            // then file (document shell). Trailing edge: undo, then
-            // command palette. Items with the same placement render in
-            // declaration order from leading-to-trailing.
+            // iPhone-only nav bar: gear, file (leading) — undo,
+            // palette (trailing). Same-placement items render in
+            // declaration order.
             if DeviceIdiom.isPhone {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
@@ -260,11 +189,8 @@ struct EditorView: View {
                     .accessibilityLabel("Open File")
                 }
                 ToolbarItem(placement: .principal) {
-                    // Replace the system navigationTitle with the
-                    // tappable / renameable title button. Stays in
-                    // sync with `documentTitle` via the SwiftUI
-                    // value chain — the bus-read in EditableTitleView
-                    // covers state/document mutations.
+                    // Replaces the system navigationTitle with the
+                    // tappable / renameable button.
                     EditableTitleView(
                         title: documentTitle,
                         titleFont: .headline,
@@ -287,19 +213,15 @@ struct EditorView: View {
         }
     }
 
-    /// `true` while this scene is the foreground/focused editor in a
-    /// multi-window session. Used to gate sheet / picker presentation so
-    /// shared bus flags only affect the active window.
+    /// Foreground in a multi-window session. Gates sheets / pickers
+    /// so a shared bus flag only fires on the focused window.
     private var isActive: Bool {
         bus.scenes.currentEditor === state
     }
 
-    /// Binding for the unsaved-changes confirmation dialog. Matches
-    /// the pending tab's owning session against this scene's session
-    /// so the dialog fires on the right window in multi-window setups
-    /// — without freezing the app. `allOpenSessions` is now read-
-    /// only (no in-getter mutation), so it's safe to call directly
-    /// from a binding.
+    /// Matches the pending close's session id against this scene's
+    /// session so the dialog fires on the right window across
+    /// focus shifts.
     private var pendingCloseBinding: Binding<Bool> {
         Binding(
             get: {
@@ -307,10 +229,9 @@ struct EditorView: View {
                 let mySession = bus.scenes.allOpenSessions.first { session in
                     session.tabs.contains { $0.state === state }
                 }
-                // Fall back to identity check when the registry hasn't
-                // caught up — better to show the dialog on the active
-                // scene than to silently drop it, since this is the
-                // "don't lose user data" path.
+                // Registry-stale fallback: show on active rather than
+                // silently drop — this is the "don't lose user data"
+                // path.
                 guard let mySession else { return isActive }
                 return ObjectIdentifier(mySession) == pending.sessionID
             },
@@ -329,16 +250,14 @@ struct EditorView: View {
         )
     }
 
-    /// Plain document name. The unsaved indicator is surfaced in the
-    /// subtitle ("edited") so the title itself stays uncluttered.
+    /// The unsaved indicator lives in the subtitle so the title
+    /// itself stays uncluttered.
     private var documentTitle: String {
         document.fileURL?.lastPathComponent ?? "Untitled"
     }
 
-    /// Subtitle = "edited" hint + file-location breadcrumb, joined
-    /// with a middle dot when both apply. Untitled documents count
-    /// as "edited" until first save. Clean URL-backed docs show
-    /// just the location.
+    /// "edited" hint + file-location breadcrumb, middle-dot joined.
+    /// Untitled = always "edited" until first save.
     private var documentSubtitle: String {
         let unsaved = document.fileURL == nil || document.isDirty
         let location: String = document.fileURL.map { DocumentLocation.describe(parentOf: $0) } ?? ""
@@ -350,17 +269,16 @@ struct EditorView: View {
         }
     }
 
-    /// `UIViewRepresentable.updateUIView` only runs when SwiftUI re-evaluates
-    /// this body, and that only happens when an `@Observable` property is
-    /// *read here*. Touching every state property the engine cares about
-    /// guarantees menu changes propagate. NOTE: do NOT touch
-    /// `document.bufferRevision` here — that bumps on every keystroke
-    /// and would re-introduce the per-keystroke body re-eval cost we
-    /// just removed. `document.text` is safe to touch: it changes only
-    /// on external writes (load / revert / restore) and on a 300 ms-
-    /// debounced snapshot after editing pauses.
+    /// `updateUIView` only fires when SwiftUI re-evaluates this body,
+    /// which only happens when an `@Observable` is read *here*.
+    /// Touching every engine-relevant property forces propagation.
+    ///
+    /// Do NOT touch `document.bufferRevision` — it bumps per keystroke
+    /// and would re-introduce the per-keystroke body re-eval cost.
+    /// `document.text` is safe: it only changes on load / revert /
+    /// restore and on the 300 ms debounced snapshot after typing stops.
     private func observeStateForEngineUpdates() {
-        _ = document.text  // catches load / revert / restore-from-revision pushes
+        _ = document.text  // load / revert / restore pushes
         _ = state.languageIdentifier
         _ = state.themeName
         _ = state.font
@@ -395,8 +313,7 @@ struct EditorView: View {
 
     private func primeStateFromDocument() {
         state.text = document.text
-        // Treat the as-loaded text as the diff baseline. Save flows
-        // also rewrite this (see EditorScene's save closure) so the
+        // Diff-gutter baseline. Save flows also rewrite this so the
         // gutter resets after a successful write.
         state.savedBaselineText = document.text
         state.fileEncoding = document.fileEncoding
@@ -406,11 +323,8 @@ struct EditorView: View {
             state.languageIdentifier = LanguageRegistry.identifier(for: url)
         }
         // Background tabs miss `.onChange(of:)` while they're not
-        // mounted, so a Settings ▸ Theme / Font change between
-        // their init and their next activation would otherwise
-        // leave them stale. Re-seed from current defaults whenever
-        // this view appears, unless the user has set a per-window
-        // override (in which case override wins).
+        // mounted — re-seed from defaults on each appear unless the
+        // user set a per-window override.
         let d = UserDefaults.standard
         if state.themeOverride == nil {
             state.themeName = AppThemeName(stored: d.string(forKey: AppPreferenceKey.themeName))
@@ -422,8 +336,8 @@ struct EditorView: View {
             let stored = d.double(forKey: AppPreferenceKey.fontSize)
             state.fontSize = stored > 0 ? stored : 14
         }
-        // Capture `state` weakly: closures stored on `state` that capture
-        // it strongly would create an ARC cycle.
+        // Weak captures: closures stored on `state` would otherwise
+        // form an ARC cycle.
         state.setText = { [weak state, weak document] newText in
             guard state != nil, let document else { return }
             if document.text != newText {
@@ -470,9 +384,6 @@ struct EditorView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                 Button("Cancel") {
-                    // Cancel the in-flight load. The task's defer
-                    // clears state.loadTask; the catch on
-                    // CancellationError flips `isLoading` off.
                     state.loadTask?.cancel()
                 }
                 .buttonStyle(.bordered)
@@ -483,12 +394,9 @@ struct EditorView: View {
         }
     }
 
-    /// Friendly "Loading <name>… from <provider>" message shown in the
-    /// overlay. Provider name comes from the same breadcrumb logic the
-    /// title-bar subtitle uses.
     private var loadingMessage: String {
-        // During an Open-in-new-window load, document.fileURL is still
-        // nil until applyPayload — pull the URL from state if available.
+        // For Open-in-new-window, document.fileURL is nil until
+        // applyPayload — fall back to state.fileURL.
         let url = document.fileURL ?? state.fileURL
         guard let url else { return "Loading…" }
         let provider = DocumentLocation.describe(parentOf: url)
@@ -505,11 +413,8 @@ struct EditorView: View {
     @ViewBuilder
     private var statusBar: some View {
         HStack(spacing: 12) {
-            // Split cycle lives at the lower-left of the iPad window
-            // so it's reachable with a thumb regardless of how the
-            // status bar's center metrics expand. The cycle glyph
-            // updates to reflect the current state (rectangle /
-            // split-2x1 / split-1x2).
+            // Lower-left so a thumb can reach it regardless of how
+            // the centre metrics expand.
             splitCycleButton
             Divider().frame(height: 14)
             counts.foregroundStyle(.secondary)
@@ -532,12 +437,9 @@ struct EditorView: View {
         .background(.bar)
     }
 
-    /// Compact iPhone status bar: an overflow menu for the
-    /// per-document settings (encoding / line endings / language /
-    /// revisions) and the info ⓘ. Palette and Settings live in the
-    /// nav bar on iPhone; counts / byte size are reachable through
-    /// the info inspector — fitting them on a phone width turns
-    /// into wrapped, unreadable text.
+    /// Per-document settings fold into the overflow menu; counts /
+    /// byte size move to the info inspector. Fitting the wide bar's
+    /// contents on a phone width would wrap into unreadable lines.
     @ViewBuilder
     private var phoneStatusBar: some View {
         HStack(spacing: 16) {
@@ -552,9 +454,8 @@ struct EditorView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .background(.bar)
-        // Horizontal swipe on the strip = prev/next tab, matching
-        // Safari's URL-bar swipe. Threshold is comfortably large so
-        // a stray scroll on the bar doesn't toggle tabs.
+        // Safari-style: horizontal swipe = prev/next tab. Threshold
+        // is wide enough that a stray scroll doesn't trigger.
         .gesture(
             DragGesture(minimumDistance: 40)
                 .onEnded { value in
@@ -568,14 +469,9 @@ struct EditorView: View {
         )
     }
 
-    /// iPhone-only nav-bar control combining the command palette
-    /// and the customizable toolbar menu. When the user has the
-    /// toolbar enabled in Settings, this renders as a `Menu` with
-    /// **Command Palette…** as the first row and every
-    /// `ToolbarConfig.shared.slots` entry beneath it. When the
-    /// toolbar is turned off, it collapses to a plain
-    /// command-palette button — keeps the nav bar from
-    /// permanently growing a third trailing icon.
+    /// Combines the palette and the customizable toolbar into one
+    /// nav-bar slot, so the bar doesn't grow a third trailing icon
+    /// when both are enabled.
     @ViewBuilder
     private var phonePaletteEntry: some View {
         if showToolbarPref {
@@ -591,11 +487,8 @@ struct EditorView: View {
         }
     }
 
-    /// Single editor, OR two editors over the same document when
-    /// split mode is on. Horizontal orientation lays them out
-    /// left/right (HStack); vertical lays them top/bottom (VStack).
-    /// The divider is a draggable 6 pt strip; pane size tracks
-    /// `state.splitFraction` along the orientation's axis.
+    /// Two editors over the same document in split mode. Pane size
+    /// tracks `state.splitFraction` along the orientation's axis.
     @ViewBuilder
     private var splitOrSingleEditor: some View {
         if state.splitOpen, let session = bus.scenes.currentSession,
@@ -627,17 +520,10 @@ struct EditorView: View {
         }
     }
 
-    // (documentTextBinding retired with the per-keystroke buffer
-    // flow refactor. The engine's text view owns the live buffer;
-    // `document.text` is now a debounced snapshot for eventual-
-    // consistency consumers and is only assigned wholesale on
-    // load / revert / restore paths.)
-
     @ViewBuilder
     private func splitDivider(in totalSize: CGFloat, axis: SplitOrientation) -> some View {
-        // Draggable 6 pt strip — width vs height swap depending on
-        // split axis. Drag offset reads from the same axis so a
-        // top/bottom split tracks vertical drags, not horizontal.
+        // Width/height swap with the axis; drag reads from the same
+        // axis so vertical splits track vertical drags.
         Color(.separator)
             .frame(width:  axis == .horizontal ? 6 : nil,
                    height: axis == .vertical   ? 6 : nil)
@@ -662,19 +548,17 @@ struct EditorView: View {
             )
     }
 
-    /// Claim "I'm the foreground scene" on the bus. Called from every
-    /// in-scene button that fires a presentation action, so the
-    /// resulting sheet / picker / window lands on this scene even
-    /// when SwiftUI's scenePhase hasn't fired yet (iPad Stage Manager
-    /// + Split View race that bites the menu-bar Open / Palette
-    /// flow).
+    /// Forces "I'm the foreground scene" on the bus before any
+    /// in-scene button fires a presentation action. Works around
+    /// the iPad Stage Manager + Split View race where scenePhase
+    /// fires late and a sheet would otherwise land on the wrong
+    /// window.
     private func claimFocus() {
         bus.scenes.currentEditor = state
         if let session = bus.scenes.currentSession,
            !session.tabs.contains(where: { $0.state === state }) {
-            // The session pointer was stale (different window's
-            // session). Find the session that owns this state and
-            // promote it.
+            // Stale session pointer (other window's session) — find
+            // the one that actually owns this state.
             for candidate in bus.scenes.allOpenSessions {
                 if candidate.tabs.contains(where: { $0.state === state }) {
                     bus.scenes.currentSession = candidate
@@ -689,10 +573,8 @@ struct EditorView: View {
         let registry = CommandRegistry.all()
         let slots = ToolbarConfig.shared.slots
         Menu {
-            // Command Palette is pinned at the top of the menu — same
-            // affordance the standalone button gives when the toolbar
-            // is disabled, just folded into the toolbar menu so the
-            // nav bar carries one icon instead of two.
+            // Palette pinned at the top so the affordance is the
+            // same whether the toolbar is on or off.
             Button {
                 claimFocus()
                 CommandActions.presentCommandPalette()
@@ -719,8 +601,7 @@ struct EditorView: View {
         .accessibilityLabel("Toolbar Actions")
     }
 
-    /// iPhone-only: Safari-style tabs button. Tap opens the tab
-    /// switcher sheet; the badge shows current tab count when > 1.
+    /// Safari-style tabs button. Badge shows tab count when > 1.
     @ViewBuilder
     private var phoneTabsButton: some View {
         Button {
@@ -770,10 +651,8 @@ struct EditorView: View {
         .help("Document settings")
     }
 
-    /// Cycle button for split view (off → horizontal → vertical →
-    /// off). Glyph mirrors the current state so the user can read
-    /// the bar at a glance: side-by-side rectangle for horizontal,
-    /// stacked for vertical, single rectangle when off.
+    /// Glyph mirrors the current state — single rectangle when
+    /// closed, split-2x1 / split-1x2 when open.
     @ViewBuilder
     private var splitCycleButton: some View {
         Button {
@@ -806,12 +685,10 @@ struct EditorView: View {
         }
     }
 
-    /// Snapshot the document ~800 ms after typing stops. Disk-backed
-    /// docs round-trip through `autoSave` (write to URL + record
-    /// revision); untitled buffers get `autoSnapshot` (revision only,
-    /// no disk touch — the sandbox requires a user-granted location).
-    /// Initial loads opt out so `loadAsync`'s text stream doesn't
-    /// immediately echo back.
+    /// ~800 ms after typing stops. URL-backed docs hit `autoSave`
+    /// (write + revision); untitled get `autoSnapshot` (revision
+    /// only — sandbox demands a user-granted location to write).
+    /// `loadAsync` opts out so its text stream doesn't echo back.
     private func scheduleAutoSave() {
         guard !document.isLoading, document.isDirty else { return }
         state.autoSaveTask?.cancel()
@@ -820,11 +697,9 @@ struct EditorView: View {
             try? await Task.sleep(for: Timing.autoSaveDebounce)
             if Task.isCancelled { return }
             guard let document, document.isDirty else { return }
-            // Snapshot live buffer from the engine before encoding.
-            // `document.text` is a 300 ms-debounced snapshot — at the
-            // autosave debounce (800 ms after typing stop) it's
-            // usually up to date, but a single dropped tick would
-            // mean autosaving stale bytes. Cheap to be explicit.
+            // Pull the engine's live buffer — `document.text` is a
+            // 300 ms snapshot, and one dropped tick would autosave
+            // stale bytes.
             if let live = state?.textView?.text {
                 document.text = live
             }
@@ -836,9 +711,8 @@ struct EditorView: View {
         }
     }
 
-    /// Status-bar entry into the document's revision history. Always
-    /// enabled — untitled buffers still capture in-memory snapshots
-    /// keyed by the tab's UUID, so there's something useful to browse.
+    /// Always enabled — untitled buffers still capture in-memory
+    /// snapshots keyed by tab UUID, so there's something to browse.
     @ViewBuilder
     private var revisionsButton: some View {
         Button {
@@ -854,19 +728,15 @@ struct EditorView: View {
         .help("Browse and restore previous versions of this document")
     }
 
-    /// Tiny chevron-less button at the bottom-right of the status bar.
-    /// Toggles the side `.inspector` panel that shows File / Outline /
-    /// Count. The current tinted style indicates open vs. closed at a
-    /// glance — matching CotEditor's persistent inspector button.
+    /// Tinted/untinted state mirrors open vs closed at a glance —
+    /// CotEditor's persistent inspector affordance.
     @ViewBuilder
     private var infoToggle: some View {
         Button {
             state.inspectorOpen.toggle()
         } label: {
-            // CotEditor-style: outline-less "i" glyph (the `info`
-            // SF symbol). The standalone `i` reads as plain text
-            // weight, so it doesn't compete with the surrounding
-            // status-bar dropdowns.
+            // SF "info" glyph — reads as plain text weight so it
+            // doesn't compete with the dropdown labels.
             Image(systemName: "info")
                 .font(.system(size: 14, weight: state.inspectorOpen ? .bold : .regular))
                 .foregroundStyle(state.inspectorOpen ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
@@ -898,14 +768,11 @@ struct EditorView: View {
     }
 
     private func byteFormatter(_ bytes: Int) -> String {
-        // Compact integer with grouping separators — matches CotEditor's
-        // "14 bytes" / "1,276,305 bytes" style.
         bytes.formatted(.number)
     }
 
-    /// CotEditor-style encoding popover. Lists every encoding the platform
-    /// reports plus a "with BOM" toggle for UTF-8; selection re-decodes the
-    /// original file bytes if possible.
+    /// Selection re-decodes the original bytes when possible —
+    /// matches CotEditor's encoding-popover behaviour.
     @ViewBuilder
     private var encodingMenu: some View {
         Menu { encodingMenuChoices } label: {
@@ -995,8 +862,8 @@ struct EditorView: View {
         .contentShape(.rect)
     }
 
-    /// Same logic as `EncodingPickerSheet.encodingChoices` — kept local
-    /// so the status menu doesn't need to import the sheet.
+    /// Duplicated from `EncodingPickerSheet.encodingChoices` so the
+    /// status menu doesn't have to import the sheet.
     private var statusEncodingChoices: [String.Encoding] {
         String.sortedAvailableStringEncodings.compactMap { $0 }
     }
@@ -1075,9 +942,9 @@ struct EditorView: View {
         case .preferences:
             NavigationStack { PreferencesView() }
         case .tabSwitcher:
-            // No longer routed through .sheet — EditorScene presents
-            // it inline so the editor frame can morph into the active
-            // tab's grid card via matchedGeometryEffect.
+            // EditorScene presents the switcher inline so the editor
+            // frame can morph into the active card via
+            // matchedGeometryEffect.
             EmptyView()
         case .processLines:
             ProcessLinesSheet()
