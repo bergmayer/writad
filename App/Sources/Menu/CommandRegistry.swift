@@ -507,12 +507,13 @@ enum CommandRegistry {
         // MARK: Spell check
 
         commands += [
-            .init(id: "spellCheckAll", title: "Check Document Spelling",   category: .spelling, shortcutHint: "⇧⌘;", synonyms: ["spell check document", "highlight misspellings", "audit spelling", "manual spell check"], action: CommandActions.highlightAllMisspellings),
-            .init(id: "spellClear",  title: "Clear Spelling Marks",         category: .spelling, synonyms: ["remove spelling highlights", "clear misspelling highlights"], action: CommandActions.clearMisspellingHighlights),
-            .init(id: "spellNext",   title: "Find Next Misspelling",        category: .spelling, synonyms: ["check spelling", "next typo"], action: CommandActions.jumpToNextMisspelling),
-            .init(id: "spellLearn",  title: "Learn Spelling of Word",       category: .spelling, synonyms: ["add to dictionary", "remember word"], action: CommandActions.learnSelectedWord),
-            .init(id: "spellIgnore", title: "Ignore Spelling for Word",     category: .spelling, synonyms: ["skip word", "ignore this word"], action: CommandActions.ignoreSelectedWord),
-            .init(id: "spellLive",   title: "Toggle Live Spell Check",      category: .spelling, synonyms: ["check spelling while typing", "spelling underline"], action: CommandActions.toggleSpellCheckLive)
+            .init(id: "spellSheet",    title: "Check Spelling…",              category: .spelling, shortcutHint: "⇧⌘:", synonyms: ["spell check", "walk through spelling", "spelling dialog", "word spell check"], action: CommandActions.presentSpellCheckSheet),
+            .init(id: "spellCheckAll", title: "Highlight All Misspellings",   category: .spelling, shortcutHint: "⇧⌘;", synonyms: ["spell check document", "highlight misspellings", "audit spelling", "manual spell check"], action: CommandActions.highlightAllMisspellings),
+            .init(id: "spellClear",    title: "Clear Spelling Marks",         category: .spelling, synonyms: ["remove spelling highlights", "clear misspelling highlights"], action: CommandActions.clearMisspellingHighlights),
+            .init(id: "spellNext",     title: "Find Next Misspelling",        category: .spelling, synonyms: ["next typo"], action: CommandActions.jumpToNextMisspelling),
+            .init(id: "spellLearn",    title: "Learn Spelling of Word",       category: .spelling, synonyms: ["add to dictionary", "remember word"], action: CommandActions.learnSelectedWord),
+            .init(id: "spellIgnore",   title: "Ignore Spelling for Word",     category: .spelling, synonyms: ["skip word", "ignore this word"], action: CommandActions.ignoreSelectedWord),
+            .init(id: "spellLive",     title: "Toggle Live Spell Check",      category: .spelling, synonyms: ["check spelling while typing", "spelling underline"], action: CommandActions.toggleSpellCheckLive)
         ]
 
         // MARK: Bookmarks

@@ -93,6 +93,16 @@ protocol SpellCheck: AnyObject {
     /// Leaves other highlights (bracket match, live-match, find
     /// results) intact.
     func clearMisspellingHighlights()
+    /// Find the next misspelling at or after `location`, wrapping
+    /// once. Drives the walk-through spell-check sheet — returns the
+    /// flagged word, its range, and ranked suggestions. `nil` when
+    /// the buffer has nothing to flag.
+    func nextMisspelling(from location: Int) -> (range: NSRange, word: String, suggestions: [String])?
+    /// Learn a word by string (the walk-through sheet shows the word
+    /// directly; cursor selection isn't necessarily on it).
+    func learnWord(_ word: String)
+    /// Ignore a word by string for the rest of the session.
+    func ignoreWord(_ word: String)
 }
 
 // MARK: - Folding

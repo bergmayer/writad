@@ -1412,6 +1412,12 @@ enum CommandActions {
     static func clearMisspellingHighlights() {
         actions?.clearMisspellingHighlights()
     }
+    /// Walk-through spell check (Word-style). Always available — the
+    /// sheet uses UITextChecker directly, no dependency on the
+    /// per-tab live-spell-check toggle.
+    static func presentSpellCheckSheet() {
+        presentSheet(.spellCheck)
+    }
 
     // (Folding moved to CommandActions+Folding.swift)
 

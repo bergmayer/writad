@@ -74,6 +74,7 @@
 		B2000049 /* AppShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000049 /* AppShortcut.swift */; };
 		B200004A /* SessionsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100004A /* SessionsStore.swift */; };
 		B200004B /* WindowPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100004B /* WindowPlacement.swift */; };
+		B200004C /* SpellCheckSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100004C /* SpellCheckSheet.swift */; };
 		B2010001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1010001 /* Assets.xcassets */; };
 		B2020001 /* FileEncoding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000001 /* FileEncoding */; };
 		B2020002 /* LineEnding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000002 /* LineEnding */; };
@@ -152,6 +153,7 @@
 		B1000049 /* AppShortcut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShortcut.swift; sourceTree = "<group>"; };
 		B100004A /* SessionsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsStore.swift; sourceTree = "<group>"; };
 		B100004B /* WindowPlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPlacement.swift; sourceTree = "<group>"; };
+		B100004C /* SpellCheckSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpellCheckSheet.swift; sourceTree = "<group>"; };
 		B1010001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B1010002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B1010003 /* Ayyyy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ayyyy.entitlements; sourceTree = "<group>"; };
@@ -307,6 +309,7 @@
 				B1000043 /* OrganizeFootnotesSheet.swift */,
 				B1000044 /* MarkdownTableSheet.swift */,
 				B1000045 /* DraftsRecoverySheet.swift */,
+				B100004C /* SpellCheckSheet.swift */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -496,6 +499,7 @@
 				B2000049 /* AppShortcut.swift in Sources */,
 				B200004A /* SessionsStore.swift in Sources */,
 				B200004B /* WindowPlacement.swift in Sources */,
+				B200004C /* SpellCheckSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

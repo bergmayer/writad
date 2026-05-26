@@ -298,11 +298,11 @@ private struct TypingPreferencesTab: View {
                 Toggle("Auto-correct", isOn: $autoCorrect)
                 Toggle("Auto-capitalize", isOn: $autoCapitalize)
                 Toggle("Smart Quotes & Dashes", isOn: $smartQuotes)
-                Toggle("Check Spelling", isOn: $spellCheck)
+                Toggle("Live Spell Check", isOn: $spellCheck)
             }
 
             Section {
-                Text("These are typically left off for plain-text and code editing — they change the bytes you type.")
+                Text("These are typically left off for plain-text and code editing — they change the bytes you type. The walk-through spell checker (Check Spelling… in the command palette) is always available regardless of these toggles.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

@@ -881,6 +881,15 @@ extension EditorEngine.TextView: EditorActions {
 
     func learnSelectedWord() {
         guard let word = wordAtSelection(), !word.isEmpty else { return }
+        learnWord(word)
+    }
+
+    func ignoreSelectedWord() {
+        guard let word = wordAtSelection(), !word.isEmpty else { return }
+        ignoreWord(word)
+    }
+
+    func learnWord(_ word: String) {
         // `learnWord` is a static — it writes to the system-wide
         // learned-words dictionary. `ignoreWord` is an instance
         // method scoped per checker.
@@ -888,10 +897,43 @@ extension EditorEngine.TextView: EditorActions {
         Self.ignoredWords.remove(word)
     }
 
-    func ignoreSelectedWord() {
-        guard let word = wordAtSelection(), !word.isEmpty else { return }
+    func ignoreWord(_ word: String) {
         Self.textChecker.ignoreWord(word)
         Self.ignoredWords.insert(word)
+    }
+
+    /// Walk-through driver: skips over session-ignored words and
+    /// returns the first flagged hit at or after `location`, wrapping
+    /// once. `suggestions` is ranked best-first by UITextChecker.
+    func nextMisspelling(from location: Int) -> (range: NSRange, word: String, suggestions: [String])? {
+        let nsText = text as NSString
+        let full = NSRange(location: 0, length: nsText.length)
+        var range = Self.textChecker.rangeOfMisspelledWord(
+            in: nsText as String,
+            range: full,
+            startingAt: max(0, min(location, nsText.length)),
+            wrap: true,
+            language: "en_US"
+        )
+        while range.location != NSNotFound {
+            let word = nsText.substring(with: range)
+            if !Self.ignoredWords.contains(word) {
+                let guesses = Self.textChecker.guesses(
+                    forWordRange: range,
+                    in: nsText as String,
+                    language: "en_US"
+                ) ?? []
+                return (range, word, guesses)
+            }
+            range = Self.textChecker.rangeOfMisspelledWord(
+                in: nsText as String,
+                range: full,
+                startingAt: NSMaxRange(range),
+                wrap: true,
+                language: "en_US"
+            )
+        }
+        return nil
     }
 
     /// Namespace so we replace only misspelling marks, not live-match
