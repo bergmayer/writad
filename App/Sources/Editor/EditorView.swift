@@ -452,7 +452,14 @@ struct EditorView: View {
             // the centre metrics expand.
             splitCycleButton
             Divider().frame(height: 14)
-            counts.foregroundStyle(.secondary)
+            // ViewThatFits hides the counts row entirely when the
+            // window is too narrow — the wide single-line text would
+            // otherwise wrap onto a second row and double the bar's
+            // height. EmptyView is the "doesn't fit" fallback.
+            ViewThatFits(in: .horizontal) {
+                counts.foregroundStyle(.secondary)
+                EmptyView()
+            }
             Spacer(minLength: 8)
             byteCountLabel.foregroundStyle(.secondary)
             Divider().frame(height: 14)
@@ -804,6 +811,8 @@ struct EditorView: View {
                     .foregroundStyle(.tint)
             }
         }
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     @ViewBuilder
