@@ -480,26 +480,34 @@ final class EditorAccessoryView: UIInputView, UIScrollViewDelegate {
         // key on the iOS keyboard. Tapping a different modifier
         // disarms the others so only one is in flight at a time
         // (except ⇧ + ⌘ together, which Cmd's dispatch handles).
-        controlButton = modifierButton(symbol: "control",
-                                       label: "Control",
-                                       keyPath: \.armedAccessoryControl)
-        buttons.append(controlButton!)
+        // IMPORTANT: hold each button in a local `let` before writing
+        // to the `weak` ivar — otherwise the autoreleased return
+        // value dies before the array append and the weak ref nils
+        // out, crashing the next force-unwrap.
+        let control = modifierButton(symbol: "control",
+                                     label: "Control",
+                                     keyPath: \.armedAccessoryControl)
+        controlButton = control
+        buttons.append(control)
 
-        commandButton = modifierButton(symbol: "command",
-                                       label: "Command",
-                                       keyPath: \.armedAccessoryCommand)
-        buttons.append(commandButton!)
+        let command = modifierButton(symbol: "command",
+                                     label: "Command",
+                                     keyPath: \.armedAccessoryCommand)
+        commandButton = command
+        buttons.append(command)
 
-        optionButton = modifierButton(symbol: "option",
-                                      label: "Option",
-                                      keyPath: \.armedAccessoryOption)
-        buttons.append(optionButton!)
+        let option = modifierButton(symbol: "option",
+                                    label: "Option",
+                                    keyPath: \.armedAccessoryOption)
+        optionButton = option
+        buttons.append(option)
 
-        shiftButton = modifierButton(symbol: "shift",
-                                     label: "Shift",
-                                     keyPath: \.armedAccessoryShift,
-                                     allowStackingWith: \.armedAccessoryCommand)
-        buttons.append(shiftButton!)
+        let shift = modifierButton(symbol: "shift",
+                                   label: "Shift",
+                                   keyPath: \.armedAccessoryShift,
+                                   allowStackingWith: \.armedAccessoryCommand)
+        shiftButton = shift
+        buttons.append(shift)
 
         // Line / document cursor jumps
         buttons.append(button(symbol: "arrow.left.to.line", label: "Start of Line") { [weak self] in
