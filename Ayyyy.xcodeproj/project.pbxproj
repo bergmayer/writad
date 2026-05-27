@@ -95,6 +95,9 @@
 		B200005E /* CommandActions+Tabs.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100005E /* CommandActions+Tabs.swift */; };
 		B200005F /* CommandActions+LineOps.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100005F /* CommandActions+LineOps.swift */; };
 		B2000060 /* CommandActions+SelectLines.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000060 /* CommandActions+SelectLines.swift */; };
+		B2000061 /* ToolbarConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000061 /* ToolbarConfig.swift */; };
+		B2000062 /* ToolbarSymbolPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000062 /* ToolbarSymbolPicker.swift */; };
+		B2000063 /* ToolbarSlotEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000063 /* ToolbarSlotEditor.swift */; };
 		B2010001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1010001 /* Assets.xcassets */; };
 		B2020001 /* FileEncoding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000001 /* FileEncoding */; };
 		B2020002 /* LineEnding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000002 /* LineEnding */; };
@@ -194,6 +197,9 @@
 		B100005E /* CommandActions+Tabs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CommandActions+Tabs.swift"; sourceTree = "<group>"; };
 		B100005F /* CommandActions+LineOps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CommandActions+LineOps.swift"; sourceTree = "<group>"; };
 		B1000060 /* CommandActions+SelectLines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CommandActions+SelectLines.swift"; sourceTree = "<group>"; };
+		B1000061 /* ToolbarConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarConfig.swift; sourceTree = "<group>"; };
+		B1000062 /* ToolbarSymbolPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarSymbolPicker.swift; sourceTree = "<group>"; };
+		B1000063 /* ToolbarSlotEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarSlotEditor.swift; sourceTree = "<group>"; };
 		B1010001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B1010002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B1010003 /* Ayyyy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ayyyy.entitlements; sourceTree = "<group>"; };
@@ -352,6 +358,9 @@
 				B100001A /* FindReplaceSheet.swift */,
 				B1000019 /* MultiFileSearchSheet.swift */,
 				B1000020 /* WindowToolbar.swift */,
+				B1000061 /* ToolbarConfig.swift */,
+				B1000062 /* ToolbarSymbolPicker.swift */,
+				B1000063 /* ToolbarSlotEditor.swift */,
 				B1000021 /* InfoInspectorSheet.swift */,
 				B1000022 /* LineUtilitiesSheets.swift */,
 				B1000023 /* Snippets.swift */,
@@ -580,6 +589,9 @@
 				B200005E /* CommandActions+Tabs.swift in Sources */,
 				B200005F /* CommandActions+LineOps.swift in Sources */,
 				B2000060 /* CommandActions+SelectLines.swift in Sources */,
+				B2000061 /* ToolbarConfig.swift in Sources */,
+				B2000062 /* ToolbarSymbolPicker.swift in Sources */,
+				B2000063 /* ToolbarSlotEditor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
