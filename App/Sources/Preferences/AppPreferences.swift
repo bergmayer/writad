@@ -53,7 +53,6 @@ enum AppPreferenceKey {
     // MARK: Indentation
     static let usesTabs               = "usesTabs"
     static let indentWidth            = "indentWidth"
-    static let autoIndent             = "autoIndent"
 
     // MARK: Editing
     static let insertCharacterPairs   = "insertCharacterPairs"
@@ -160,7 +159,6 @@ enum AppPreferenceDefaults {
             // Indentation
             AppPreferenceKey.usesTabs: false,
             AppPreferenceKey.indentWidth: 4,
-            AppPreferenceKey.autoIndent: true,
 
             // Editing
             AppPreferenceKey.insertCharacterPairs: true,

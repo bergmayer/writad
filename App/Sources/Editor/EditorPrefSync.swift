@@ -124,14 +124,12 @@ private struct IndentationPrefSync: ViewModifier {
     let state: EditorState
     @AppStorage(AppPreferenceKey.usesTabs) private var usesTabsPref: Bool = false
     @AppStorage(AppPreferenceKey.indentWidth) private var indentWidthPref: Int = 4
-    @AppStorage(AppPreferenceKey.autoIndent) private var autoIndentPref: Bool = true
     @AppStorage(AppPreferenceKey.insertCharacterPairs) private var insertCharacterPairsPref: Bool = true
 
     func body(content: Content) -> some View {
         content
             .onChange(of: usesTabsPref) { _, v in state.usesTabs = v }
             .onChange(of: indentWidthPref) { _, v in state.indentWidth = v }
-            .onChange(of: autoIndentPref) { _, v in state.autoIndent = v }
             .onChange(of: insertCharacterPairsPref) { _, v in state.insertCharacterPairs = v }
     }
 }

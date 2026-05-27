@@ -71,7 +71,6 @@ final class EditorState {
     // Indentation
     var usesTabs: Bool
     var indentWidth: Int
-    var autoIndent: Bool
 
     // Typing behavior
     var insertCharacterPairs: Bool
@@ -168,7 +167,6 @@ final class EditorState {
 
         self.usesTabs                      = d.bool(forKey: AppPreferenceKey.usesTabs)
         self.indentWidth                   = d.integer(forKey: AppPreferenceKey.indentWidth)
-        self.autoIndent                    = d.bool(forKey: AppPreferenceKey.autoIndent)
 
         self.insertCharacterPairs          = d.bool(forKey: AppPreferenceKey.insertCharacterPairs)
         self.autoCorrect                   = d.bool(forKey: AppPreferenceKey.autoCorrect)
