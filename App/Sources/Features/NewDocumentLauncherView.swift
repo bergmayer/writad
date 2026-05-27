@@ -20,9 +20,9 @@ struct NewDocumentLauncherView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
+                openExistingSection
                 templatesSection
                 draftsSection
-                openExistingSection
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 28)
