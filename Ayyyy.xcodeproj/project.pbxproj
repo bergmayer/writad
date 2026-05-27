@@ -75,6 +75,16 @@
 		B200004A /* SessionsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100004A /* SessionsStore.swift */; };
 		B200004B /* WindowPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100004B /* WindowPlacement.swift */; };
 		B200004C /* SpellCheckSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100004C /* SpellCheckSheet.swift */; };
+		B200004D /* FindState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100004D /* FindState.swift */; };
+		B200004E /* SceneRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100004E /* SceneRouter.swift */; };
+		B200004F /* PickerIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100004F /* PickerIntents.swift */; };
+		B2000050 /* EditingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000050 /* EditingState.swift */; };
+		B2000051 /* PendingURLs.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000051 /* PendingURLs.swift */; };
+		B2000052 /* TabModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000052 /* TabModel.swift */; };
+		B2000053 /* EditorSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000053 /* EditorSession.swift */; };
+		B2000054 /* ClosedTabsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000054 /* ClosedTabsStore.swift */; };
+		B2000055 /* DraftsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000055 /* DraftsStore.swift */; };
+		B2000056 /* PreferenceEnums.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000056 /* PreferenceEnums.swift */; };
 		B2010001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1010001 /* Assets.xcassets */; };
 		B2020001 /* FileEncoding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000001 /* FileEncoding */; };
 		B2020002 /* LineEnding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000002 /* LineEnding */; };
@@ -154,6 +164,16 @@
 		B100004A /* SessionsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsStore.swift; sourceTree = "<group>"; };
 		B100004B /* WindowPlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPlacement.swift; sourceTree = "<group>"; };
 		B100004C /* SpellCheckSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpellCheckSheet.swift; sourceTree = "<group>"; };
+		B100004D /* FindState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindState.swift; sourceTree = "<group>"; };
+		B100004E /* SceneRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneRouter.swift; sourceTree = "<group>"; };
+		B100004F /* PickerIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickerIntents.swift; sourceTree = "<group>"; };
+		B1000050 /* EditingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingState.swift; sourceTree = "<group>"; };
+		B1000051 /* PendingURLs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingURLs.swift; sourceTree = "<group>"; };
+		B1000052 /* TabModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabModel.swift; sourceTree = "<group>"; };
+		B1000053 /* EditorSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSession.swift; sourceTree = "<group>"; };
+		B1000054 /* ClosedTabsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClosedTabsStore.swift; sourceTree = "<group>"; };
+		B1000055 /* DraftsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftsStore.swift; sourceTree = "<group>"; };
+		B1000056 /* PreferenceEnums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferenceEnums.swift; sourceTree = "<group>"; };
 		B1010001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B1010002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B1010003 /* Ayyyy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ayyyy.entitlements; sourceTree = "<group>"; };
@@ -261,6 +281,15 @@
 				B1000034 /* EditableTitleView.swift */,
 				B100004A /* SessionsStore.swift */,
 				B100004B /* WindowPlacement.swift */,
+				B100004D /* FindState.swift */,
+				B100004E /* SceneRouter.swift */,
+				B100004F /* PickerIntents.swift */,
+				B1000050 /* EditingState.swift */,
+				B1000051 /* PendingURLs.swift */,
+				B1000052 /* TabModel.swift */,
+				B1000053 /* EditorSession.swift */,
+				B1000054 /* ClosedTabsStore.swift */,
+				B1000055 /* DraftsStore.swift */,
 			);
 			path = Editor;
 			sourceTree = "<group>";
@@ -332,6 +361,7 @@
 			children = (
 				B100000F /* AppPreferences.swift */,
 				B1000010 /* PreferencesView.swift */,
+				B1000056 /* PreferenceEnums.swift */,
 			);
 			path = Preferences;
 			sourceTree = "<group>";
@@ -500,6 +530,16 @@
 				B200004A /* SessionsStore.swift in Sources */,
 				B200004B /* WindowPlacement.swift in Sources */,
 				B200004C /* SpellCheckSheet.swift in Sources */,
+				B200004D /* FindState.swift in Sources */,
+				B200004E /* SceneRouter.swift in Sources */,
+				B200004F /* PickerIntents.swift in Sources */,
+				B2000050 /* EditingState.swift in Sources */,
+				B2000051 /* PendingURLs.swift in Sources */,
+				B2000052 /* TabModel.swift in Sources */,
+				B2000053 /* EditorSession.swift in Sources */,
+				B2000054 /* ClosedTabsStore.swift in Sources */,
+				B2000055 /* DraftsStore.swift in Sources */,
+				B2000056 /* PreferenceEnums.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
