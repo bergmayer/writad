@@ -84,6 +84,7 @@ enum AppShortcut {
     // MARK: Tabs / Window
     static let showAllTabs       = KeyboardShortcut("\\", modifiers: [.command, .shift])
     static let closeTab          = KeyboardShortcut("w")
+    static let closeWindow       = KeyboardShortcut("w", modifiers: [.command, .shift])
     static let reopenLastClosed  = KeyboardShortcut("t", modifiers: [.command, .shift])
     static let nextTab           = KeyboardShortcut("]", modifiers: [.command, .shift])
     static let previousTab       = KeyboardShortcut("[", modifiers: [.command, .shift])

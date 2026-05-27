@@ -22,29 +22,21 @@ extension CommandActions {
 
     // MARK: - Close / confirm
 
-    /// Safari ⌘W parity: close the tab if there's more than one,
-    /// else close the window. Dirty buffers always route through the
-    /// confirm dialog; its handlers tear the window down when the
-    /// last tab resolves.
+    /// ⌘W closes the active tab. Closing the final tab now leaves the
+    /// window with a fresh launcher tab instead of destroying it —
+    /// matching Safari iPad's "Start Page". Use `closeWindow()`
+    /// (⌘⇧W) when the user actually wants the window gone.
     static func closeActiveTab() {
-        guard let session = Self.session,
-              let tab = session.tabs.first(where: { $0.id == session.selectedTabID }) else { return }
-        if session.tabs.count > 1 {
-            requestCloseTab(session.selectedTabID, in: session)
-            return
-        }
-        // Last tab: dirty → confirm dialog (resolve handler tears
-        // the window down); clean → close immediately on iPad,
-        // swallow ⌘W on iPhone (single-window).
-        if shouldWarnBeforeClose(tab) {
-            requestCloseTab(session.selectedTabID, in: session)
-            return
-        }
+        guard let session = Self.session else { return }
+        requestCloseTab(session.selectedTabID, in: session)
+    }
+
+    /// Tear down the foreground scene. iPad-only; iPhone is single-
+    /// window and the system request is a no-op there.
+    static func closeWindow() {
         destroyForegroundWindowScene()
     }
 
-    /// iPad-only; iPhone has one scene and the system request is a
-    /// no-op there.
     static func destroyForegroundWindowScene() {
         guard let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) else { return }
         UIApplication.shared.requestSceneSessionDestruction(
@@ -77,9 +69,7 @@ extension CommandActions {
         defer { Self.context.editing.pendingClose = nil }
         guard let (session, tab) = Self.resolveSession(for: pending) else { return }
         tab.document.deleteScratchFile()
-        let wasLastTab = (session.tabs.count == 1)
-        _ = session.closeTab(pending.tabID, disposition: .discard)
-        if wasLastTab { destroyForegroundWindowScene() }
+        session.closeTab(pending.tabID, disposition: .discard)
     }
 
     /// URL-backed: save then close. Untitled: route to Save As, tab
@@ -103,10 +93,37 @@ extension CommandActions {
             Self.context.editing.pendingClose = nil
             return
         }
-        let wasLastTab = (session.tabs.count == 1)
-        _ = session.closeTab(pending.tabID)
+        session.closeTab(pending.tabID)
         Self.context.editing.pendingClose = nil
-        if wasLastTab { destroyForegroundWindowScene() }
+    }
+
+    /// "Save as Draft" path from the close dialog + title menu:
+    /// force a draft snapshot of the live text so the launcher can
+    /// resume it, then close (archive disposition — both the draft
+    /// and the closed-tab record become recovery vehicles). Same
+    /// shape as autoSave but synchronous to the user's tap so we
+    /// don't lose the last keystroke when the debounce hadn't fired.
+    static func saveAsDraftAndClose(_ pending: PendingClose) {
+        defer { Self.context.editing.pendingClose = nil }
+        guard let (session, tab) = Self.resolveSession(for: pending) else { return }
+        snapshotDraft(for: tab)
+        session.closeTab(pending.tabID)
+    }
+
+    /// Title-menu / palette entry — captures the buffer into the
+    /// draft store without closing.
+    static func saveAsDraft() {
+        guard let session = Self.context.scenes.currentSession,
+              let tab = session.tabs.first(where: { $0.id == session.selectedTabID })
+        else { return }
+        snapshotDraft(for: tab)
+    }
+
+    private static func snapshotDraft(for tab: TabModel) {
+        if let live = tab.state.textView?.text {
+            tab.document.text = live
+        }
+        tab.document.autoSave()
     }
 
     static func cancelPendingClose() {

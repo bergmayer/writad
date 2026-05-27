@@ -103,13 +103,19 @@ struct EditorView: View {
             Button(pending.isUntitled ? "Save…" : "Save and Close") {
                 CommandActions.confirmSaveAndClose(pending)
             }
+            // "Save as Draft" parks the live buffer in the launcher's
+            // recovery pool without writing to disk — fastest path
+            // to dismiss the dialog without losing work.
+            Button("Save as Draft") {
+                CommandActions.saveAsDraftAndClose(pending)
+            }
             Button("Discard Changes", role: .destructive) {
                 CommandActions.confirmDiscardAndClose(pending)
             }
             Button("Cancel", role: .cancel) { CommandActions.cancelPendingClose() }
         } message: { pending in
             Text(pending.isUntitled
-                 ? "This document is untitled. Save it to a file or discard the contents."
+                 ? "This document is untitled. Save it to a file, park it as a draft, or discard the contents."
                  : "This document has unsaved changes since its last save.")
         }
         .onAppear {

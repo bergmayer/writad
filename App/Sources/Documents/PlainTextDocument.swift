@@ -427,11 +427,21 @@ final class PlainTextDocument {
     /// freeze the UI during the engine's line-manager init.
     nonisolated static let hardSizeCap: Int = 100 * 1024 * 1024  // 100 MB
 
-    static let supportedReadTypes: [UTType] = [
-        .plainText, .utf8PlainText, .utf16PlainText, .sourceCode, .text,
-        .delimitedText, .commaSeparatedText, .tabSeparatedText,
-        .yaml, .json, .xml, .html, .data
-    ]
+    /// File picker / Recents are gated on these types so the user
+    /// only sees files Ayyyy can actually open. Dropping `.data`
+    /// removes the over-broad fallback — it matches every file. Add
+    /// custom UTIs (markdown / TeX / Typst) when registered.
+    static let supportedReadTypes: [UTType] = {
+        var types: [UTType] = [
+            .plainText, .utf8PlainText, .utf16PlainText, .sourceCode, .text,
+            .delimitedText, .commaSeparatedText, .tabSeparatedText,
+            .yaml, .json, .xml, .html
+        ]
+        for identifier in ["net.daringfireball.markdown", "org.tug.tex", "app.typst.typst"] {
+            if let custom = UTType(identifier) { types.append(custom) }
+        }
+        return types
+    }()
     static let supportedWriteType: UTType = .plainText
 
     nonisolated static let candidateEncodings: [String.Encoding] = [

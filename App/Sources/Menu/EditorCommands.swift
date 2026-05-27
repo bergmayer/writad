@@ -398,6 +398,8 @@ struct EditorCommands: Commands {
                 .keyboardShortcut(AppShortcut.showAllTabs)
             Button("Close Tab", action: focused(CommandActions.closeActiveTab))
                 .keyboardShortcut(AppShortcut.closeTab)
+            Button("Close Window", action: focused(CommandActions.closeWindow))
+                .keyboardShortcut(AppShortcut.closeWindow)
             Button("Reopen Last Closed Tab", action: focused(CommandActions.reopenLastClosedTab))
                 .keyboardShortcut(AppShortcut.reopenLastClosed)
             Divider()

@@ -68,18 +68,25 @@ final class EditorSession {
         case discard
     }
 
+    /// Always succeeds. When the last tab closes, spawns a fresh
+    /// launcher in its place so the window keeps a renderable surface
+    /// — Safari iPad's "Start Page" behavior. To destroy the whole
+    /// window, use `CommandActions.closeWindow()` instead.
+    @discardableResult
     func closeTab(_ id: UUID, disposition: CloseDisposition = .archive) -> Bool {
         guard let idx = tabs.firstIndex(where: { $0.id == id }) else { return false }
-        // Caller is expected to close the window when this returns
-        // false — never let `tabs` go to zero.
-        guard tabs.count > 1 else { return false }
         let tab = tabs[idx]
         if disposition == .archive {
             recordClosure(of: tab)
         }
         let wasActive = (selectedTabID == id)
         tabs.remove(at: idx)
-        if wasActive {
+        if tabs.isEmpty {
+            let fresh = TabModel()
+            fresh.kind = .launcher
+            tabs.append(fresh)
+            selectedTabID = fresh.id
+        } else if wasActive {
             selectedTabID = tabs[max(0, idx - 1)].id
         }
         return true
