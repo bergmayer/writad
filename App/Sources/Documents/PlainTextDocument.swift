@@ -263,41 +263,23 @@ final class PlainTextDocument {
         }
     }
 
-    /// Mac-style autosave: write to the scratch shadow + a recoverable
-    /// draft. Never touches `fileURL` — ⌘S is the only path that writes
-    /// back to the source. Off-main so the encode + write don't freeze
-    /// the typing loop (used to be a noticeable hitch on multi-MB files).
-    func autoSave() {
-        // Recoverable draft for any dirty buffer (untitled OR URL-backed).
-        // For URL-backed docs we stash a security-scoped bookmark so the
-        // recovery path can re-open the original and apply the drafted
-        // text on top instead of orphaning a new Untitled.
-        if !text.isEmpty {
-            var metadata: DraftMetadata?
-            if let source = fileURL {
-                let bookmark = try? source.bookmarkData(options: .minimalBookmark)
-                // Reuse the load-time attrs rather than re-reading
-                // disk — autosave fires per-keystroke and the source
-                // can't have changed since load without an explicit
-                // ⌘S in between (which would have re-baselined them).
-                metadata = DraftMetadata(
-                    sourceBookmark: bookmark,
-                    sourceDisplay: Self.displayPath(for: source),
-                    sourceEncodingRaw: fileEncoding.encoding.rawValue,
-                    sourceMtime: sourceMtimeAtLoad,
-                    sourceSize: sourceSizeAtLoad
-                )
-            }
-            draftURL = DraftsStore.shared.save(
-                text: text,
-                existing: draftURL,
-                metadata: metadata
-            )
-        } else if let stale = draftURL {
-            // User cleared the buffer — drop the draft so it doesn't
-            // resurface in the recovery banner.
-            DraftsStore.shared.discard(stale)
-            draftURL = nil
+    /// Mac-style autosave with checkout semantics:
+    ///
+    /// - Per-keystroke (`commitDraft: false`): writes only to the
+    ///   local scratch shadow + revision store. The synced drafts
+    ///   folder is NOT touched, so two devices can't both see the
+    ///   same buffer in the launcher while it's being edited.
+    /// - On close / app-background (`commitDraft: true`): also
+    ///   writes a draft to the synced folder so the buffer is
+    ///   recoverable from the launcher on the next session or on
+    ///   another device.
+    ///
+    /// Never touches `fileURL` either way — ⌘S is the only path
+    /// that writes back to the source. Off-main so the encode +
+    /// write don't freeze the typing loop.
+    func autoSave(commitDraft: Bool = false) {
+        if commitDraft {
+            writeDraftToSyncFolder()
         }
         guard let scratch = Self.scratchURL(for: revisionKey) else { return }
         let snapshot = text
@@ -338,6 +320,39 @@ final class PlainTextDocument {
     /// Alias kept for legacy call sites — the unified `autoSave()`
     /// already handles untitled buffers.
     func autoSnapshot() { autoSave() }
+
+    /// Push the live buffer into the synced drafts folder. Called
+    /// from every close path (tab × / ⌘W / Save as Draft / window
+    /// close / app background) so that an interrupted session can
+    /// be resumed from the launcher on this or any synced device.
+    /// Per-keystroke autosave doesn't call this — the draft folder
+    /// only sees the buffer at moments the user "lets go" of it.
+    func writeDraftToSyncFolder() {
+        if !text.isEmpty {
+            var metadata: DraftMetadata?
+            if let source = fileURL {
+                let bookmark = try? source.bookmarkData(options: .minimalBookmark)
+                metadata = DraftMetadata(
+                    sourceBookmark: bookmark,
+                    sourceDisplay: Self.displayPath(for: source),
+                    sourceEncodingRaw: fileEncoding.encoding.rawValue,
+                    sourceMtime: sourceMtimeAtLoad,
+                    sourceSize: sourceSizeAtLoad
+                )
+            }
+            draftURL = DraftsStore.shared.save(
+                text: text,
+                existing: draftURL,
+                metadata: metadata
+            )
+        } else if let stale = draftURL {
+            // User cleared the buffer before close — drop the draft
+            // so it doesn't resurface as an empty entry in the
+            // launcher.
+            DraftsStore.shared.discard(stale)
+            draftURL = nil
+        }
+    }
 
     /// Throw away the scratch shadow and draft for this doc — called
     /// by the Discard close path.

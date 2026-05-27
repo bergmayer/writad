@@ -123,7 +123,10 @@ extension CommandActions {
         if let live = tab.state.textView?.text {
             tab.document.text = live
         }
-        tab.document.autoSave()
+        // commitDraft: the user is closing or explicitly Save-as-
+        // Drafting, so push the live bytes to the synced folder
+        // — the per-keystroke path skips this.
+        tab.document.autoSave(commitDraft: true)
     }
 
     static func cancelPendingClose() {

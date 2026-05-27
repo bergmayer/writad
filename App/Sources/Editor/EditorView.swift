@@ -743,9 +743,11 @@ struct EditorView: View {
     /// Safari-style tabs button. Badge shows tab count when > 1.
     @ViewBuilder
     private var phoneTabsButton: some View {
-        Button {
-            claimFocus()
-            CommandActions.showTabSwitcher()
+        // Tap → menu. "Show Tab Overview" is the first item so the
+        // expose-style switcher is still one tap away; close-tab
+        // commands sit below. Long-press was too fiddly to reach.
+        Menu {
+            TabOverviewContextMenu()
         } label: {
             ZStack {
                 Image(systemName: "square.on.square")
@@ -764,13 +766,9 @@ struct EditorView: View {
             }
             .contentShape(.rect)
         }
-        .buttonStyle(.plain)
-        .help("Show All Tabs")
-        .accessibilityLabel("Show All Tabs")
-        // Tap-and-hold gates the multi-tab management menu — same
-        // entries as the iPad chrome's overview button so the surface
-        // is consistent across idioms.
-        .contextMenu { TabOverviewContextMenu() }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .accessibilityLabel("Tabs")
     }
 
     private var phoneTabBadgeCount: Int? {

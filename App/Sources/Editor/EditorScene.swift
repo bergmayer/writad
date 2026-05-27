@@ -150,11 +150,15 @@ struct EditorScene: View {
                 // since the debounce may be stale. `persistSessionRecord`
                 // re-runs the same loop, but going through it here gets
                 // drafts on disk before the OS suspends us.
+                // commitDraft: app is going to the background and
+                // could be killed by the OS, so push every dirty
+                // buffer to the synced folder for cross-device /
+                // post-launch recovery.
                 for tab in session.tabs where tab.document.isDirty {
                     if let live = tab.state.textView?.text {
                         tab.document.text = live
                     }
-                    tab.document.autoSave()
+                    tab.document.autoSave(commitDraft: true)
                 }
                 persistSessionRecord()
             }
@@ -437,8 +441,16 @@ struct EditorScene: View {
             ?? ""
         tab.document.text = text
         tab.document.isDirty = true
-        tab.document.draftURL = draft.url
         tab.state.text = text
+        // Check the draft out of the synced folder. While the tab
+        // is open the buffer lives only in local scratch; on close
+        // the draft is re-written so the launcher (and other
+        // devices) can pick it up again. This is what stops the
+        // same draft from being opened simultaneously on iPhone
+        // and iPad — once it's gone from the synced folder, the
+        // other device's launcher won't see it.
+        DraftsStore.shared.discard(draft.url)
+        tab.document.draftURL = nil
 
         if let bookmark = draft.metadata?.sourceBookmark,
            let resolved = Self.resolveBookmark(bookmark) {
@@ -604,12 +616,14 @@ struct EditorScene: View {
         guard !sceneUUID.isEmpty else { return }
         // Pull engine-live text into drafts so the snapshot's
         // `draftFilename` references current bytes, not a 300 ms-old
-        // debounce.
+        // debounce. commitDraft: this runs when the scene is being
+        // torn down (window close), so we want the synced folder
+        // updated for cross-device / next-launch recovery.
         for tab in session.tabs where tab.document.isDirty {
             if let live = tab.state.textView?.text {
                 tab.document.text = live
             }
-            tab.document.autoSave()
+            tab.document.autoSave(commitDraft: true)
         }
         let record = SessionRecord(scene: sceneUUID, session: session)
         SessionsStore.shared.save(record)

@@ -149,9 +149,12 @@ struct TabBarView: View {
 
     @ViewBuilder
     private var showAllTabsButton: some View {
-        Button {
-            AppStateBus.shared.scenes.claimFocus(session: session)
-            CommandActions.showTabSwitcher()
+        // Tap → menu. "Show Tab Overview" is the first item so the
+        // expose-style switcher stays one tap away; the close-tab
+        // commands sit below in the same surface. Long-press was
+        // too fragile a gesture to gate batch close behind.
+        Menu {
+            TabOverviewContextMenu()
         } label: {
             Image(systemName: "square.on.square")
                 .font(.system(size: 12, weight: .regular))
@@ -160,14 +163,9 @@ struct TabBarView: View {
                 .foregroundStyle(.secondary)
                 .contentShape(.rect)
         }
-        .buttonStyle(.borderless)
-        .help("Show All Tabs")
-        .accessibilityLabel("Show All Tabs")
-        // Tap-and-hold (or long-press on iPad / right-click on Mac
-        // Catalyst) gates the multi-tab management actions here so
-        // they live in one place instead of repeating on every pill.
-        // Shared with the iPhone status-bar overview button.
-        .contextMenu { TabOverviewContextMenu() }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .accessibilityLabel("Tabs")
     }
 
     private func tabLabel(_ tab: TabModel) -> String {

@@ -1,13 +1,24 @@
 import SwiftUI
 
-/// Tap-and-hold menu attached to the "show all tabs" button — both
-/// the iPad chrome's `showAllTabsButton` in `TabBarView` and the
-/// iPhone status bar's `phoneTabsButton`. Keeping the entries here
-/// means the two surfaces stay in lockstep instead of drifting as
-/// new tab-management commands land.
+/// Menu attached to the "show all tabs" button — both the iPad
+/// chrome's `showAllTabsButton` in `TabBarView` and the iPhone
+/// status bar's `phoneTabsButton`. The button now uses `Menu`
+/// (tap = menu), so a single tap reaches every entry instead of
+/// requiring a fragile long-press. "Show Tab Overview" leads so
+/// the previous tap-to-open-switcher behavior is still one tap.
+/// Keeping the entries here means the two surfaces stay in
+/// lockstep instead of drifting as new tab-management commands
+/// land.
 struct TabOverviewContextMenu: View {
 
     var body: some View {
+        Button {
+            claimFocus()
+            CommandActions.showTabSwitcher()
+        } label: {
+            Label("Show Tab Overview", systemImage: "square.on.square")
+        }
+        Divider()
         Button {
             claimFocus()
             CommandActions.newTab()
