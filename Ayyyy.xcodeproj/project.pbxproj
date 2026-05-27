@@ -85,6 +85,9 @@
 		B2000054 /* ClosedTabsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000054 /* ClosedTabsStore.swift */; };
 		B2000055 /* DraftsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000055 /* DraftsStore.swift */; };
 		B2000056 /* PreferenceEnums.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000056 /* PreferenceEnums.swift */; };
+		B2000057 /* BookmarkGutterOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000057 /* BookmarkGutterOverlay.swift */; };
+		B2000058 /* MatchScrollMarksOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000058 /* MatchScrollMarksOverlay.swift */; };
+		B2000059 /* ChangeHistoryGutterOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000059 /* ChangeHistoryGutterOverlay.swift */; };
 		B2010001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1010001 /* Assets.xcassets */; };
 		B2020001 /* FileEncoding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000001 /* FileEncoding */; };
 		B2020002 /* LineEnding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000002 /* LineEnding */; };
@@ -174,6 +177,9 @@
 		B1000054 /* ClosedTabsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClosedTabsStore.swift; sourceTree = "<group>"; };
 		B1000055 /* DraftsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftsStore.swift; sourceTree = "<group>"; };
 		B1000056 /* PreferenceEnums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferenceEnums.swift; sourceTree = "<group>"; };
+		B1000057 /* BookmarkGutterOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkGutterOverlay.swift; sourceTree = "<group>"; };
+		B1000058 /* MatchScrollMarksOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchScrollMarksOverlay.swift; sourceTree = "<group>"; };
+		B1000059 /* ChangeHistoryGutterOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangeHistoryGutterOverlay.swift; sourceTree = "<group>"; };
 		B1010001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B1010002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B1010003 /* Ayyyy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ayyyy.entitlements; sourceTree = "<group>"; };
@@ -290,6 +296,9 @@
 				B1000053 /* EditorSession.swift */,
 				B1000054 /* ClosedTabsStore.swift */,
 				B1000055 /* DraftsStore.swift */,
+				B1000057 /* BookmarkGutterOverlay.swift */,
+				B1000058 /* MatchScrollMarksOverlay.swift */,
+				B1000059 /* ChangeHistoryGutterOverlay.swift */,
 			);
 			path = Editor;
 			sourceTree = "<group>";
@@ -540,6 +549,9 @@
 				B2000054 /* ClosedTabsStore.swift in Sources */,
 				B2000055 /* DraftsStore.swift in Sources */,
 				B2000056 /* PreferenceEnums.swift in Sources */,
+				B2000057 /* BookmarkGutterOverlay.swift in Sources */,
+				B2000058 /* MatchScrollMarksOverlay.swift in Sources */,
+				B2000059 /* ChangeHistoryGutterOverlay.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
