@@ -52,16 +52,37 @@ final class DraftsStore {
     /// stays glance-readable.
     static let maxDrafts = 6
 
-    let directory: URL
+    /// Where new drafts get written. Resolved on access so a Settings
+    /// toggle of "Sync via iCloud Drive" takes effect immediately
+    /// without needing a relaunch — both local and iCloud roots get
+    /// ensured up front so either is ready when first write hits.
+    var directory: URL {
+        let root = UbiquityContainer.documentsURLForWrite
+        let dir = root.appendingPathComponent("Drafts", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    /// Every root the launcher should consider when listing drafts —
+    /// iCloud + local. Reading from both means flipping the sync
+    /// toggle never hides existing files; the user's old iCloud
+    /// drafts stay browseable even after going local-only.
+    var readDirectories: [URL] {
+        UbiquityContainer.documentsRootsForRead.map { root in
+            let dir = root.appendingPathComponent("Drafts", isDirectory: true)
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            return dir
+        }
+    }
 
     private init() {
-        // Prefer iCloud Drive so drafts sync across the user's
-        // devices; fall back to local Documents when iCloud is off
-        // or the user isn't signed in. Either way the path is
-        // `<root>/Drafts/`.
-        let docs = UbiquityContainer.preferredDocumentsURL
-        self.directory = docs.appendingPathComponent("Drafts", isDirectory: true)
-        try? FileManager.default.createDirectory(at: self.directory, withIntermediateDirectories: true)
+        // Eagerly ensure both potential draft directories exist so
+        // first-write doesn't race with directory creation when the
+        // user toggles iCloud mid-session.
+        for root in UbiquityContainer.documentsRootsForRead {
+            let dir = root.appendingPathComponent("Drafts", isDirectory: true)
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
     }
 
     /// Creates a new UUID-named file on first write, overwrites in
@@ -117,39 +138,47 @@ final class DraftsStore {
         try? FileManager.default.removeItem(at: sidecar)
     }
 
-    /// Every recoverable draft, newest first, empties filtered.
+    /// Every recoverable draft from every active root (iCloud and
+    /// local), newest first, empties filtered. Reading the union
+    /// means a user who toggled iCloud sync off still sees their
+    /// previously-synced drafts in the launcher.
     func loadAll() -> [DraftRecord] {
-        let urls = (try? FileManager.default.contentsOfDirectory(
-            at: directory,
-            includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey],
-            options: [.skipsHiddenFiles]
-        )) ?? []
         var records: [DraftRecord] = []
-        for url in urls {
-            guard url.pathExtension == "txt" else { continue }
-            let id = UUID(uuidString: url.deletingPathExtension().lastPathComponent) ?? UUID()
-            let attrs = try? url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
-            let modified = attrs?.contentModificationDate ?? .distantPast
-            let bytes = attrs?.fileSize ?? 0
-            guard bytes > 0 else { continue }
-            let preview: String
-            if let data = try? Data(contentsOf: url),
-               let str = String(data: data.prefix(2_048), encoding: .utf8) {
-                preview = String(str.prefix(80))
-                    .replacingOccurrences(of: "\n", with: " ")
-            } else {
-                preview = ""
+        var seen = Set<String>()
+        for dir in readDirectories {
+            let urls = (try? FileManager.default.contentsOfDirectory(
+                at: dir,
+                includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey],
+                options: [.skipsHiddenFiles]
+            )) ?? []
+            for url in urls {
+                guard url.pathExtension == "txt" else { continue }
+                let canonical = url.standardizedFileURL.path
+                guard seen.insert(canonical).inserted else { continue }
+                let id = UUID(uuidString: url.deletingPathExtension().lastPathComponent) ?? UUID()
+                let attrs = try? url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
+                let modified = attrs?.contentModificationDate ?? .distantPast
+                let bytes = attrs?.fileSize ?? 0
+                guard bytes > 0 else { continue }
+                let preview: String
+                if let data = try? Data(contentsOf: url),
+                   let str = String(data: data.prefix(2_048), encoding: .utf8) {
+                    preview = String(str.prefix(80))
+                        .replacingOccurrences(of: "\n", with: " ")
+                } else {
+                    preview = ""
+                }
+                let sidecar = url.deletingPathExtension().appendingPathExtension("json")
+                let metadata: DraftMetadata?
+                if let blob = try? Data(contentsOf: sidecar) {
+                    metadata = try? JSONDecoder().decode(DraftMetadata.self, from: blob)
+                } else {
+                    metadata = nil
+                }
+                records.append(DraftRecord(
+                    id: id, url: url, modified: modified, bytes: bytes, preview: preview, metadata: metadata
+                ))
             }
-            let sidecar = url.deletingPathExtension().appendingPathExtension("json")
-            let metadata: DraftMetadata?
-            if let blob = try? Data(contentsOf: sidecar) {
-                metadata = try? JSONDecoder().decode(DraftMetadata.self, from: blob)
-            } else {
-                metadata = nil
-            }
-            records.append(DraftRecord(
-                id: id, url: url, modified: modified, bytes: bytes, preview: preview, metadata: metadata
-            ))
         }
         records.sort { $0.modified > $1.modified }
         return records

@@ -108,6 +108,14 @@ enum AppPreferenceKey {
     /// When `true`, every occurrence of the current selection (≥2 chars,
     /// no newline) is tinted in the editor and tallied in the status bar.
     static let liveMatchHighlight = "liveMatchHighlight"
+
+    // MARK: iCloud
+    /// When `true` and the user is signed in to iCloud Drive,
+    /// drafts and templates write to the ubiquity container so
+    /// they sync across the user's devices. Off → local Documents
+    /// only. The launcher always reads from both locations, so
+    /// flipping the toggle never strands existing files.
+    static let iCloudSyncEnabled = "iCloudSyncEnabled"
 }
 
 /// Default values applied on first launch and used as fallbacks when
@@ -133,6 +141,7 @@ enum AppPreferenceDefaults {
             AppPreferenceKey.showStatusBar: true,
             AppPreferenceKey.showToolbar: true,
             AppPreferenceKey.liveMatchHighlight: true,
+            AppPreferenceKey.iCloudSyncEnabled: true,
             AppPreferenceKey.showChangeHistoryGutter: false,
             AppPreferenceKey.overscroll: true,
 

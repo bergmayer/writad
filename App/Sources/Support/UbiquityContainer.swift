@@ -38,17 +38,49 @@ enum UbiquityContainer {
             ?? URL(fileURLWithPath: NSTemporaryDirectory())
     }()
 
-    /// iCloud if available, else local Documents. Both stores
-    /// (drafts, templates) resolve their working directory through
-    /// here so the rest of the app doesn't need to know.
-    static var preferredDocumentsURL: URL {
-        documentsURL ?? localDocumentsURL
+    /// `true` when the user is signed in to iCloud and the app has
+    /// access to its ubiquity container. Says nothing about the
+    /// user's preference — see `syncIsActive` for that.
+    static var isAvailable: Bool { documentsURL != nil }
+
+    /// User's stored toggle. Reading via UserDefaults directly
+    /// rather than `@AppStorage` so non-View callers (DraftsStore,
+    /// TemplatesStore, both `@MainActor` singletons) can check it
+    /// without dragging SwiftUI in.
+    static var userPrefersSync: Bool {
+        // `bool(forKey:)` returns false for a missing key, but the
+        // default is true (registered in AppPreferenceDefaults). The
+        // `object(forKey:) != nil` guard keeps that default honored
+        // on the very first launch before defaults are registered.
+        let key = AppPreferenceKey.iCloudSyncEnabled
+        guard UserDefaults.standard.object(forKey: key) != nil else { return true }
+        return UserDefaults.standard.bool(forKey: key)
     }
 
-    /// `true` when the user is signed in to iCloud and the app has
-    /// access to its ubiquity container. Used by UI surfaces that
-    /// want to flag "not syncing right now."
-    static var isAvailable: Bool {
-        documentsURL != nil
+    /// `true` when we're actually writing to iCloud — both the user
+    /// toggle and the system signal must align.
+    static var syncIsActive: Bool {
+        isAvailable && userPrefersSync
+    }
+
+    /// Where new files (drafts, templates) get written. The reads
+    /// always check both locations (`documentsRootsForRead`) so a
+    /// toggle flip never strands existing content.
+    static var documentsURLForWrite: URL {
+        syncIsActive ? (documentsURL ?? localDocumentsURL) : localDocumentsURL
+    }
+
+    /// Both potential roots, in priority order — iCloud first when
+    /// available, then local. DraftsStore + TemplatesStore iterate
+    /// these so a user who toggles iCloud off still sees their old
+    /// iCloud drafts in the launcher.
+    static var documentsRootsForRead: [URL] {
+        var roots: [URL] = []
+        if let iCloud = documentsURL { roots.append(iCloud) }
+        roots.append(localDocumentsURL)
+        // Dedupe — on a Mac Catalyst build the two paths can resolve
+        // to the same URL.
+        var seen = Set<String>()
+        return roots.filter { seen.insert($0.standardizedFileURL.path).inserted }
     }
 }

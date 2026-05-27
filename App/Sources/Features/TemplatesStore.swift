@@ -23,45 +23,65 @@ final class TemplatesStore {
 
     static let shared = TemplatesStore()
 
-    let directory: URL
-
-    private init() {
-        // Templates live in iCloud Drive so a custom template added
-        // on one device shows up everywhere. Default seeds are
-        // re-installed if missing on every launch (so an app update
-        // can ship new defaults), but a user-added template is
-        // never auto-deleted — only the named seeds are checked.
-        let docs = UbiquityContainer.preferredDocumentsURL
-        self.directory = docs.appendingPathComponent("Templates", isDirectory: true)
+    /// Active write root — iCloud when sync is on and the user is
+    /// signed in, otherwise local Documents. Default seeds get
+    /// (re-)installed here so an app update can ship new defaults,
+    /// but a user-added template is never auto-deleted.
+    var directory: URL {
+        UbiquityContainer.documentsURLForWrite.appendingPathComponent("Templates", isDirectory: true)
     }
+
+    /// Every root the launcher scans for templates. Listing both
+    /// roots means a user who flipped iCloud off keeps seeing the
+    /// templates they previously synced.
+    var readDirectories: [URL] {
+        UbiquityContainer.documentsRootsForRead.map {
+            $0.appendingPathComponent("Templates", isDirectory: true)
+        }
+    }
+
+    private init() {}
 
     /// Idempotent: creates the folder, writes any seed file that
     /// isn't already there. Lets the user delete a seed they don't
     /// want without it reappearing — only missing files are written.
+    /// Seeds the *active* directory only; the other root keeps
+    /// whatever templates the user left there.
     func seedIfNeeded() {
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let dir = directory
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         for seed in Self.defaultSeeds {
-            let url = directory.appendingPathComponent(seed.filename)
+            let url = dir.appendingPathComponent(seed.filename)
             guard !FileManager.default.fileExists(atPath: url.path) else { continue }
             try? seed.body.data(using: .utf8)?.write(to: url, options: .atomic)
         }
     }
 
+    /// Union of every read root. Same-named templates in two roots
+    /// are deduped — iCloud wins because it's first in
+    /// `UbiquityContainer.documentsRootsForRead`.
     func loadAll() -> [TemplateRecord] {
-        let urls = (try? FileManager.default.contentsOfDirectory(
-            at: directory,
-            includingPropertiesForKeys: [.nameKey],
-            options: [.skipsHiddenFiles]
-        )) ?? []
-        return urls
-            .map { url -> TemplateRecord in
-                TemplateRecord(
+        var records: [TemplateRecord] = []
+        var seenName = Set<String>()
+        for dir in readDirectories {
+            let urls = (try? FileManager.default.contentsOfDirectory(
+                at: dir,
+                includingPropertiesForKeys: [.nameKey],
+                options: [.skipsHiddenFiles]
+            )) ?? []
+            for url in urls {
+                let lowercaseName = url.lastPathComponent.lowercased()
+                guard seenName.insert(lowercaseName).inserted else { continue }
+                records.append(TemplateRecord(
                     url: url,
                     displayName: url.deletingPathExtension().lastPathComponent,
                     symbol: Self.symbol(for: url.pathExtension.lowercased())
-                )
+                ))
             }
-            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+        }
+        return records.sorted {
+            $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+        }
     }
 
     /// Returns the template's bytes as a String, or nil if the file

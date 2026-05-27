@@ -88,6 +88,7 @@ private struct EditorPreferencesTab: View {
     @AppStorage(AppPreferenceKey.ensureTrailingNewline) private var ensureTrailingNewline: Bool = false
     @AppStorage(AppPreferenceKey.trimTrailingWhitespaceOnSave) private var trimTrailingWhitespace: Bool = false
     @AppStorage(AppPreferenceKey.syntaxLimitBytes) private var syntaxLimitRaw: Int = SyntaxLimit.up5MB.rawValue
+    @AppStorage(AppPreferenceKey.iCloudSyncEnabled) private var iCloudSyncEnabled: Bool = true
 
     /// Round-trips Int↔Double so the Double-backed `@AppStorage`
     /// stays compatible with the live editor / menu zoom callers.
@@ -254,10 +255,35 @@ private struct EditorPreferencesTab: View {
             } footer: {
                 Text("Files over the limit open in plain-text mode for snappy typing. Tree-sitter syntax highlighting, code folding, and the Markdown inline decorator are all skipped.")
             }
+
+            iCloudSection
         }
         // No `.formStyle(.grouped)`: it runs sections edge-to-edge
         // and looks bad on iPhone (sheet = screen width). Default
         // resolves to `insetGrouped`, which has comfortable padding.
+    }
+
+    /// Toggle for the iCloud Drive sync that drafts + templates
+    /// flow through. The launcher always reads from both iCloud and
+    /// local locations, so flipping the toggle is non-destructive —
+    /// nothing existing gets stranded or moved. The header copy
+    /// changes when iCloud is unavailable so the user understands
+    /// why the toggle is disabled.
+    @ViewBuilder
+    private var iCloudSection: some View {
+        let signedIn = UbiquityContainer.isAvailable
+        Section {
+            Toggle("Sync via iCloud Drive", isOn: $iCloudSyncEnabled)
+                .disabled(!signedIn)
+        } header: {
+            Text("iCloud")
+        } footer: {
+            if signedIn {
+                Text("New drafts and template seeds are written to iCloud Drive and sync across your devices. Switching this off keeps existing iCloud files reachable in the launcher — new content just goes to local storage instead.")
+            } else {
+                Text("Sign in to iCloud and enable Drive in the system settings to sync drafts and templates across your devices.")
+            }
+        }
     }
 }
 
