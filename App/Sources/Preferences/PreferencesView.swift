@@ -87,7 +87,6 @@ private struct EditorPreferencesTab: View {
     @AppStorage(AppPreferenceKey.defaultLanguage) private var defaultLanguageRaw: String = LanguageIdentifier.plain.rawValue
     @AppStorage(AppPreferenceKey.ensureTrailingNewline) private var ensureTrailingNewline: Bool = false
     @AppStorage(AppPreferenceKey.trimTrailingWhitespaceOnSave) private var trimTrailingWhitespace: Bool = false
-    @AppStorage(AppPreferenceKey.launchBehavior) private var launchBehaviorRaw: String = LaunchBehavior.newBlank.rawValue
     @AppStorage(AppPreferenceKey.syntaxLimitBytes) private var syntaxLimitRaw: Int = SyntaxLimit.up5MB.rawValue
 
     /// Round-trips Int↔Double so the Double-backed `@AppStorage`
@@ -124,13 +123,6 @@ private struct EditorPreferencesTab: View {
         Binding(
             get: { SyntaxLimit(rawValue: syntaxLimitRaw) ?? .up5MB },
             set: { syntaxLimitRaw = $0.rawValue }
-        )
-    }
-
-    private var launchBehaviorBinding: Binding<LaunchBehavior> {
-        Binding(
-            get: { LaunchBehavior(rawValue: launchBehaviorRaw) ?? .newBlank },
-            set: { launchBehaviorRaw = $0.rawValue }
         )
     }
 
@@ -249,14 +241,6 @@ private struct EditorPreferencesTab: View {
                 Text("On Save")
             } footer: {
                 Text("Applied each time the document is written to disk — including the debounced auto-save that fires ~800 ms after typing stops. BOM and line endings are handled per document via the encoding and line-ending pickers in the status bar.")
-            }
-
-            Section("On Launch") {
-                Picker("When no windows are restored", selection: launchBehaviorBinding) {
-                    ForEach(LaunchBehavior.allCases, id: \.self) { behavior in
-                        Text(behavior.displayName).tag(behavior)
-                    }
-                }
             }
 
             Section {

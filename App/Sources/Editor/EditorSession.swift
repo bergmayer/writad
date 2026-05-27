@@ -17,6 +17,10 @@ final class EditorSession {
 
     init() {
         let initial = TabModel()
+        // Every spawn-a-tab path lands on the launcher so the user
+        // can pick a template, resume a draft, or import a file —
+        // there is no "blank document" entry point any more.
+        initial.kind = .launcher
         self.tabs = [initial]
         self.selectedTabID = initial.id
     }
@@ -33,9 +37,14 @@ final class EditorSession {
         return first
     }
 
+    /// Default `.launcher` so every Cmd-T lands on the document
+    /// shell; callers that already know they're seeding content
+    /// (open file → new tab, recover draft, reopen closed tab) pass
+    /// `.editor` to skip the launcher transit.
     @discardableResult
-    func newTab() -> TabModel {
+    func newTab(kind: TabKind = .launcher) -> TabModel {
         let tab = TabModel()
+        tab.kind = kind
         // Drop after the last pinned tab so newcomers don't shove
         // pins around — Safari rule.
         let insertAt = tabs.partitionPointAfterPinned()
@@ -48,9 +57,7 @@ final class EditorSession {
     /// back to `.editor` and loads the chosen URL into the same tab.
     @discardableResult
     func newFileBrowserTab() -> TabModel {
-        let tab = newTab()
-        tab.kind = .fileBrowser
-        return tab
+        newTab(kind: .fileBrowser)
     }
 
     /// `.discard` is required from the unsaved-changes dialog's

@@ -116,7 +116,6 @@ struct EditorCommands: Commands {
                 // currentSession can lag on iPad Stage Manager.
                 if let session = focusedSession ?? AppStateBus.shared.scenes.currentSession {
                     session.newTab()
-                    CommandActions.offerDraftsIfAvailable()
                 } else {
                     openWindow(id: SceneID.editor.rawValue)
                 }

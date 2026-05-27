@@ -160,7 +160,7 @@ extension CommandActions {
         let text = (try? String(contentsOf: draft.url, encoding: .utf8))
             ?? (try? String(contentsOf: draft.url, encoding: .isoLatin1))
             ?? ""
-        let tab = session.newTab()
+        let tab = session.newTab(kind: .editor)
         tab.document.text = text
         tab.document.isDirty = true
         tab.document.draftURL = draft.url
@@ -309,7 +309,7 @@ extension CommandActions {
             Self.context.scenes.routeOpenURL?(url)
             return
         }
-        let tab = session.newTab()
+        let tab = session.newTab(kind: .editor)
         if let snapshot = record.unsavedSnapshot {
             tab.document.text = snapshot
             tab.document.isDirty = true

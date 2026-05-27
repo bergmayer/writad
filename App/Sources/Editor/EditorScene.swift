@@ -16,7 +16,6 @@ struct EditorScene: View {
     /// `onAppear` fires on every foreground transition. This flag
     /// stops a re-appearance from re-offering the drafts sheet after
     /// the user already dismissed it.
-    @State private var didOfferDraftsForThisScene = false
     /// Set from `.onOpenURL` so URL-launched scenes (Files app, share
     /// sheet) skip the drafts banner — the user already declared
     /// intent for a specific file, no need to surface unsaved work.
@@ -185,9 +184,8 @@ struct EditorScene: View {
                     }
                     try? tab.document.save()
                 }
-                let wasFirstScene = isColdLaunchFirstScene
                 applySessionRestoreIfNeeded()
-                applyLaunchBehaviorIfFirstScene()
+                markColdLaunchHandled()
                 consumePendingNewWindowURL()
                 adoptPendingTabIfAvailable()
                 // Shortcut delivered via `configurationForConnecting`
@@ -199,14 +197,10 @@ struct EditorScene: View {
                     bus.scenes.pendingShortcut = nil
                     applyHomeShortcut(pending)
                 }
-                // Drafts banner only on brand-new blank scenes —
-                // restored or URL-launched scenes already have intent.
-                // Defer past one runloop so `.onOpenURL` has a chance
-                // to set its flag before the gate evaluates.
-                Task { @MainActor in
-                    try? await Task.sleep(for: Timing.paletteHandoff)
-                    offerDraftsIfNotFirstScene(wasFirstScene: wasFirstScene)
-                }
+                // Drafts banner gone: the launcher tab now lists
+                // unsaved drafts inline, so the old non-first-scene
+                // banner would be a duplicate. The drafts sheet
+                // stays reachable from Edit ▸ Recover Drafts….
             }
             // Files app "Open in Ayyyy", share sheet, and the
             // `LSSupportsOpeningDocumentsInPlace` plumbing all
@@ -353,7 +347,9 @@ struct EditorScene: View {
     }
 
     /// File-browser tabs get the inline picker; its pick handler
-    /// transforms the tab back to editor mode in place.
+    /// transforms the tab back to editor mode in place. Launcher
+    /// tabs show templates + unsaved drafts and likewise flip back
+    /// to editor mode once the user picks a seed.
     @ViewBuilder
     private var activeTabContent: some View {
         switch session.activeTab.kind {
@@ -363,6 +359,18 @@ struct EditorScene: View {
             FileBrowserTabContent(onPick: { url in
                 adoptPickedFileIntoActiveTab(url)
             })
+        case .launcher:
+            NewDocumentLauncherView(
+                onPickTemplate: { template in
+                    adoptTemplateIntoActiveTab(template)
+                },
+                onPickDraft: { draft in
+                    adoptDraftIntoActiveTab(draft)
+                },
+                onPickOpenFile: {
+                    session.activeTab.kind = .fileBrowser
+                }
+            )
         }
     }
 
@@ -372,6 +380,67 @@ struct EditorScene: View {
         let tab = session.activeTab
         tab.kind = .editor
         openURL(url)
+    }
+
+    /// Seeds the active launcher tab with a template's bytes as a
+    /// new Untitled buffer. The template file itself is never opened
+    /// — `fileURL` stays nil so ⌘S prompts for a save location, and
+    /// the next keystroke kicks the draft autosave loop.
+    private func adoptTemplateIntoActiveTab(_ template: TemplateRecord) {
+        let tab = session.activeTab
+        let body = TemplatesStore.shared.loadContent(template) ?? ""
+        tab.document.text = body
+        tab.document.fileURL = nil
+        tab.document.isDirty = !body.isEmpty
+        tab.state.text = body
+        tab.state.fileURL = nil
+        tab.state.savedBaselineText = ""
+        tab.state.languageIdentifier = LanguageRegistry.identifier(for: template.url)
+        tab.kind = .editor
+    }
+
+    /// Adopts an existing draft into the active launcher tab. URL-
+    /// backed drafts re-bind to their source so ⌘S writes back; the
+    /// drafted text on top stays dirty until explicit save.
+    private func adoptDraftIntoActiveTab(_ draft: DraftRecord) {
+        let tab = session.activeTab
+        let text = (try? String(contentsOf: draft.url, encoding: .utf8))
+            ?? (try? String(contentsOf: draft.url, encoding: .isoLatin1))
+            ?? ""
+        tab.document.text = text
+        tab.document.isDirty = true
+        tab.document.draftURL = draft.url
+        tab.state.text = text
+
+        if let bookmark = draft.metadata?.sourceBookmark,
+           let resolved = Self.resolveBookmark(bookmark) {
+            tab.document.fileURL = resolved.url
+            tab.state.fileURL = resolved.url
+            tab.state.languageIdentifier = LanguageRegistry.identifier(for: resolved.url)
+            if let rawEncoding = draft.metadata?.sourceEncodingRaw {
+                let encoding = String.Encoding(rawValue: rawEncoding)
+                tab.document.fileEncoding = FileEncoding(encoding: encoding)
+                tab.state.fileEncoding = tab.document.fileEncoding
+            }
+            let onDisk = (try? String(contentsOf: resolved.url, encoding: .utf8))
+                ?? (try? String(contentsOf: resolved.url, encoding: .isoLatin1))
+                ?? ""
+            tab.state.savedBaselineText = onDisk
+        } else {
+            tab.state.savedBaselineText = ""
+        }
+        tab.kind = .editor
+    }
+
+    private static func resolveBookmark(_ data: Data) -> (url: URL, isStale: Bool)? {
+        var stale = false
+        guard let url = try? URL(
+            resolvingBookmarkData: data,
+            options: [],
+            relativeTo: nil,
+            bookmarkDataIsStale: &stale
+        ) else { return nil }
+        return (url, stale)
     }
 
     /// Keyed by tab id so swapping tabs mid-switcher animates right.
@@ -427,45 +496,12 @@ struct EditorScene: View {
         state.textView?.replace(state.selectedRange, withText: lines.joined(separator: nl) + nl)
     }
 
-    /// `false` only for the cold-launch first scene; every later
-    /// scene (state-restored or user-spawned) sees `true`.
-    private var isColdLaunchFirstScene: Bool {
-        !AppStateBus.shared.scenes.hasAppliedLaunchBehavior
-    }
-
-    private func applyLaunchBehaviorIfFirstScene() {
-        guard !AppStateBus.shared.scenes.hasAppliedLaunchBehavior else { return }
+    /// Latches the one-shot "first scene" bit so later scenes know
+    /// the cold-launch pass already ran. Kept after the launcher
+    /// rewrite because state-restore + URL-routing both still read
+    /// it via `AppStateBus.shared.scenes.hasAppliedLaunchBehavior`.
+    private func markColdLaunchHandled() {
         AppStateBus.shared.scenes.hasAppliedLaunchBehavior = true
-        // The cold-launch first scene is a fresh blank surface — by
-        // spec, no drafts prompt. Subsequent scenes get it via
-        // `offerDraftsIfNotFirstScene`.
-        let raw = UserDefaults.standard.string(forKey: AppPreferenceKey.launchBehavior) ?? LaunchBehavior.newBlank.rawValue
-        guard LaunchBehavior(rawValue: raw) == .openPicker,
-              document.fileURL == nil,
-              document.text.isEmpty else { return }
-        // Defer one tick so the scene's on screen before the sheet.
-        DispatchQueue.main.async {
-            AppStateBus.shared.pickers.pending = .open
-        }
-    }
-
-    /// `didOfferDraftsForThisScene` stops re-prompting after a
-    /// foreground re-enter dismisses the sheet. URL-launched scenes
-    /// and scenes built from a restored `SessionRecord` skip the
-    /// banner — both already have clear intent.
-    private func offerDraftsIfNotFirstScene(wasFirstScene: Bool) {
-        guard !wasFirstScene,
-              !didOfferDraftsForThisScene,
-              !sceneReceivedOpenURL,
-              !didApplySessionRecord,
-              !DraftsStore.shared.loadAll().isEmpty
-        else { return }
-        didOfferDraftsForThisScene = true
-        DispatchQueue.main.async {
-            AppStateBus.shared.scenes.currentSession = session
-            AppStateBus.shared.scenes.currentEditor = session.activeTab.state
-            AppStateBus.shared.editing.presentedSheet = .draftsRecovery
-        }
     }
 
     /// One-shot per scene. The first scene to call this seeds the
@@ -566,13 +602,20 @@ struct EditorScene: View {
             Task { @MainActor in openWindow(id: SceneID.editor.rawValue) }
         case .tab:
             Task { @MainActor in
-                session.newTab()
+                session.newTab(kind: .editor)
                 openURL(url)
             }
         }
     }
 
     private func openURL(_ url: URL) {
+        // Any "load a URL into this tab" path lands here; flipping
+        // kind up front means file-open from the launcher (or from a
+        // pending newWindow handoff) transitions the surface to the
+        // editor synchronously, before the load finishes.
+        if session.activeTab.kind != .editor {
+            session.activeTab.kind = .editor
+        }
         state.loadTask?.cancel()
 
         // Weak captures so a close mid-download lets the Task bail

@@ -75,12 +75,6 @@ enum AppPreferenceKey {
     static let defaultLineEndingRaw   = "defaultLineEndingRaw"
     static let defaultLanguage        = "defaultLanguage"
 
-    // MARK: Launch behaviour
-    /// What to do when the app launches and SwiftUI didn't restore any
-    /// prior windows. See `LaunchBehavior`. When previous windows are
-    /// restored this preference is ignored — restoration always wins.
-    static let launchBehavior         = "launchBehavior"
-
     // MARK: Large-file behaviour
     /// Maximum file size (in bytes) for which the engine applies syntax
     /// highlighting, fold discovery, and the markdown inline decorator.
@@ -177,9 +171,6 @@ enum AppPreferenceDefaults {
             AppPreferenceKey.defaultEncodingRaw: Int(String.Encoding.utf8.rawValue),
             AppPreferenceKey.defaultLineEndingRaw: "\n",
             AppPreferenceKey.defaultLanguage: LanguageIdentifier.markdown.rawValue,
-
-            // Launch behaviour
-            AppPreferenceKey.launchBehavior: LaunchBehavior.newBlank.rawValue,
 
             // Large-file behaviour — default to 5 MB. Above that, the
             // engine opens the file in plain-text mode so the initial

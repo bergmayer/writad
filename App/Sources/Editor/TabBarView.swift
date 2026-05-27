@@ -313,10 +313,14 @@ private struct TabPillView: View {
     }
 
     private var label: String {
-        if tab.kind == .fileBrowser { return "New Tab" }
-        let base = tab.document.fileURL?.lastPathComponent ?? "Untitled"
-        let unsaved = tab.document.fileURL == nil || tab.document.isDirty
-        return unsaved ? "● \(base)" : base
+        switch tab.kind {
+        case .fileBrowser: return "New Tab"
+        case .launcher:    return "New"
+        case .editor:
+            let base = tab.document.fileURL?.lastPathComponent ?? "Untitled"
+            let unsaved = tab.document.fileURL == nil || tab.document.isDirty
+            return unsaved ? "● \(base)" : base
+        }
     }
 
     private var accessibilityLabel: String {
@@ -330,6 +334,7 @@ private struct TabPillView: View {
     private var pinnedIconName: String {
         switch tab.kind {
         case .fileBrowser: return "folder.fill"
+        case .launcher:    return "rectangle.stack.badge.plus"
         case .editor:
             return tab.document.fileURL == nil ? "pin.fill" : "doc.text.fill"
         }

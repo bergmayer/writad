@@ -2,9 +2,14 @@ import Foundation
 
 /// `.fileBrowser` hosts a UIDocumentBrowserViewController inline;
 /// a pick transitions the tab back to `.editor` with the file loaded.
+/// `.launcher` is the canonical "new window / new tab" surface — it
+/// shows templates + unsaved drafts and flips to `.editor` once the
+/// user picks one. Every spawn-a-fresh-tab path lands here so the
+/// user never sees a blank editor with no entry point.
 enum TabKind {
     case editor
     case fileBrowser
+    case launcher
 }
 
 /// Equatable by identity so SwiftUI can match rows in the tab bar.

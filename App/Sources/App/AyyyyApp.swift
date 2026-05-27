@@ -11,6 +11,7 @@ struct AyyyyApp: App {
 
     init() {
         AppPreferenceDefaults.register()
+        TemplatesStore.shared.seedIfNeeded()
     }
 
     var body: some Scene {

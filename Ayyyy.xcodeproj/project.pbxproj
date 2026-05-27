@@ -97,6 +97,8 @@
 		B2000061 /* ToolbarConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000061 /* ToolbarConfig.swift */; };
 		B2000062 /* ToolbarSymbolPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000062 /* ToolbarSymbolPicker.swift */; };
 		B2000063 /* ToolbarSlotEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000063 /* ToolbarSlotEditor.swift */; };
+		B2000064 /* TemplatesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000064 /* TemplatesStore.swift */; };
+		B2000065 /* NewDocumentLauncherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000065 /* NewDocumentLauncherView.swift */; };
 		B2010001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1010001 /* Assets.xcassets */; };
 		B2020001 /* FileEncoding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000001 /* FileEncoding */; };
 		B2020002 /* LineEnding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000002 /* LineEnding */; };
@@ -198,6 +200,8 @@
 		B1000061 /* ToolbarConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarConfig.swift; sourceTree = "<group>"; };
 		B1000062 /* ToolbarSymbolPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarSymbolPicker.swift; sourceTree = "<group>"; };
 		B1000063 /* ToolbarSlotEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarSlotEditor.swift; sourceTree = "<group>"; };
+		B1000064 /* TemplatesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplatesStore.swift; sourceTree = "<group>"; };
+		B1000065 /* NewDocumentLauncherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewDocumentLauncherView.swift; sourceTree = "<group>"; };
 		B1010001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B1010002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B1010003 /* Ayyyy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ayyyy.entitlements; sourceTree = "<group>"; };
@@ -375,6 +379,8 @@
 				B1000044 /* MarkdownTableSheet.swift */,
 				B1000045 /* DraftsRecoverySheet.swift */,
 				B100004C /* SpellCheckSheet.swift */,
+				B1000064 /* TemplatesStore.swift */,
+				B1000065 /* NewDocumentLauncherView.swift */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -588,6 +594,8 @@
 				B2000061 /* ToolbarConfig.swift in Sources */,
 				B2000062 /* ToolbarSymbolPicker.swift in Sources */,
 				B2000063 /* ToolbarSlotEditor.swift in Sources */,
+				B2000064 /* TemplatesStore.swift in Sources */,
+				B2000065 /* NewDocumentLauncherView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -23,17 +23,11 @@ enum CommandActions {
         Self.context.scenes.openWindowAction?(.editor)
     }
 
-    /// Every user-initiated new tab/window offers drafts recovery so
-    /// an unsaved buffer isn't buried behind a fresh blank surface.
+    /// New tabs land on the launcher (templates + drafts), so the
+    /// old "offer drafts banner" plumbing is gone — the launcher
+    /// itself surfaces the same list inline.
     static func newTab() {
         Self.context.scenes.currentSession?.newTab()
-        offerDraftsIfAvailable()
-    }
-
-    /// Shared by every "user opened a new surface" entry point.
-    static func offerDraftsIfAvailable() {
-        guard !DraftsStore.shared.loadAll().isEmpty else { return }
-        Self.context.editing.presentedSheet = .draftsRecovery
     }
 
     static func openFile() {

@@ -39,16 +39,3 @@ enum SyntaxLimit: Int, CaseIterable, Identifiable {
     }
 }
 
-/// Cold-launch behaviour. SwiftUI restoration always wins when
-/// it has a prior window to bring back.
-enum LaunchBehavior: String, CaseIterable {
-    case newBlank   = "newBlank"
-    case openPicker = "openPicker"
-
-    var displayName: String {
-        switch self {
-        case .newBlank:   "New blank document"
-        case .openPicker: "Show file picker"
-        }
-    }
-}
