@@ -371,34 +371,36 @@ struct EditorScene: View {
                 adoptDraftIntoActiveTab(draft)
             },
             onPickOpenFile: {
-                promotePlaceholderIfNeeded()
                 session.activeTab.kind = .fileBrowser
             },
             onCancel: {
-                // From a real launcher tab, request-close flips it
-                // to either a sibling editor tab or the empty state.
-                // The empty state hides the Cancel button entirely
-                // (via showsCancel), so we never reach here for it.
-                CommandActions.requestCloseTab(session.activeTab.id, in: session)
+                // Cancel = "I'm done with this surface". If the
+                // launcher is one of several tabs, close just that
+                // tab. If it's the only tab in the window, the user
+                // is asking to dismiss the window itself — on iPad
+                // that destroys the scene; on iPhone (single-window)
+                // it falls through to a close-and-respawn since
+                // there's nowhere meaningful to go.
+                if session.tabs.count == 1 {
+                    if DeviceIdiom.supportsMultipleWindows {
+                        CommandActions.closeWindow()
+                    } else {
+                        CommandActions.requestCloseTab(session.activeTab.id, in: session)
+                    }
+                } else {
+                    CommandActions.requestCloseTab(session.activeTab.id, in: session)
+                }
             },
-            showsCancel: !session.isEmpty
+            // Hide Cancel only when it would have nowhere useful to
+            // go: a single-tab launcher on iPhone, where closing
+            // the window isn't an option.
+            showsCancel: session.tabs.count > 1 || DeviceIdiom.supportsMultipleWindows
         )
-    }
-
-    /// If the active surface is the empty-state placeholder, promote
-    /// it into the real `tabs` array before the caller mutates it —
-    /// otherwise their edits would land on a phantom that no tab bar
-    /// ever shows.
-    private func promotePlaceholderIfNeeded() {
-        if session.isEmpty {
-            session.promoteEmptyStateIntoTabs()
-        }
     }
 
     /// Loads the URL into the active tab's existing document — same
     /// identity, so the tab pill stays stable across the transition.
     private func adoptPickedFileIntoActiveTab(_ url: URL) {
-        promotePlaceholderIfNeeded()
         let tab = session.activeTab
         tab.kind = .editor
         openURL(url)
@@ -409,7 +411,6 @@ struct EditorScene: View {
     /// — `fileURL` stays nil so ⌘S prompts for a save location, and
     /// the next keystroke kicks the draft autosave loop.
     private func adoptTemplateIntoActiveTab(_ template: TemplateRecord) {
-        promotePlaceholderIfNeeded()
         let tab = session.activeTab
         let body = TemplatesStore.shared.loadContent(template) ?? ""
         tab.document.text = body
@@ -434,7 +435,6 @@ struct EditorScene: View {
     /// either way — the user keeps the drafted bytes while
     /// resolving.
     private func adoptDraftIntoActiveTab(_ draft: DraftRecord) {
-        promotePlaceholderIfNeeded()
         let tab = session.activeTab
         let text = (try? String(contentsOf: draft.url, encoding: .utf8))
             ?? (try? String(contentsOf: draft.url, encoding: .isoLatin1))
