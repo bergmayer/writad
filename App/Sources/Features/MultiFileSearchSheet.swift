@@ -624,24 +624,14 @@ struct MultiFileSearchSheet: View {
     }
 
     private static func compileMatcher(for ctx: FindContext) throws -> Matcher {
-        let useRegex = ctx.useRegex || ctx.wholeWord
-        if useRegex {
-            let pattern: String
-            if ctx.wholeWord {
-                let inner = ctx.useRegex
-                    ? ctx.query
-                    : NSRegularExpression.escapedPattern(for: ctx.query)
-                pattern = #"\b"# + inner + #"\b"#
-            } else {
-                pattern = ctx.query
-            }
-            var opts: NSRegularExpression.Options = []
-            if !ctx.caseSensitive { opts.insert(.caseInsensitive) }
-            let regex = try NSRegularExpression(pattern: pattern, options: opts)
-            return Matcher(regex: regex, literal: nil, caseSensitive: ctx.caseSensitive)
-        } else {
-            return Matcher(regex: nil, literal: ctx.query, caseSensitive: ctx.caseSensitive)
+        if FindCompile.useRegex(for: ctx) {
+            return Matcher(
+                regex: try FindCompile.regex(for: ctx),
+                literal: nil,
+                caseSensitive: ctx.caseSensitive
+            )
         }
+        return Matcher(regex: nil, literal: ctx.query, caseSensitive: ctx.caseSensitive)
     }
 
     // MARK: - Grouping
@@ -842,7 +832,10 @@ struct MultiFileSearchSheet: View {
         return count
     }
 
-    /// Returns `(replacedText, count)`.
+    /// Returns `(replacedText, count)`. `query` is expected to equal
+    /// `ctx.query`; it stays a parameter so callers don't have to
+    /// rewrite the context, but the regex/whole-word wrapping uses
+    /// the context.
     private func replaceInString(
         _ text: String,
         query: String,
@@ -850,19 +843,10 @@ struct MultiFileSearchSheet: View {
         context ctx: FindContext,
         limitToFirst: Bool
     ) throws -> (String, Int) {
-        let useRegex = ctx.useRegex || ctx.wholeWord
         let nsText = text as NSString
         let fullRange = NSRange(location: 0, length: nsText.length)
-        if useRegex {
-            let pattern: String
-            if ctx.wholeWord && !ctx.useRegex {
-                pattern = "\\b" + NSRegularExpression.escapedPattern(for: query) + "\\b"
-            } else {
-                pattern = query
-            }
-            var opts: NSRegularExpression.Options = []
-            if !ctx.caseSensitive { opts.insert(.caseInsensitive) }
-            let regex = try NSRegularExpression(pattern: pattern, options: opts)
+        if FindCompile.useRegex(for: ctx) {
+            let regex = try FindCompile.regex(for: ctx)
             if limitToFirst {
                 if let match = regex.firstMatch(in: text, options: [], range: fullRange) {
                     let replaced = regex.replacementString(for: match, in: text, offset: 0, template: replacement)

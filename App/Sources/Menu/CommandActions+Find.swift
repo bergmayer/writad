@@ -99,13 +99,9 @@ extension CommandActions {
         let ctx = Self.context.find.context
         guard !ctx.query.isEmpty else { return }
         do {
-            let pattern = effectivePattern(for: ctx)
-            let useRegex = ctx.useRegex || ctx.wholeWord
             let newText: String
-            if useRegex {
-                var opts: NSRegularExpression.Options = []
-                if !ctx.caseSensitive { opts.insert(.caseInsensitive) }
-                let re = try NSRegularExpression(pattern: pattern, options: opts)
+            if FindCompile.useRegex(for: ctx) {
+                let re = try FindCompile.regex(for: ctx)
                 newText = re.stringByReplacingMatches(
                     in: original,
                     options: [],
@@ -166,24 +162,14 @@ extension CommandActions {
         startingAt cursor: Int,
         totalLength: Int
     ) throws -> QueryReplaceMatch? {
-        let pattern = effectivePattern(for: context)
-        let useRegex = context.useRegex || context.wholeWord
         return try Self.nextQueryReplaceMatch(
-            query: pattern,
+            query: FindCompile.effectivePattern(for: context),
             replacement: context.replacement,
-            useRegex: useRegex,
+            useRegex: FindCompile.useRegex(for: context),
             caseSensitive: context.caseSensitive,
             startingAt: forward ? cursor : 0,
             searchUpTo: forward ? totalLength : cursor,
             preferLast: !forward
         )
-    }
-
-    private static func effectivePattern(for context: FindContext) -> String {
-        guard context.wholeWord else { return context.query }
-        let inner = context.useRegex
-            ? context.query
-            : NSRegularExpression.escapedPattern(for: context.query)
-        return #"\b"# + inner + #"\b"#
     }
 }
