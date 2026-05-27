@@ -317,7 +317,7 @@ private struct TabPillView: View {
         case .fileBrowser: return "New Tab"
         case .launcher:    return "New"
         case .editor:
-            let base = tab.document.fileURL?.lastPathComponent ?? "Untitled"
+            let base = tab.document.displayName
             let unsaved = tab.document.fileURL == nil || tab.document.isDirty
             return unsaved ? "● \(base)" : base
         }

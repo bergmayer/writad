@@ -140,14 +140,20 @@ struct NewDocumentLauncherView: View {
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                         } else {
-                            Text(draft.preview.isEmpty ? "(empty)" : draft.preview)
-                                .font(.body.monospaced())
+                            // Untitled drafts have no filename to lead
+                            // with; the saved timestamp doubles as a
+                            // de-facto name so two same-day drafts are
+                            // distinguishable in the launcher list.
+                            Text(untitledTitle(for: draft))
+                                .font(.body)
                                 .foregroundStyle(.primary)
                                 .lineLimit(1)
-                                .truncationMode(.tail)
-                            Text("Untitled")
-                                .font(.caption)
+                                .truncationMode(.middle)
+                            Text(draft.preview.isEmpty ? "(empty)" : draft.preview)
+                                .font(.caption.monospaced())
                                 .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
                         }
                         Text(metadataLine(for: draft))
                             .font(.caption)
@@ -176,9 +182,19 @@ struct NewDocumentLauncherView: View {
 
     private func metadataLine(for draft: DraftRecord) -> String {
         let size = draft.bytes.formatted(.byteCount(style: .file))
+        // URL-backed drafts keep the timestamp here; Untitled rows
+        // have already promoted it into the title so we drop the
+        // duplicate to keep the row scannable.
+        if draft.metadata?.sourceDisplay == nil {
+            return size
+        }
         let when = draft.modified.formatted(date: .abbreviated, time: .shortened)
-        let suffix = draft.metadata?.sourceDisplay == nil ? "" : " · was open file"
-        return "\(size) · \(when)\(suffix)"
+        return "\(size) · \(when) · was open file"
+    }
+
+    private func untitledTitle(for draft: DraftRecord) -> String {
+        let when = draft.modified.formatted(date: .abbreviated, time: .shortened)
+        return "Untitled — \(when)"
     }
 
     // MARK: Open existing

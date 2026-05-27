@@ -287,7 +287,7 @@ struct EditorView: View {
     /// The unsaved indicator lives in the subtitle so the title
     /// itself stays uncluttered.
     private var documentTitle: String {
-        document.fileURL?.lastPathComponent ?? "Untitled"
+        document.displayName
     }
 
     /// "edited" hint + file-location breadcrumb, middle-dot joined.

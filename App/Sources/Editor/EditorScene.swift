@@ -70,7 +70,7 @@ struct EditorScene: View {
 
     /// On the scene because WindowToolbar reads it too.
     private var documentTitle: String {
-        document.fileURL?.lastPathComponent ?? "Untitled"
+        document.displayName
     }
 
     /// "edited" hint + location breadcrumb, middle-dot joined when
@@ -259,7 +259,7 @@ struct EditorScene: View {
                     isPresented: isActive ? bus.pickers.binding(for: .saveAs) : .constant(false),
                     document: TextFileWrapperProxy(snapshot: liveEncodedSnapshot()),
                     contentType: PlainTextDocument.supportedWriteType,
-                    defaultFilename: state.fileURL?.deletingPathExtension().lastPathComponent ?? "Untitled"
+                    defaultFilename: state.fileURL?.deletingPathExtension().lastPathComponent ?? document.displayName
                 ) { result in
                     if case let .success(url) = result {
                         document.fileURL = url

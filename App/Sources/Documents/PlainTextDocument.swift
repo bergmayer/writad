@@ -44,10 +44,32 @@ final class PlainTextDocument {
     /// first autosave of a dirty doc; cleared on Save-As / Discard.
     var draftURL: URL?
 
+    /// Monotonic per-launch tag so a window full of fresh "Untitled"
+    /// tabs picks up distinct titles ("Untitled", "Untitled 2", …)
+    /// — same scheme TextEdit uses. Stays the same after the doc is
+    /// saved (becomes irrelevant once `fileURL` is set); numbers
+    /// aren't recycled when a tab closes.
+    let untitledNumber: Int
+
+    private static var untitledCounter: Int = 0
+    private static func nextUntitledNumber() -> Int {
+        untitledCounter += 1
+        return untitledCounter
+    }
+
     init() {
         self.fileEncoding = Self.defaultFileEncoding()
         self.lineEnding = Self.defaultLineEnding()
         self.revisionKey = RevisionStore.keyForUntitledTab(UUID())
+        self.untitledNumber = Self.nextUntitledNumber()
+    }
+
+    /// Window/tab pill title. Untitled docs read "Untitled" (n=1)
+    /// or "Untitled N" so multiple Untitled windows are visually
+    /// distinct in Stage Manager / the App Switcher.
+    var displayName: String {
+        if let url = fileURL { return url.lastPathComponent }
+        return untitledNumber == 1 ? "Untitled" : "Untitled \(untitledNumber)"
     }
 
     /// Synchronous load. Used by Revert-to-Saved; new code should

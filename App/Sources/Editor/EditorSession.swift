@@ -204,7 +204,7 @@ final class EditorSession {
         // close inside the debounce window archives pre-edit text.
         let liveText = tab.state.textView?.text ?? tab.document.text
         return ClosedTabRecord(
-            displayName: tab.document.fileURL?.lastPathComponent ?? "Untitled",
+            displayName: tab.document.displayName,
             fileURL: tab.document.fileURL,
             unsavedSnapshot: liveText.isEmpty ? nil : liveText
         )

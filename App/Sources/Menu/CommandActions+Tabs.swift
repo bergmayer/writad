@@ -62,7 +62,7 @@ extension CommandActions {
             Self.context.editing.pendingClose = PendingClose(
                 sessionID: ObjectIdentifier(session),
                 tabID: tabID,
-                displayName: tab.document.fileURL?.lastPathComponent ?? "Untitled",
+                displayName: tab.document.displayName,
                 isUntitled: tab.document.fileURL == nil
             )
         } else {
