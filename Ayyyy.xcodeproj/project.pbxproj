@@ -101,6 +101,7 @@
 		B2000065 /* NewDocumentLauncherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000065 /* NewDocumentLauncherView.swift */; };
 		B2000066 /* StaleSourceAlertModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000066 /* StaleSourceAlertModifier.swift */; };
 		B2000067 /* UbiquityContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000067 /* UbiquityContainer.swift */; };
+		B2000068 /* BatchCloseAlertModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000068 /* BatchCloseAlertModifier.swift */; };
 		B2010001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1010001 /* Assets.xcassets */; };
 		B2020001 /* FileEncoding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000001 /* FileEncoding */; };
 		B2020002 /* LineEnding in Frameworks */ = {isa = PBXBuildFile; productRef = B4000002 /* LineEnding */; };
@@ -206,6 +207,7 @@
 		B1000065 /* NewDocumentLauncherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewDocumentLauncherView.swift; sourceTree = "<group>"; };
 		B1000066 /* StaleSourceAlertModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaleSourceAlertModifier.swift; sourceTree = "<group>"; };
 		B1000067 /* UbiquityContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UbiquityContainer.swift; sourceTree = "<group>"; };
+		B1000068 /* BatchCloseAlertModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchCloseAlertModifier.swift; sourceTree = "<group>"; };
 		B1010001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B1010002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B1010003 /* Ayyyy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ayyyy.entitlements; sourceTree = "<group>"; };
@@ -326,6 +328,7 @@
 				B1000059 /* ChangeHistoryGutterOverlay.swift */,
 				B100005D /* EditorPrefSync.swift */,
 				B1000066 /* StaleSourceAlertModifier.swift */,
+				B1000068 /* BatchCloseAlertModifier.swift */,
 			);
 			path = Editor;
 			sourceTree = "<group>";
@@ -604,6 +607,7 @@
 				B2000065 /* NewDocumentLauncherView.swift in Sources */,
 				B2000066 /* StaleSourceAlertModifier.swift in Sources */,
 				B2000067 /* UbiquityContainer.swift in Sources */,
+				B2000068 /* BatchCloseAlertModifier.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

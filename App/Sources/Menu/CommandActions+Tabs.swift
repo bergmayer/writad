@@ -425,12 +425,99 @@ extension CommandActions {
 
     static func closeOtherTabs() {
         guard let session = Self.session else { return }
-        session.closeOtherTabs(except: session.selectedTabID)
+        requestCloseOtherTabs(except: session.selectedTabID, in: session)
     }
 
     static func closeTabsToRight() {
         guard let session = Self.session else { return }
-        session.closeTabsToRight(of: session.selectedTabID)
+        requestCloseTabsToRight(of: session.selectedTabID, in: session)
+    }
+
+    // MARK: - Batch close (Close Other Tabs / Right / All)
+
+    /// Route every "close many tabs" entry through one funnel so the
+    /// unsaved-changes dialog is consistent. The dialog fires only
+    /// when at least one of the tabs in the closing set is dirty;
+    /// clean batches go through immediately.
+    static func requestCloseOtherTabs(except keepID: UUID, in session: EditorSession) {
+        let victims = session.tabs.filter { $0.id != keepID && !$0.isPinned }
+        requestCloseTabs(victims, in: session, description: descriptor(for: victims.count, kind: .other))
+    }
+
+    static func requestCloseTabsToRight(of pivotID: UUID, in session: EditorSession) {
+        guard let pivot = session.tabs.firstIndex(where: { $0.id == pivotID }) else { return }
+        let victims = session.tabs[(pivot + 1)...].filter { !$0.isPinned }
+        requestCloseTabs(Array(victims), in: session, description: descriptor(for: victims.count, kind: .right))
+    }
+
+    static func requestCloseAllTabs(in session: EditorSession) {
+        // Pinned tabs are exempt — matches the Safari semantics
+        // every other batch-close command in the app follows.
+        let victims = session.tabs.filter { !$0.isPinned }
+        requestCloseTabs(victims, in: session, description: descriptor(for: victims.count, kind: .all))
+    }
+
+    private enum BatchKind { case other, right, all }
+
+    private static func descriptor(for count: Int, kind: BatchKind) -> String {
+        let plural = (count == 1 ? "tab" : "tabs")
+        switch kind {
+        case .other: return count == 1 ? "Close 1 other tab" : "Close \(count) other tabs"
+        case .right: return "Close \(count) \(plural) to the right"
+        case .all:   return count == 1 ? "Close 1 tab" : "Close all \(count) tabs"
+        }
+    }
+
+    private static func requestCloseTabs(_ victims: [TabModel], in session: EditorSession, description: String) {
+        guard !victims.isEmpty else { return }
+        let dirty = victims.filter(shouldWarnBeforeClose)
+        if dirty.isEmpty {
+            for tab in victims { session.closeTab(tab.id) }
+            return
+        }
+        Self.context.editing.pendingBatchClose = PendingBatchClose(
+            sessionID: ObjectIdentifier(session),
+            tabIDs: victims.map(\.id),
+            description: description,
+            dirtyCount: dirty.count
+        )
+    }
+
+    /// "Discard All" path — wipes scratch + draft for every dirty tab
+    /// so the bytes can't resurrect from the launcher or ⇧⌘T.
+    static func confirmBatchDiscard(_ pending: PendingBatchClose) {
+        defer { Self.context.editing.pendingBatchClose = nil }
+        guard let session = resolveSession(for: pending) else { return }
+        for tabID in pending.tabIDs {
+            guard let tab = session.tabs.first(where: { $0.id == tabID }) else { continue }
+            tab.document.deleteScratchFile()
+            session.closeTab(tabID, disposition: .discard)
+        }
+    }
+
+    /// "Save All to Drafts" — autosave the live buffer for every
+    /// dirty tab (URL-backed gets a draft pinned to its source;
+    /// untitled goes to the recovery pool), then close everything
+    /// with `.archive` disposition so ⇧⌘T can resurrect them too.
+    static func confirmBatchSaveAsDrafts(_ pending: PendingBatchClose) {
+        defer { Self.context.editing.pendingBatchClose = nil }
+        guard let session = resolveSession(for: pending) else { return }
+        for tabID in pending.tabIDs {
+            guard let tab = session.tabs.first(where: { $0.id == tabID }) else { continue }
+            snapshotDraft(for: tab)
+            session.closeTab(tabID)
+        }
+    }
+
+    static func cancelBatchClose() {
+        Self.context.editing.pendingBatchClose = nil
+    }
+
+    /// Resolves the originating session for a PendingBatchClose,
+    /// matching by identity so the dialog hits the right window
+    /// even after focus shifts.
+    private static func resolveSession(for pending: PendingBatchClose) -> EditorSession? {
+        Self.context.scenes.allOpenSessions.first { ObjectIdentifier($0) == pending.sessionID }
     }
 
     /// Reopen the most-recently closed tab in the active session.

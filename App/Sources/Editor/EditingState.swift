@@ -27,6 +27,10 @@ final class EditingState {
     /// untitled tab needs the confirmation dialog.
     var pendingClose: PendingClose?
 
+    /// Set by `CommandActions.requestCloseOtherTabs` / `…Right` /
+    /// `…AllTabs` when at least one tab in the closing set is dirty.
+    var pendingBatchClose: PendingBatchClose?
+
     /// Stale-source dialog state — set by the launcher's draft-
     /// adoption path or by ⌘S when the source's disk mtime/size has
     /// drifted from what we recorded at load. Drives a single alert
@@ -70,4 +74,22 @@ struct PendingClose: Identifiable {
     let tabID: UUID
     let displayName: String
     let isUntitled: Bool
+}
+
+/// "Close Other Tabs" / "Close Tabs to the Right" / "Close All Tabs"
+/// route through this when at least one of the tabs in the batch
+/// has unsaved changes. The user picks Discard All (drops drafts)
+/// or Save All to Drafts (parks the live bytes for launcher
+/// recovery) — there's no per-tab Save-and-Close since the prompt
+/// is meant to be quick.
+@MainActor
+struct PendingBatchClose: Identifiable {
+    let id = UUID()
+    let sessionID: ObjectIdentifier
+    let tabIDs: [UUID]
+    /// "Close 4 other tabs", "Close 7 tabs to the right", "Close all 9 tabs"
+    let description: String
+    /// Number of tabs in `tabIDs` that are actually dirty — used in
+    /// the dialog message so the user sees the scope.
+    let dirtyCount: Int
 }

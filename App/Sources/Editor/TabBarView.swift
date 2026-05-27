@@ -75,12 +75,16 @@ struct TabBarView: View {
         TabPillView(
             tab: tab,
             isActive: tab.id == session.selectedTabID,
-            isCloseable: session.tabs.count > 1,
+            // Always closeable — the last close spawns a launcher
+            // tab in place rather than emptying the session.
+            isCloseable: true,
             onSelect: { session.selectedTabID = tab.id },
             onClose:  { CommandActions.requestCloseTab(tab.id, in: session) },
             onPin:    { session.togglePinned(tab.id) },
-            onCloseOthers: { session.closeOtherTabs(except: tab.id) },
-            onCloseRight:  { session.closeTabsToRight(of: tab.id) }
+            onCloseOthers: { CommandActions.requestCloseOtherTabs(except: tab.id, in: session) },
+            onCloseRight:  { CommandActions.requestCloseTabsToRight(of: tab.id, in: session) },
+            onCloseAll:    { CommandActions.requestCloseAllTabs(in: session) },
+            onOpenNewTab:  { CommandActions.newTab() }
         )
         .id(tab.id)
         .draggable(tab.id.uuidString) {
@@ -195,6 +199,8 @@ private struct TabPillView: View {
     let onPin: () -> Void
     let onCloseOthers: () -> Void
     let onCloseRight: () -> Void
+    let onCloseAll: () -> Void
+    let onOpenNewTab: () -> Void
 
     var body: some View {
         pillContent
@@ -285,13 +291,16 @@ private struct TabPillView: View {
 
     @ViewBuilder
     private var contextMenu: some View {
+        Button(action: onOpenNewTab) {
+            Label("Open New Tab", systemImage: "plus.square")
+        }
         Button {
             onPin()
         } label: {
             Label(tab.isPinned ? "Unpin Tab" : "Pin Tab",
                   systemImage: tab.isPinned ? "pin.slash" : "pin")
         }
-        if isCloseable, DeviceIdiom.supportsMultipleWindows {
+        if DeviceIdiom.supportsMultipleWindows {
             Button {
                 CommandActions.moveTab(tab.id, toNewWindow: true)
             } label: {
@@ -299,16 +308,17 @@ private struct TabPillView: View {
             }
         }
         Divider()
-        if isCloseable {
-            Button(role: .destructive, action: onClose) {
-                Label("Close Tab", systemImage: "xmark")
-            }
+        Button(role: .destructive, action: onClose) {
+            Label("Close This Tab", systemImage: "xmark")
         }
         Button(role: .destructive, action: onCloseOthers) {
             Label("Close Other Tabs", systemImage: "rectangle.stack.badge.minus")
         }
         Button(role: .destructive, action: onCloseRight) {
             Label("Close Tabs to the Right", systemImage: "rectangle.righthalf.inset.filled.arrow.right")
+        }
+        Button(role: .destructive, action: onCloseAll) {
+            Label("Close All Tabs", systemImage: "xmark.square.fill")
         }
     }
 

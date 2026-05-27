@@ -351,6 +351,14 @@ struct EditorScene: View {
                 },
                 onPickOpenFile: {
                     session.activeTab.kind = .fileBrowser
+                },
+                onCancel: {
+                    // Same path as ⌘W on a launcher tab — closeTab
+                    // either pops the launcher and reveals a sibling
+                    // editor tab, or (if this is the only tab) spins
+                    // up a fresh launcher in its place. Either way
+                    // the window stays open.
+                    CommandActions.requestCloseTab(session.activeTab.id, in: session)
                 }
             )
         }

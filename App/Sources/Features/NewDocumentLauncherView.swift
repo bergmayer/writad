@@ -11,6 +11,11 @@ struct NewDocumentLauncherView: View {
     let onPickTemplate: (TemplateRecord) -> Void
     let onPickDraft: (DraftRecord) -> Void
     let onPickOpenFile: () -> Void
+    /// Closes this launcher surface without picking anything. The
+    /// scene routes it to the same close path as ⌘W — if this is
+    /// the only tab the window stays open with another launcher
+    /// taking its place.
+    let onCancel: () -> Void
 
     /// Refreshed on each appear — the user may have deleted a draft
     /// in another window or saved one out of the recovery pool.
@@ -18,19 +23,45 @@ struct NewDocumentLauncherView: View {
     @State private var drafts: [DraftRecord] = []
 
     var body: some View {
+        // Outer wash sets the chrome backdrop; the actual launcher
+        // floats as a centered card with its own padding so the
+        // surface feels contained within the tab rather than
+        // taking over the whole pane.
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 20) {
+                header
                 openExistingSection
                 templatesSection
                 draftsSection
             }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color(uiColor: .systemBackground))
+            )
+            .frame(maxWidth: 720, alignment: .leading)
             .padding(.horizontal, 24)
             .padding(.vertical, 28)
-            .frame(maxWidth: 720, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
         .background(Color(uiColor: .systemGroupedBackground))
         .onAppear(perform: refresh)
+    }
+
+    @ViewBuilder
+    private var header: some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("New Document")
+                    .font(.title2.weight(.semibold))
+                Text("Pick a template, resume a draft, or open an existing file.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 12)
+            Button("Cancel", action: onCancel)
+                .buttonStyle(.bordered)
+        }
     }
 
     private func refresh() {

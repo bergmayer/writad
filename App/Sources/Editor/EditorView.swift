@@ -127,6 +127,15 @@ struct EditorView: View {
             check: bus.editing.sourceStaleCheck,
             cancel: { bus.editing.sourceStaleCheck = nil }
         ))
+        // Batch close confirmation. Triggered by "Close Other Tabs",
+        // "Close Tabs to the Right", "Close All Tabs" when at least
+        // one of the tabs in the closing set has unsaved changes.
+        // Same modifier-extraction reason as the stale-source alert.
+        .modifier(BatchCloseAlertModifier(
+            presented: pendingBatchCloseBinding,
+            pending: bus.editing.pendingBatchClose,
+            message: batchCloseMessage
+        ))
         .onAppear {
             primeStateFromDocument()
             AppStateBus.shared.scenes.currentEditor = state
@@ -288,6 +297,30 @@ struct EditorView: View {
                 if !newValue { bus.editing.pendingClose = nil }
             }
         )
+    }
+
+    /// Single-presenter gate so the batch close alert only renders
+    /// in the window that owns the tabs being closed.
+    private var pendingBatchCloseBinding: Binding<Bool> {
+        Binding(
+            get: {
+                guard let pending = bus.editing.pendingBatchClose,
+                      let mySession = session
+                else { return false }
+                return ObjectIdentifier(mySession) == pending.sessionID
+            },
+            set: { newValue in
+                if !newValue { bus.editing.pendingBatchClose = nil }
+            }
+        )
+    }
+
+    private func batchCloseMessage(_ pending: PendingBatchClose) -> String {
+        let scope = pending.description
+        let suffix = pending.dirtyCount == 1
+            ? "1 of them has unsaved changes."
+            : "\(pending.dirtyCount) of them have unsaved changes."
+        return "\(scope). \(suffix) Save to Drafts parks the live bytes for launcher recovery; Discard drops them."
     }
 
     /// Only the scene that owns the stale tab presents — otherwise
