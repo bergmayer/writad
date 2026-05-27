@@ -55,8 +55,11 @@ final class DraftsStore {
     let directory: URL
 
     private init() {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
-            ?? URL(fileURLWithPath: NSTemporaryDirectory())
+        // Prefer iCloud Drive so drafts sync across the user's
+        // devices; fall back to local Documents when iCloud is off
+        // or the user isn't signed in. Either way the path is
+        // `<root>/Drafts/`.
+        let docs = UbiquityContainer.preferredDocumentsURL
         self.directory = docs.appendingPathComponent("Drafts", isDirectory: true)
         try? FileManager.default.createDirectory(at: self.directory, withIntermediateDirectories: true)
     }

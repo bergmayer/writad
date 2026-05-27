@@ -198,6 +198,22 @@
 	     while still owning the document browser surface ourselves. -->
 	<key>UIFileSharingEnabled</key>
 	<true/>
+	<!-- iCloud Drive ubiquity container. Templates + drafts live in
+	     <container>/Documents/, which `NSUbiquitousContainerIsDocumentScopePublic`
+	     surfaces in the Files app as "Ayyyy" so the user can drag in
+	     their own templates and other apps can read the drafts. -->
+	<key>NSUbiquitousContainers</key>
+	<dict>
+		<key>iCloud.com.palefire.ayyyy</key>
+		<dict>
+			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
+			<true/>
+			<key>NSUbiquitousContainerSupportedFolderLevels</key>
+			<string>Any</string>
+			<key>NSUbiquitousContainerName</key>
+			<string>Ayyyy</string>
+		</dict>
+	</dict>
 
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>

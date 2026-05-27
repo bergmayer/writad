@@ -26,8 +26,12 @@ final class TemplatesStore {
     let directory: URL
 
     private init() {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
-            ?? URL(fileURLWithPath: NSTemporaryDirectory())
+        // Templates live in iCloud Drive so a custom template added
+        // on one device shows up everywhere. Default seeds are
+        // re-installed if missing on every launch (so an app update
+        // can ship new defaults), but a user-added template is
+        // never auto-deleted — only the named seeds are checked.
+        let docs = UbiquityContainer.preferredDocumentsURL
         self.directory = docs.appendingPathComponent("Templates", isDirectory: true)
     }
 
