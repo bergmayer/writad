@@ -743,11 +743,9 @@ struct EditorView: View {
     /// Safari-style tabs button. Badge shows tab count when > 1.
     @ViewBuilder
     private var phoneTabsButton: some View {
-        // Tap → menu. "Show Tab Overview" is the first item so the
-        // expose-style switcher is still one tap away; close-tab
-        // commands sit below. Long-press was too fiddly to reach.
-        Menu {
-            TabOverviewContextMenu()
+        Button {
+            claimFocus()
+            CommandActions.showTabSwitcher()
         } label: {
             ZStack {
                 Image(systemName: "square.on.square")
@@ -764,11 +762,18 @@ struct EditorView: View {
                         .offset(x: 10, y: -8)
                 }
             }
+            // The icon itself is 18pt; the hit area is the full
+            // 44pt HIG touch target. Earlier the area was tight to
+            // the glyph, which made long-press dicey to land.
+            .frame(width: 44, height: 44)
             .contentShape(.rect)
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .accessibilityLabel("Tabs")
+        .buttonStyle(.plain)
+        .help("Show All Tabs")
+        .accessibilityLabel("Show All Tabs")
+        // Long-press surfaces the tab-management menu. The hit
+        // target above is wide enough to keep the gesture reliable.
+        .contextMenu { TabOverviewContextMenu() }
     }
 
     private var phoneTabBadgeCount: Int? {

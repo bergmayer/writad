@@ -149,23 +149,26 @@ struct TabBarView: View {
 
     @ViewBuilder
     private var showAllTabsButton: some View {
-        // Tap → menu. "Show Tab Overview" is the first item so the
-        // expose-style switcher stays one tap away; the close-tab
-        // commands sit below in the same surface. Long-press was
-        // too fragile a gesture to gate batch close behind.
-        Menu {
-            TabOverviewContextMenu()
+        Button {
+            AppStateBus.shared.scenes.claimFocus(session: session)
+            CommandActions.showTabSwitcher()
         } label: {
             Image(systemName: "square.on.square")
                 .font(.system(size: 12, weight: .regular))
                 .symbolRenderingMode(.hierarchical)
-                .frame(width: 28, height: 28)
                 .foregroundStyle(.secondary)
+                // 44pt frame to match HIG touch-target sizing so the
+                // long-press gesture is easy to land. Icon stays at
+                // 12pt visually.
+                .frame(width: 44, height: 44)
                 .contentShape(.rect)
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .accessibilityLabel("Tabs")
+        .buttonStyle(.borderless)
+        .help("Show All Tabs")
+        .accessibilityLabel("Show All Tabs")
+        // Long-press surfaces the multi-tab management menu. Same
+        // entries as the iPhone status-bar overview button.
+        .contextMenu { TabOverviewContextMenu() }
     }
 
     private func tabLabel(_ tab: TabModel) -> String {
