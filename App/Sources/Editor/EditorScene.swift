@@ -137,7 +137,15 @@ struct EditorScene: View {
                     AppStateBus.shared.scenes.currentSession = session
                     AppStateBus.shared.scenes.registerSession(session)
                     AppStateBus.shared.scenes.currentEditor = session.activeTab.state
-                    AppStateBus.shared.scenes.openWindowAction = { id in openWindow(id: id.rawValue) }
+                    AppStateBus.shared.scenes.openWindowAction = { id in
+                        if id == .editor {
+                            WindowPlacement.openEditorWindow {
+                                openWindow(id: id.rawValue)
+                            }
+                        } else {
+                            openWindow(id: id.rawValue)
+                        }
+                    }
                     AppStateBus.shared.scenes.routeOpenURL = { url in route(open: url) }
                     AppStateBus.shared.editing.saveCurrentDocument = { [weak session] in
                         guard let session, session.activeTab.document.fileURL != nil else {
@@ -488,24 +496,20 @@ struct EditorScene: View {
         let pendingCount = SessionsStore.shared.initiateRestoreSweep()
         if pendingCount > 1 {
             for _ in 0..<(pendingCount - 1) {
-                openWindow(id: SceneID.editor.rawValue)
+                WindowPlacement.openEditorWindow {
+                    openWindow(id: SceneID.editor.rawValue)
+                }
             }
         }
         if let record = SessionsStore.shared.consumePendingRestore() {
             SessionRestore.apply(record, to: session)
-        } else if !isColdLaunchFirstScene {
-            // No record + not the cold-launch baseline = user just
-            // spawned this window (⌘N, "New Window" menu, etc.).
-            // Hop past `onAppear` so the UIWindowScene is wired.
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(80))
-                let active = UIApplication.shared.connectedScenes
-                    .compactMap { $0 as? UIWindowScene }
-                    .first { $0.activationState == .foregroundActive }
-                guard let active else { return }
-                WindowPlacement.requestProminentPlacement(for: active)
-            }
         }
+        // Placement for user-spawned windows is now requested on the
+        // activation itself via `WindowPlacement.openEditorWindow`
+        // (the call site that triggered this scene). The post-appear
+        // re-activation attempt was a no-op — iPad only honors the
+        // placement hint when set on the request that creates the
+        // scene, not on subsequent re-activations.
     }
 
     /// Snapshots current tabs (file bookmarks + draft refs + active
@@ -559,7 +563,9 @@ struct EditorScene: View {
     private func applyHomeShortcut(_ shortcut: HomeShortcut) {
         switch shortcut {
         case .newFile:
-            openWindow(id: SceneID.editor.rawValue)
+            WindowPlacement.openEditorWindow {
+                openWindow(id: SceneID.editor.rawValue)
+            }
         case .commandPalette:
             CommandActions.presentCommandPalette()
         }
@@ -575,7 +581,11 @@ struct EditorScene: View {
         switch destination {
         case .window:
             AppStateBus.shared.pending.newWindow = url
-            Task { @MainActor in openWindow(id: SceneID.editor.rawValue) }
+            Task { @MainActor in
+                WindowPlacement.openEditorWindow {
+                    openWindow(id: SceneID.editor.rawValue)
+                }
+            }
         case .tab:
             Task { @MainActor in
                 session.newTab()

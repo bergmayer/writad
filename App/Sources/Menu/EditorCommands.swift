@@ -104,8 +104,12 @@ struct EditorCommands: Commands {
             // they override the destination preference per spec.
             // iPhone is single-window so the item is hidden.
             if DeviceIdiom.supportsMultipleWindows {
-                Button("New Window") { openWindow(id: SceneID.editor.rawValue) }
-                    .keyboardShortcut(AppShortcut.newWindow)
+                Button("New Window") {
+                    WindowPlacement.openEditorWindow {
+                        openWindow(id: SceneID.editor.rawValue)
+                    }
+                }
+                .keyboardShortcut(AppShortcut.newWindow)
             }
             // No `.disabled(...)`: SwiftUI evaluates the disable
             // expression at menu-build time, so a transient nil
@@ -118,7 +122,9 @@ struct EditorCommands: Commands {
                     session.newTab()
                     CommandActions.offerDraftsIfAvailable()
                 } else {
-                    openWindow(id: SceneID.editor.rawValue)
+                    WindowPlacement.openEditorWindow {
+                        openWindow(id: SceneID.editor.rawValue)
+                    }
                 }
             }
             .keyboardShortcut(AppShortcut.newTab)

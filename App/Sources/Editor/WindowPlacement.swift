@@ -1,27 +1,44 @@
 import UIKit
+import SwiftUI
 
-/// Best-effort attempt to differentiate freshly-opened iPad windows
-/// from the scene they spawn off of. iPadOS has no public API to set
-/// an explicit frame; the closest lever is
-/// `UIWindowSceneProminentPlacement`, which the system *may* honor by
-/// positioning the new window with offset/inset relative to siblings.
+/// Opens a new editor window with `UIWindowSceneProminentPlacement`
+/// set on the activation request itself — the only point iPad will
+/// actually honor the placement hint. SwiftUI's `openWindow(id:)`
+/// activates without options, so new windows land flat behind the
+/// spawning one and look identical to it. Calling
+/// `activateSceneSession(for:)` ourselves lets us slot the placement
+/// in.
 ///
-/// In full-screen / split view this is typically a no-op; in
-/// free-form windowing (iPadOS 26) it nudges the system toward a
-/// "more prominent" slot. Failure is silent — the new window still
-/// opens, just without the cascade hint.
+/// Tags the activation with an `NSUserActivity` whose `activityType`
+/// matches the SwiftUI `WindowGroup` id so iOS routes the new scene
+/// to our editor surface (and not, say, the preferences group).
+/// Falls back through the bus's `openWindowAction` if the system
+/// returns an error — the window still opens, just without our
+/// placement preference.
 @MainActor
 enum WindowPlacement {
 
-    static func requestProminentPlacement(for scene: UIWindowScene) {
-        guard !DeviceIdiom.isPhone else { return }
+    static func openEditorWindow(fallback: (() -> Void)? = nil) {
+        guard !DeviceIdiom.isPhone else {
+            fallback?()
+            return
+        }
         let options = UIWindowScene.ActivationRequestOptions()
         options.placement = .prominent()
+        let activity = NSUserActivity(activityType: SceneID.editor.rawValue)
+        activity.targetContentIdentifier = SceneID.editor.rawValue
         let request = UISceneSessionActivationRequest(
-            session: scene.session,
-            userActivity: nil,
+            role: .windowApplication,
+            userActivity: activity,
             options: options
         )
-        UIApplication.shared.activateSceneSession(for: request) { _ in }
+        UIApplication.shared.activateSceneSession(for: request) { _ in
+            // System rejected the request (uncommon — usually placement
+            // is just ignored rather than failing). Fall back to the
+            // SwiftUI path so the user still gets a window.
+            Task { @MainActor in
+                fallback?()
+            }
+        }
     }
 }
