@@ -72,6 +72,26 @@ final class PlainTextDocument {
         return untitledNumber == 1 ? "Untitled" : "Untitled \(untitledNumber)"
     }
 
+    /// Disk state at the moment we last read from / wrote to the
+    /// source file. The stale-source safeguard compares these to
+    /// the current on-disk attrs before adopting a draft or ⌘S'ing
+    /// — if either differs (or the file's gone), the user sees a
+    /// missing / changed dialog before any bytes commit.
+    var sourceMtimeAtLoad: Date?
+    var sourceSizeAtLoad: Int?
+
+    /// Reads the file's modification date + size for the stale
+    /// check. `nil` means the URL is gone or unreachable.
+    nonisolated static func diskAttrs(of url: URL) -> (mtime: Date, size: Int)? {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let attrs = try? url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey]),
+              let mtime = attrs.contentModificationDate,
+              let size = attrs.fileSize
+        else { return nil }
+        return (mtime, size)
+    }
+
     /// Synchronous load. Used by Revert-to-Saved; new code should
     /// prefer ``loadAsync(from:)`` so a slow File Provider can be
     /// cancelled mid-read.
@@ -136,6 +156,13 @@ final class PlainTextDocument {
         self.lineEnding = Self.detectLineEnding(in: payload.text) ?? .lf
         self.fileURL = url
         self.isDirty = false
+        // Capture the disk snapshot now so the stale-source check
+        // on save can spot concurrent writes from other apps /
+        // devices.
+        if let attrs = Self.diskAttrs(of: url) {
+            self.sourceMtimeAtLoad = attrs.mtime
+            self.sourceSizeAtLoad = attrs.size
+        }
         // URL-derived key — reopening the same file finds its
         // revision history. Anything captured under the prior
         // untitled-UUID key is orphaned (acceptable tradeoff).
@@ -211,6 +238,13 @@ final class PlainTextDocument {
         self.fileURL = url
         self.originalData = data
         self.isDirty = false
+        // Bring the stale-source baseline up to date with the bytes
+        // we just wrote — otherwise the next ⌘S would see "changed
+        // since last load" and warn about our own write.
+        if let attrs = Self.diskAttrs(of: url) {
+            self.sourceMtimeAtLoad = attrs.mtime
+            self.sourceSizeAtLoad = attrs.size
+        }
         // The just-written file is now canonical; drop the scratch
         // shadow and the draft entry so neither resurrects stale bytes.
         deleteScratchFile()
@@ -242,10 +276,16 @@ final class PlainTextDocument {
             var metadata: DraftMetadata?
             if let source = fileURL {
                 let bookmark = try? source.bookmarkData(options: .minimalBookmark)
+                // Reuse the load-time attrs rather than re-reading
+                // disk — autosave fires per-keystroke and the source
+                // can't have changed since load without an explicit
+                // ⌘S in between (which would have re-baselined them).
                 metadata = DraftMetadata(
                     sourceBookmark: bookmark,
                     sourceDisplay: Self.displayPath(for: source),
-                    sourceEncodingRaw: fileEncoding.encoding.rawValue
+                    sourceEncodingRaw: fileEncoding.encoding.rawValue,
+                    sourceMtime: sourceMtimeAtLoad,
+                    sourceSize: sourceSizeAtLoad
                 )
             }
             draftURL = DraftsStore.shared.save(

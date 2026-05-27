@@ -130,6 +130,131 @@ extension CommandActions {
         Self.context.editing.pendingClose = nil
     }
 
+    // MARK: - Stale-source safeguard
+
+    /// Run before any ⌘S that's targeting an existing `fileURL`.
+    /// Returns `true` when the caller should proceed with the
+    /// actual write — `false` means we've raised a stale dialog
+    /// and the user has to resolve it first.
+    @discardableResult
+    static func saveDocumentSafely(_ tab: TabModel, session: EditorSession) -> Bool {
+        guard let url = tab.document.fileURL else {
+            Self.context.pickers.pending = .saveAs
+            return false
+        }
+        if let attrs = PlainTextDocument.diskAttrs(of: url),
+           let loadMtime = tab.document.sourceMtimeAtLoad,
+           let loadSize = tab.document.sourceSizeAtLoad,
+           attrs.mtime != loadMtime || attrs.size != loadSize {
+            Self.context.editing.sourceStaleCheck = .changedOnSave(
+                tabID: tab.id,
+                displayName: tab.document.displayName
+            )
+            return false
+        }
+        return performSave(tab: tab)
+    }
+
+    /// "Save Anyway" path off the stale dialog — bypasses the disk
+    /// check and writes over whatever's there now. The user
+    /// acknowledged data loss.
+    static func forceSaveAfterStale() {
+        defer { Self.context.editing.sourceStaleCheck = nil }
+        guard let check = Self.context.editing.sourceStaleCheck,
+              let (_, tab) = resolveTab(for: check)
+        else { return }
+        _ = performSave(tab: tab)
+    }
+
+    /// "Reload" path off the stale dialog — discards the buffer's
+    /// in-memory state and re-reads the source from disk. Lossy
+    /// for whatever wasn't yet ⌘S'd.
+    static func reloadAfterStale() {
+        defer { Self.context.editing.sourceStaleCheck = nil }
+        guard let check = Self.context.editing.sourceStaleCheck,
+              let (_, tab) = resolveTab(for: check),
+              let url = tab.document.fileURL
+        else { return }
+        // Throw away the draft + scratch — the user picked reload,
+        // so the unsaved bytes are deliberately gone.
+        tab.document.deleteScratchFile()
+        Task { @MainActor in
+            do {
+                try await tab.document.loadAsync(from: url)
+                tab.state.text = tab.document.text
+                tab.state.fileURL = url
+                tab.state.savedBaselineText = tab.document.text
+            } catch {
+                Self.context.editing.openErrorMessage =
+                    "Couldn't reload \(check.displayName): \(error.localizedDescription)"
+            }
+        }
+    }
+
+    /// "Continue Editing" path off the `changedOnAdopt` dialog —
+    /// keeps the drafted text but bumps the load-time baseline to
+    /// the disk's current attrs so the next ⌘S doesn't re-warn for
+    /// the same drift.
+    static func acceptStaleAdopt() {
+        defer { Self.context.editing.sourceStaleCheck = nil }
+        guard let check = Self.context.editing.sourceStaleCheck,
+              case .changedOnAdopt = check,
+              let (_, tab) = resolveTab(for: check),
+              let url = tab.document.fileURL,
+              let attrs = PlainTextDocument.diskAttrs(of: url)
+        else { return }
+        tab.document.sourceMtimeAtLoad = attrs.mtime
+        tab.document.sourceSizeAtLoad = attrs.size
+    }
+
+    /// "OK" off the source-missing dialog — the file's gone, so
+    /// the buffer drops its URL link and becomes Untitled. Draft
+    /// stays around as recovery for the bytes themselves.
+    static func acknowledgeSourceMissing() {
+        defer { Self.context.editing.sourceStaleCheck = nil }
+        guard let check = Self.context.editing.sourceStaleCheck,
+              case .missing = check,
+              let (_, tab) = resolveTab(for: check)
+        else { return }
+        tab.document.fileURL = nil
+        tab.state.fileURL = nil
+        tab.document.sourceMtimeAtLoad = nil
+        tab.document.sourceSizeAtLoad = nil
+        // No baseline against a missing file — every line is "added"
+        // until the user picks a new save target.
+        tab.state.savedBaselineText = ""
+    }
+
+    private static func performSave(tab: TabModel) -> Bool {
+        if let live = tab.state.textView?.text {
+            tab.document.text = live
+        }
+        do {
+            try tab.document.save()
+            tab.state.savedBaselineText = tab.document.text
+            return true
+        } catch {
+            Self.context.editing.openErrorMessage =
+                "Couldn't save \(tab.document.displayName): \(error.localizedDescription)"
+            return false
+        }
+    }
+
+    /// Walks every open session for a tab matching the stale-check.
+    private static func resolveTab(for check: SourceStaleCheck) -> (EditorSession, TabModel)? {
+        let tabID: UUID
+        switch check {
+        case .missing(let t, _), .changedOnAdopt(let t, _), .changedOnSave(let t, _):
+            tabID = t
+        }
+        for session in Self.context.scenes.allOpenSessions {
+            if let tab = session.tabs.first(where: { $0.id == tabID }) {
+                return (session, tab)
+            }
+        }
+        return nil
+    }
+
     /// Shared by save / discard handlers so both reach the same
     /// definition of "the targeted tab."
     private static func resolveSession(for pending: PendingClose) -> (EditorSession, TabModel)? {

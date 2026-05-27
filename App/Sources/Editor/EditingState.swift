@@ -26,6 +26,39 @@ final class EditingState {
     /// Set by `CommandActions.requestCloseTab(_:)` when a dirty or
     /// untitled tab needs the confirmation dialog.
     var pendingClose: PendingClose?
+
+    /// Stale-source dialog state — set by the launcher's draft-
+    /// adoption path or by ⌘S when the source's disk mtime/size has
+    /// drifted from what we recorded at load. Drives a single alert
+    /// in `EditorView` with branch-appropriate buttons.
+    var sourceStaleCheck: SourceStaleCheck?
+}
+
+/// What the user has to resolve before continuing.
+enum SourceStaleCheck: Identifiable {
+    /// File the draft references is gone. Continue as Untitled.
+    case missing(tabID: UUID, displayName: String)
+    /// Source file changed since draft was captured. The user picks
+    /// between keeping the draft's bytes or reloading disk content.
+    case changedOnAdopt(tabID: UUID, displayName: String)
+    /// ⌘S aborted because the source file changed between load and
+    /// save. The user picks force-save, reload, or cancel.
+    case changedOnSave(tabID: UUID, displayName: String)
+
+    var id: String {
+        switch self {
+        case .missing(let t, _):       return "missing-\(t)"
+        case .changedOnAdopt(let t, _): return "changed-adopt-\(t)"
+        case .changedOnSave(let t, _):  return "changed-save-\(t)"
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .missing(_, let n), .changedOnAdopt(_, let n), .changedOnSave(_, let n):
+            return n
+        }
+    }
 }
 
 /// The session id is captured so the dialog targets the right

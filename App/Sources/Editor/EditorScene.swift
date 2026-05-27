@@ -139,21 +139,10 @@ struct EditorScene: View {
                     AppStateBus.shared.scenes.openWindowAction = { id in openWindow(id: id.rawValue) }
                     AppStateBus.shared.scenes.routeOpenURL = { url in route(open: url) }
                     AppStateBus.shared.editing.saveCurrentDocument = { [weak session] in
-                        guard let session, session.activeTab.document.fileURL != nil else {
-                            AppStateBus.shared.pickers.pending = .saveAs
-                            return
-                        }
-                        let tab = session.activeTab
-                        // ⌘S needs the freshest bytes — `document.text`
-                        // is a 300 ms snapshot, so pull engine-live.
-                        if let live = tab.state.textView?.text {
-                            tab.document.text = live
-                        }
-                        do {
-                            try tab.document.save()
-                            // Disk + buffer agree — zero the diff bars.
-                            tab.state.savedBaselineText = tab.document.text
-                        } catch { /* errors surface via PlainTextDocument */ }
+                        guard let session else { return }
+                        // saveDocumentSafely handles Untitled → Save As,
+                        // stale-source warnings, and the actual write.
+                        CommandActions.saveDocumentSafely(session.activeTab, session: session)
                     }
                     return
                 }
@@ -174,15 +163,8 @@ struct EditorScene: View {
                 AppStateBus.shared.scenes.registerSession(session)
                 AppStateBus.shared.scenes.routeOpenURL = { url in route(open: url) }
                 AppStateBus.shared.editing.saveCurrentDocument = { [weak session] in
-                    guard let session, session.activeTab.document.fileURL != nil else {
-                        AppStateBus.shared.pickers.pending = .saveAs
-                        return
-                    }
-                    let tab = session.activeTab
-                    if let live = tab.state.textView?.text {
-                        tab.document.text = live
-                    }
-                    try? tab.document.save()
+                    guard let session else { return }
+                    CommandActions.saveDocumentSafely(session.activeTab, session: session)
                 }
                 applySessionRestoreIfNeeded()
                 markColdLaunchHandled()
@@ -402,6 +384,14 @@ struct EditorScene: View {
     /// Adopts an existing draft into the active launcher tab. URL-
     /// backed drafts re-bind to their source so ⌘S writes back; the
     /// drafted text on top stays dirty until explicit save.
+    ///
+    /// For URL-backed drafts this also runs the stale-source
+    /// safeguard: if the original file is gone we drop the URL link
+    /// and surface a "Source missing" notice; if the file's been
+    /// modified since the draft was captured we surface a "Continue
+    /// editing / Reload" choice. The tab transitions to `.editor`
+    /// either way — the user keeps the drafted bytes while
+    /// resolving.
     private func adoptDraftIntoActiveTab(_ draft: DraftRecord) {
         let tab = session.activeTab
         let text = (try? String(contentsOf: draft.url, encoding: .utf8))
@@ -414,6 +404,23 @@ struct EditorScene: View {
 
         if let bookmark = draft.metadata?.sourceBookmark,
            let resolved = Self.resolveBookmark(bookmark) {
+            let attrs = PlainTextDocument.diskAttrs(of: resolved.url)
+            if attrs == nil {
+                // File can no longer be reached. Adopt the bytes as
+                // an Untitled buffer and surface a notice — the
+                // dialog's OK button (`acknowledgeSourceMissing`)
+                // clears the URL link.
+                tab.document.fileURL = resolved.url
+                tab.state.fileURL = resolved.url
+                tab.state.languageIdentifier = LanguageRegistry.identifier(for: resolved.url)
+                tab.state.savedBaselineText = ""
+                tab.kind = .editor
+                bus.editing.sourceStaleCheck = .missing(
+                    tabID: tab.id,
+                    displayName: resolved.url.lastPathComponent
+                )
+                return
+            }
             tab.document.fileURL = resolved.url
             tab.state.fileURL = resolved.url
             tab.state.languageIdentifier = LanguageRegistry.identifier(for: resolved.url)
@@ -422,13 +429,29 @@ struct EditorScene: View {
                 tab.document.fileEncoding = FileEncoding(encoding: encoding)
                 tab.state.fileEncoding = tab.document.fileEncoding
             }
+            tab.document.sourceMtimeAtLoad = attrs?.mtime
+            tab.document.sourceSizeAtLoad = attrs?.size
             let onDisk = (try? String(contentsOf: resolved.url, encoding: .utf8))
                 ?? (try? String(contentsOf: resolved.url, encoding: .isoLatin1))
                 ?? ""
             tab.state.savedBaselineText = onDisk
-        } else {
-            tab.state.savedBaselineText = ""
+            tab.kind = .editor
+            // Did anything change between draft creation and now?
+            // Compare the draft's recorded attrs to current disk.
+            // If we don't have recorded attrs (older draft), skip —
+            // can't reason about drift without a baseline.
+            if let recordedMtime = draft.metadata?.sourceMtime,
+               let recordedSize = draft.metadata?.sourceSize,
+               let liveAttrs = attrs,
+               liveAttrs.mtime != recordedMtime || liveAttrs.size != recordedSize {
+                bus.editing.sourceStaleCheck = .changedOnAdopt(
+                    tabID: tab.id,
+                    displayName: resolved.url.lastPathComponent
+                )
+            }
+            return
         }
+        tab.state.savedBaselineText = ""
         tab.kind = .editor
     }
 

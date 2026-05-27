@@ -11,6 +11,14 @@ struct DraftMetadata: Codable {
     var sourceDisplay: String?
     /// `String.Encoding.rawValue`. nil for untitled.
     var sourceEncodingRaw: UInt?
+    /// Disk state of the source at the moment the draft was last
+    /// written. The launcher's adoption path re-reads disk mtime/
+    /// size and compares — if either differs (or the file's gone)
+    /// the user gets a missing / changed dialog before the buffer
+    /// becomes editable. Cheaper than a content hash and good
+    /// enough to catch the "someone else wrote it" race.
+    var sourceMtime: Date?
+    var sourceSize: Int?
 }
 
 /// One recoverable dirty buffer from a previous session.

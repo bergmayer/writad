@@ -118,6 +118,15 @@ struct EditorView: View {
                  ? "This document is untitled. Save it to a file, park it as a draft, or discard the contents."
                  : "This document has unsaved changes since its last save.")
         }
+        // Stale-source safeguards. Three flavors, one alert. Wrapped
+        // in a ViewModifier so the body's modifier chain stays under
+        // the Swift type-checker's expression budget.
+        .modifier(StaleSourceAlertModifier(
+            title: staleAlertTitle,
+            presented: staleCheckBinding,
+            check: bus.editing.sourceStaleCheck,
+            cancel: { bus.editing.sourceStaleCheck = nil }
+        ))
         .onAppear {
             primeStateFromDocument()
             AppStateBus.shared.scenes.currentEditor = state
@@ -279,6 +288,38 @@ struct EditorView: View {
                 if !newValue { bus.editing.pendingClose = nil }
             }
         )
+    }
+
+    /// Only the scene that owns the stale tab presents — otherwise
+    /// every open window would stack the same alert.
+    private var staleCheckBinding: Binding<Bool> {
+        Binding(
+            get: {
+                guard let check = bus.editing.sourceStaleCheck else { return false }
+                let tabID: UUID
+                switch check {
+                case .missing(let t, _), .changedOnAdopt(let t, _), .changedOnSave(let t, _):
+                    tabID = t
+                }
+                return session?.tabs.contains(where: { $0.id == tabID }) ?? false
+            },
+            set: { newValue in
+                if !newValue { bus.editing.sourceStaleCheck = nil }
+            }
+        )
+    }
+
+    private var staleAlertTitle: String {
+        switch bus.editing.sourceStaleCheck {
+        case .missing:        return "Source file missing"
+        case .changedOnAdopt: return "Source file changed"
+        case .changedOnSave:  return "Source file changed"
+        case .none:           return ""
+        }
+    }
+
+    private var session: EditorSession? {
+        bus.scenes.allOpenSessions.first { $0.tabs.contains(where: { $0.state === state }) }
     }
 
     private var openErrorAlertBinding: Binding<Bool> {
