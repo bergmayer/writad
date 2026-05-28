@@ -93,14 +93,13 @@ struct EditorScene: View {
         NavigationStack {
             ZStack {
                 editorStack
-                    .matchedGeometryEffect(
-                        id: switcherMatchID,
-                        in: tabSwitcherNS,
-                        properties: .frame,
-                        isSource: !bus.editing.tabSwitcherActive
-                    )
-                    // Fade under the switcher so the morph reads as
-                    // "editor → card", not "editor + card overlap".
+                    // Cross-fade against the switcher. The earlier
+                    // matchedGeometryEffect that drove an editor →
+                    // card "zoom" morph cached the source frame and
+                    // wouldn't grow back when the window resized
+                    // (Stage Manager / Slide Over), leaving the
+                    // editor stuck at a smaller-than-window size.
+                    // Plain opacity is layout-safe and good enough.
                     .opacity(bus.editing.tabSwitcherActive ? 0 : 1)
                     .allowsHitTesting(!bus.editing.tabSwitcherActive)
 
