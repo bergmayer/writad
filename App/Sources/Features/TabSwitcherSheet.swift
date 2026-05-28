@@ -103,7 +103,13 @@ struct TabSwitcherView: View {
         TabCard(
             tab: tab,
             isActive: tab.id == session.selectedTabID,
-            canClose: session.tabs.count > 1,
+            // A single-tab session is closeable when that tab has
+            // real content (`.editor` / `.fileBrowser`) — closing
+            // spawns a fresh launcher in its place. The exception
+            // is a lone launcher tab: closing it would just spawn
+            // another launcher, so we hide the X to avoid the
+            // pointless gesture.
+            canClose: session.tabs.count > 1 || tab.kind != .launcher,
             onSelect: { activate(tab) },
             onClose:  { CommandActions.requestCloseTab(tab.id, in: session) },
             onPin:    { session.togglePinned(tab.id) },
