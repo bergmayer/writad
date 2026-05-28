@@ -347,9 +347,19 @@ struct EditorScene: View {
                 document: document,
                 state: state,
                 tabContentOverride: AnyView(
-                    FileBrowserTabContent(onPick: { url in
-                        adoptPickedFileIntoActiveTab(url)
-                    })
+                    FileBrowserTabContent(
+                        onPick: { url in
+                            adoptPickedFileIntoActiveTab(url)
+                        },
+                        onCancel: {
+                            // Back out to the launcher in the same
+                            // tab. The user landed on the file
+                            // browser via the launcher's "Open File…"
+                            // row, so this restores the surface they
+                            // came from.
+                            session.activeTab.kind = .launcher
+                        }
+                    )
                 )
             )
         case .launcher:

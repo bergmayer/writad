@@ -47,19 +47,43 @@ struct FileBrowserSheetView: View {
 
 /// In-tab browser content — the tab itself hosts the document
 /// browser. On pick, `onPick` flips the tab back to `.editor` and
-/// loads the URL, so the user stays in the same tab through the
-/// whole open flow. No dismiss closure: the tab persists until the
-/// user closes it manually.
+/// loads the URL. `onCancel` lets the user back out to the launcher
+/// without picking anything: a thin header bar above the browser
+/// hosts the "Back" button so the user always has a way out of the
+/// picker without closing the tab entirely.
 struct FileBrowserTabContent: View {
 
     let onPick: (URL) -> Void
+    let onCancel: () -> Void
 
     var body: some View {
-        FileBrowserRepresentable(
-            dismiss: { /* no-op: the tab outlives the pick */ },
-            onPick: onPick
-        )
-        .ignoresSafeArea()
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Button(action: onCancel) {
+                    Label("Back", systemImage: "chevron.backward")
+                        .labelStyle(.titleAndIcon)
+                }
+                .buttonStyle(.bordered)
+                Spacer()
+                Text("Open File")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                // Symmetry placeholder so the title stays centered —
+                // same footprint as the Back button on the leading edge.
+                Color.clear
+                    .frame(width: 64, height: 1)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(.bar)
+
+            FileBrowserRepresentable(
+                dismiss: { /* no-op: the tab outlives the pick */ },
+                onPick: onPick
+            )
+            .ignoresSafeArea(edges: .bottom)
+        }
     }
 }
 
