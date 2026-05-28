@@ -75,6 +75,14 @@ final class AppDelegateBridge: NSObject, UIApplicationDelegate {
     /// in the session aren't second-guessed.
     private let processStart = Date()
 
+    /// Flips true as soon as the first scene config is approved.
+    /// Without this, a fresh install (no records, no matches) had
+    /// every session destroyed and iPadOS kept spawning replacements
+    /// — an instant infinite create/destroy loop on launch. The
+    /// first scene per cold launch always passes; subsequent
+    /// cold-launch sessions go through the record-match filter.
+    private var hasAllowedAnyScene = false
+
     func application(
         _ application: UIApplication,
         configurationForConnecting connectingSceneSession: UISceneSession,
@@ -91,9 +99,11 @@ final class AppDelegateBridge: NSObject, UIApplicationDelegate {
         // are gone from our store via `didDiscardSceneSessions`,
         // so they fail the check and get destroyed. After the cold-
         // launch window everything is user-initiated (⌘N, +, etc.)
-        // and passes through.
+        // and passes through. The "allow first scene" gate breaks
+        // the otherwise infinite destroy/respawn loop on fresh
+        // installs where no records exist yet.
         let isColdLaunchWindow = Date().timeIntervalSince(processStart) < 5.0
-        if isColdLaunchWindow {
+        if isColdLaunchWindow, hasAllowedAnyScene {
             let persistentId = connectingSceneSession.persistentIdentifier
             // `hasRecord(forPersistentIdentifier:)` is true only when
             // we explicitly saved a record for this session — i.e.,
@@ -107,6 +117,7 @@ final class AppDelegateBridge: NSObject, UIApplicationDelegate {
                 )
             }
         }
+        hasAllowedAnyScene = true
         return UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
     }
 
