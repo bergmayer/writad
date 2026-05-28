@@ -70,6 +70,17 @@ struct AyyyyApp: App {
 @MainActor
 final class AppDelegateBridge: NSObject, UIApplicationDelegate {
 
+    /// Captured when the process starts. Used to distinguish "iPadOS
+    /// is restoring a session from a previous app run" (fires within
+    /// a couple of seconds of launch) from "user just hit ⌘N" (fires
+    /// later, mid-session). The former is the case we want to deny.
+    private let processStart = Date()
+
+    /// Flips true as soon as the first scene config is handed out.
+    /// During cold launch, every scene after the first is iPadOS
+    /// auto-restoring extras — we destroy those.
+    private var hasAllowedFirstScene = false
+
     func application(
         _ application: UIApplication,
         configurationForConnecting connectingSceneSession: UISceneSession,
@@ -78,7 +89,42 @@ final class AppDelegateBridge: NSObject, UIApplicationDelegate {
         if let item = options.shortcutItem {
             apply(item)
         }
+        // Cross-launch window restoration is OFF by user preference.
+        // iPadOS keeps `UISceneSession` objects alive across app
+        // launches and auto-restores them on next launch — that's
+        // the "two windows come back after I swiped them away" bug.
+        // During the cold-launch window we accept exactly one scene
+        // and destroy the rest; after the cold-launch window all
+        // scenes are user-initiated (⌘N, the + button, openWindow)
+        // and pass through unmolested.
+        let isColdLaunchWindow = Date().timeIntervalSince(processStart) < 5.0
+        if isColdLaunchWindow {
+            if hasAllowedFirstScene {
+                application.requestSceneSessionDestruction(
+                    connectingSceneSession,
+                    options: nil,
+                    errorHandler: nil
+                )
+            } else {
+                hasAllowedFirstScene = true
+            }
+        }
         return UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+    }
+
+    /// Called when iPadOS itself discards sessions (e.g., the user
+    /// swiped them away in the App Switcher while the app was
+    /// running, or the OS cleaned up after a force-quit). Mirror the
+    /// discards into our own SessionsStore so our records don't
+    /// outlive the system's view of the world.
+    func application(
+        _ application: UIApplication,
+        didDiscardSceneSessions sceneSessions: Set<UISceneSession>
+    ) {
+        // No store API for "remove by UISceneSession" — we key on
+        // our own sceneUUID, which the system doesn't know. The
+        // records get pruned naturally via the size cap; doing
+        // nothing here is fine.
     }
 
     func application(

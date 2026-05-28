@@ -146,17 +146,14 @@ final class SessionsStore {
         pendingRestores.isEmpty ? nil : pendingRestores.removeFirst()
     }
 
-    /// Records sharing the most recent prior-launch `launchID`,
-    /// oldest-first. Returns `[]` when there's nothing to restore.
+    /// Cross-launch restoration is OFF by user preference. Every
+    /// cold launch starts clean with one fresh window; unsaved work
+    /// is recovered via the launcher's Drafts list, not by re-
+    /// spawning windows that were open at last quit. Returning []
+    /// is the kill-switch — `applySessionRestoreIfNeeded` then
+    /// short-circuits, no extra windows get opened.
     private func recordsFromPreviousLaunch() -> [SessionRecord] {
-        // Find the most recent record whose launchID isn't ours.
-        let priorRecords = records.filter { $0.launchID != currentLaunchID }
-        guard let mostRecent = priorRecords.max(by: { $0.lastModified < $1.lastModified }) else {
-            return []
-        }
-        return priorRecords
-            .filter { $0.launchID == mostRecent.launchID }
-            .sorted { $0.lastModified < $1.lastModified }
+        []
     }
 
     func record(forScene sceneUUID: String) -> SessionRecord? {
