@@ -16,12 +16,19 @@ struct TabSnapshot: Codable {
 /// saved during a single app run so the next launch can identify
 /// "windows open at last quit" — records from earlier launches still
 /// sit in the store as dormant history until the cap evicts them.
+/// `persistentIdentifier` is iPadOS's `UISceneSession.persistentIdentifier`
+/// captured at scene register time — the AppDelegate's
+/// `configurationForConnecting` uses it to correlate a cold-launch
+/// scene back to its record. No record == iPadOS ghost (user swiped
+/// or explicitly closed); a matching record means "involuntary kill,
+/// the user wants this back."
 struct SessionRecord: Codable {
     let sceneUUID: String
     var tabs: [TabSnapshot]
     var activeIndex: Int
     var lastModified: Date
     var launchID: String
+    var persistentIdentifier: String?
 }
 
 /// Records on disk (UserDefaults `sessionRecords`). The actual draft
@@ -63,6 +70,12 @@ final class SessionsStore {
     /// uses it to evict records when the user closes a window.
     private var sceneUUIDsByObjectIdentifier: [ObjectIdentifier: String] = [:]
 
+    /// Mirror map from our `sceneUUID` to iPadOS's
+    /// `UISceneSession.persistentIdentifier`. Saved into each
+    /// `SessionRecord` at persist time so the AppDelegate can
+    /// correlate a cold-launch scene to our record.
+    private var persistentIdsByUUID: [String: String] = [:]
+
     private init() {
         self.records = Self.load() ?? []
         NotificationCenter.default.addObserver(
@@ -101,6 +114,30 @@ final class SessionsStore {
     /// Idempotent — repeat calls with the same arguments are no-ops.
     func register(_ scene: UIScene, sceneUUID: String) {
         sceneUUIDsByObjectIdentifier[ObjectIdentifier(scene)] = sceneUUID
+        persistentIdsByUUID[sceneUUID] = scene.session.persistentIdentifier
+    }
+
+    /// Looked up by `SessionRecord.init(scene:session:)` so the
+    /// record carries the iPadOS session id forward across launches.
+    func persistentIdentifier(forSceneUUID uuid: String) -> String? {
+        persistentIdsByUUID[uuid]
+    }
+
+    /// `true` if any prior-launch record claims this iPadOS session.
+    /// AppDelegate's `configurationForConnecting` uses it to decide
+    /// whether a restoring session is one we want back or an iPadOS
+    /// ghost to destroy.
+    func hasRecord(forPersistentIdentifier id: String) -> Bool {
+        records.contains { $0.persistentIdentifier == id }
+    }
+
+    /// Drop any record claiming this persistent identifier. Used
+    /// from `application(_:didDiscardSceneSessions:)` so iOS-level
+    /// discards (user swiped a window away in the App Switcher
+    /// while the app was running) mirror into our store.
+    func removeRecord(forPersistentIdentifier id: String) {
+        records.removeAll { $0.persistentIdentifier == id }
+        persist()
     }
 
     /// One-shot cleanup of orphaned `UISceneSession`s — the ones
@@ -146,14 +183,22 @@ final class SessionsStore {
         pendingRestores.isEmpty ? nil : pendingRestores.removeFirst()
     }
 
-    /// Cross-launch restoration is OFF by user preference. Every
-    /// cold launch starts clean with one fresh window; unsaved work
-    /// is recovered via the launcher's Drafts list, not by re-
-    /// spawning windows that were open at last quit. Returning []
-    /// is the kill-switch — `applySessionRestoreIfNeeded` then
-    /// short-circuits, no extra windows get opened.
+    /// Records sharing the most recent prior-launch `launchID`,
+    /// oldest-first. Returns `[]` when there's nothing to restore.
+    /// Used by `applySessionRestoreIfNeeded` to re-open windows
+    /// that were alive at the prior involuntary kill (OOM, reboot).
+    /// User-initiated closes remove their records before this point
+    /// either via the `didDisconnectNotification` handler (in-app
+    /// close) or `didDiscardSceneSessions` (App Switcher swipe), so
+    /// only "the user didn't mean to lose this" records survive.
     private func recordsFromPreviousLaunch() -> [SessionRecord] {
-        []
+        let priorRecords = records.filter { $0.launchID != currentLaunchID }
+        guard let mostRecent = priorRecords.max(by: { $0.lastModified < $1.lastModified }) else {
+            return []
+        }
+        return priorRecords
+            .filter { $0.launchID == mostRecent.launchID }
+            .sorted { $0.lastModified < $1.lastModified }
     }
 
     func record(forScene sceneUUID: String) -> SessionRecord? {
@@ -208,6 +253,7 @@ extension SessionRecord {
         self.activeIndex = session.tabs.firstIndex { $0.id == session.selectedTabID } ?? 0
         self.lastModified = Date()
         self.launchID = SessionsStore.shared.currentLaunchID
+        self.persistentIdentifier = SessionsStore.shared.persistentIdentifier(forSceneUUID: sceneUUID)
     }
 }
 
