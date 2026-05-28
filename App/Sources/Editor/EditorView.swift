@@ -397,9 +397,10 @@ struct EditorView: View {
     }
 
     /// "edited" hint + file-location breadcrumb, middle-dot joined.
-    /// Untitled = always "edited" until first save.
+    /// A brand-new Untitled doc with no edits is NOT "edited" —
+    /// the indicator only appears once `isDirty` flips.
     private var documentSubtitle: String {
-        let unsaved = document.fileURL == nil || document.isDirty
+        let unsaved = document.isDirty
         let location: String = document.fileURL.map { DocumentLocation.describe(parentOf: $0) } ?? ""
         switch (unsaved, location.isEmpty) {
         case (true, true):   return "edited"

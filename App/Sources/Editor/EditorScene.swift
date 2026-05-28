@@ -74,9 +74,11 @@ struct EditorScene: View {
     }
 
     /// "edited" hint + location breadcrumb, middle-dot joined when
-    /// both apply.
+    /// both apply. A brand-new Untitled doc with no edits is NOT
+    /// "edited" — the indicator only appears once the buffer is
+    /// actually dirty (`isDirty == true`).
     private var documentSubtitle: String {
-        let unsaved = document.fileURL == nil || document.isDirty
+        let unsaved = document.isDirty
         let location: String = document.fileURL.map { DocumentLocation.describe(parentOf: $0) } ?? ""
         switch (unsaved, location.isEmpty) {
         case (true, true):   return "edited"
@@ -639,6 +641,19 @@ struct EditorScene: View {
                 tab.document.text = live
             }
             tab.document.autoSave(commitDraft: true)
+        }
+        // A window has nothing worth restoring when every tab is
+        // empty (no fileURL, no draftURL). Persisting these would
+        // pollute the next launch with phantom "Untitled" windows
+        // the user never meant to keep. Drafts handle the data-
+        // safety side — anything dirty would have written a draft
+        // in the loop above and now has a non-nil draftURL.
+        let hasRestorableTab = session.tabs.contains { tab in
+            tab.document.fileURL != nil || tab.document.draftURL != nil
+        }
+        guard hasRestorableTab else {
+            SessionsStore.shared.remove(forScene: sceneUUID)
+            return
         }
         let record = SessionRecord(scene: sceneUUID, session: session)
         SessionsStore.shared.save(record)

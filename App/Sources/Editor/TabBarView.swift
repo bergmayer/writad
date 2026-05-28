@@ -266,9 +266,10 @@ private struct TabPillView: View {
     }
 
     /// Whether to render the leading unsaved-dot on the active pill.
-    /// Mirrors the dirty / untitled rule used by `label`.
+    /// Only fires for genuinely dirty buffers — a blank Untitled tab
+    /// shouldn't claim to have unsaved changes.
     private var showsDirtyDot: Bool {
-        tab.document.fileURL == nil || tab.document.isDirty
+        tab.document.isDirty
     }
 
     private var pillBackground: some View {
@@ -314,8 +315,10 @@ private struct TabPillView: View {
         case .launcher:    return "New"
         case .editor:
             let base = tab.document.displayName
-            let unsaved = tab.document.fileURL == nil || tab.document.isDirty
-            return unsaved ? "● \(base)" : base
+            // Only show the unsaved-dot for genuinely dirty buffers.
+            // A brand-new Untitled tab shouldn't claim edits it
+            // doesn't have.
+            return tab.document.isDirty ? "● \(base)" : base
         }
     }
 
