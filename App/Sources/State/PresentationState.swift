@@ -5,7 +5,6 @@ import Foundation
 final class PresentationState {
 
     var presentedSheet: EditorSheet?
-    var tabSwitcherActive: Bool = false
     var revertRequestCount: Int = 0
     var openErrorMessage: String?
     var pendingClose: PendingClose?

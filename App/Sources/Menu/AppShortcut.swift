@@ -10,11 +10,17 @@ enum AppShortcut {
 
     // MARK: App
     static let preferences      = KeyboardShortcut(",")
-    static let commandPalette   = KeyboardShortcut(";")
+    /// Primary shortcut shown in the menu. A second binding adds ⌃P as
+    /// an alias — see `EditorCommands` where both are wired.
+    static let commandPalette   = KeyboardShortcut("p")
 
     // MARK: File
     static let newWindow        = KeyboardShortcut("n")
     static let newTab           = KeyboardShortcut("t")
+    /// ⌘O — claimable here only because we suppress the system-injected
+    /// `.importExport` "Open…" item in EditorCommands. With that
+    /// suppression in place, the chord no longer collides.
+    static let openFile         = KeyboardShortcut("o")
     static let save             = KeyboardShortcut("s")
     static let saveAs           = KeyboardShortcut("s", modifiers: [.command, .shift])
     static let showRevisions    = KeyboardShortcut("h", modifiers: [.command, .option])

@@ -64,46 +64,20 @@ struct EditorView: View {
         .sheet(item: isActive ? $bus.presentation.presentedSheet : .constant(nil)) { sheet in
             sheetContent(for: sheet)
         }
-        .alert(
-            "Couldn't open file",
-            isPresented: openErrorAlertBinding,
-            presenting: bus.presentation.openErrorMessage
-        ) { _ in
-            Button("OK") { bus.presentation.openErrorMessage = nil }
-        } message: { message in
-            Text(message)
-        }
         // `.alert` not `.confirmationDialog`: iPad popover-with-tail needs
         // an anchor, and close paths come from disparate places (tab
         // strip, switcher, ⌘W, palette) with no single sensible anchor.
-        .alert(
-            "Close \(bus.presentation.pendingClose?.displayName ?? "tab")?",
-            isPresented: pendingCloseBinding,
-            presenting: bus.presentation.pendingClose
-        ) { pending in
-            // Saved files write back to the existing URL; untitled
-            // buffers open Save As, then the tab closes.
-            Button(pending.isUntitled ? "Save…" : "Save and Close") {
-                CommandActions.confirmSaveAndClose(pending)
-            }
-            // Save as Draft keeps the edits in the unsaved-drafts
-            // list (reachable from the launcher) without writing
-            // them to a file — fastest way out of the dialog when
-            // the user isn't ready to pick a filename.
-            Button("Save as Draft") {
-                CommandActions.saveAsDraftAndClose(pending)
-            }
-            Button("Discard Changes", role: .destructive) {
-                CommandActions.confirmDiscardAndClose(pending)
-            }
-            Button("Cancel", role: .cancel) { CommandActions.cancelPendingClose() }
-        } message: { pending in
-            Text(pending.isUntitled
-                 ? "This document is untitled. Save it to a file, keep it as an unsaved draft, or discard the contents."
-                 : "This document has unsaved changes since its last save.")
-        }
-        // Three stale-source flavors, one alert. ViewModifier extraction
-        // keeps the body's modifier chain under the type-checker budget.
+        // Each alert is its own ViewModifier — the trailing-closure
+        // alert API counts heavily against the type-checker budget and
+        // stacking three of them inline tipped the body over again.
+        .modifier(OpenErrorAlertModifier(
+            presented: openErrorAlertBinding,
+            message: bus.presentation.openErrorMessage
+        ))
+        .modifier(PendingCloseAlertModifier(
+            presented: pendingCloseBinding,
+            pending: bus.presentation.pendingClose
+        ))
         .modifier(StaleSourceAlertModifier(
             title: staleAlertTitle,
             presented: staleCheckBinding,
@@ -129,41 +103,21 @@ struct EditorView: View {
         // (palette / preferences / multitasking swipe), which dimmed the
         // menu bar despite a live editor behind another window.
         // `currentEditor` is weak — nils on EditorState dealloc.
-        .onChange(of: state.fileEncoding) { _, newValue in document.fileEncoding = newValue }
-        .onChange(of: state.lineEnding)   { _, newValue in document.lineEnding = newValue }
         // Pref → live state propagation is automatic: every preference
         // field on EditorState is a computed read through
         // AppPreferencesStore, so Settings changes show up via Observation
-        // without an explicit .onChange chain.
-        // `bufferRevision` is a UInt64 bumped per edit — O(1) to observe.
-        // Watching `document.text` would cascade the whole String through
-        // the observation graph per keystroke (the McCartney-file freeze).
-        .onChange(of: document.bufferRevision) { _, _ in
-            scheduleAutoSave()
-            scheduleLiveSpellCheckIfEnabled()
-        }
-        // Repaint/clear immediately so the user sees the toggle take.
-        .onChange(of: state.spellCheck) { _, isOn in
-            if isOn {
-                state.textView?.highlightAllMisspellings()
-            } else {
-                state.liveSpellTask?.cancel()
-                state.liveSpellTask = nil
-                state.textView?.clearMisspellingHighlights()
+        // without an explicit .onChange chain. The remaining observers
+        // (encoding/lineEnding mirror, autosave debounce, spell-check
+        // toggle, tap-to-suggest) live in EditorObserversModifier — see
+        // its file for the per-handler rationale.
+        .modifier(EditorObserversModifier(
+            document: document,
+            state: state,
+            onBufferEdit: {
+                scheduleAutoSave()
+                scheduleLiveSpellCheckIfEnabled()
             }
-        }
-        // Tap-to-suggest on a highlighted misspelling: only fire when the
-        // caret crosses INTO a new misspelling range, never on arrow-key
-        // movement within the same word, never while another sheet is up.
-        .onChange(of: state.selectedRange) { oldValue, newValue in
-            guard newValue.length == 0,
-                  AppStateBus.shared.presentation.presentedSheet == nil,
-                  let actions = state.textView,
-                  let entered = actions.misspellingRange(at: newValue.location),
-                  actions.misspellingRange(at: oldValue.location) != entered
-            else { return }
-            CommandActions.presentSpellCheckSheet()
-        }
+        ))
         // Load / revert / restore flow through document.text; the engine's
         // updateUIView picks them up via lastPushedDocumentText.
         .navigationTitle(documentTitle)
@@ -176,48 +130,12 @@ struct EditorView: View {
             for: .navigationBar
         )
         .toolbar {
-            // iPhone nav bar: gear, file (leading); undo, palette
-            // (trailing). Same-placement items render in declaration order.
             if DeviceIdiom.isPhone {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        claimFocus()
-                        CommandActions.presentPreferences()
-                    } label: {
-                        Image(systemName: "gear")
-                    }
-                    .accessibilityLabel("Settings")
-                }
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        claimFocus()
-                        CommandActions.presentFileBrowser()
-                    } label: {
-                        Image(systemName: "folder")
-                    }
-                    .accessibilityLabel("Open File")
-                }
-                ToolbarItem(placement: .principal) {
-                    // Replaces the system navigationTitle with the
-                    // tappable / renameable button.
-                    EditableTitleView(
-                        title: documentTitle,
-                        titleFont: .headline,
-                        maxRenameWidth: 200
-                    )
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        claimFocus()
-                        CommandActions.undo()
-                    } label: {
-                        Image(systemName: "arrow.uturn.backward")
-                    }
-                    .accessibilityLabel("Undo")
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    phonePaletteEntry
-                }
+                PhoneEditorToolbar(
+                    documentTitle: documentTitle,
+                    showToolbarPref: prefs.showToolbar,
+                    claimFocus: claimFocus
+                )
             }
         }
     }
@@ -447,21 +365,6 @@ struct EditorView: View {
         return "Loading \(name)\nfrom \(provider)…"
     }
 
-    @ViewBuilder
-    private var phonePaletteEntry: some View {
-        if prefs.showToolbar {
-            phoneCombinedMenu
-        } else {
-            Button {
-                claimFocus()
-                CommandActions.presentCommandPalette()
-            } label: {
-                Image(systemName: "command.square")
-            }
-            .accessibilityLabel("Command Palette")
-        }
-    }
-
     /// Two editors over the same document; pane size tracks splitFraction.
     @ViewBuilder
     private var splitOrSingleEditor: some View {
@@ -526,37 +429,6 @@ struct EditorView: View {
         bus.scenes.claimFocus(state: state)
     }
 
-    @ViewBuilder
-    private var phoneCombinedMenu: some View {
-        let slots = ToolbarConfig.shared.slots
-        Menu {
-            // Palette pinned at top — same affordance with toolbar off.
-            Button {
-                claimFocus()
-                CommandActions.presentCommandPalette()
-            } label: {
-                Label("Command Palette…", systemImage: "command.square")
-            }
-            if !slots.isEmpty {
-                Divider()
-                ForEach(slots) { slot in
-                    if let cmd = CommandRegistry.lookup(id: slot.commandId) {
-                        Button {
-                            claimFocus()
-                            if cmd.isEnabled() { cmd.action() }
-                        } label: {
-                            Label(cmd.title, systemImage: slot.symbol.isEmpty ? "questionmark" : slot.symbol)
-                        }
-                        .disabled(!cmd.isEnabled())
-                    }
-                }
-            }
-        } label: {
-            Image(systemName: "ellipsis.rectangle")
-                .symbolRenderingMode(.hierarchical)
-        }
-        .accessibilityLabel("Toolbar Actions")
-    }
 
     /// ~800 ms after last edit. URL-backed → autoSave (write+revision);
     /// untitled → autoSnapshot (revision only, since sandbox demands a

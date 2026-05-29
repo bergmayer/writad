@@ -127,7 +127,7 @@ enum CommandRegistry {
             .init(id: "revert",     title: "Revert to Saved",                category: .file, synonyms: ["reload from disk", "discard changes"], action: CommandActions.revertToSaved),
             .init(id: "revs",       title: "Show Revisions…",                category: .file, shortcutHint: "⌥⌘H",  synonyms: ["history", "versions", "time machine", "undo to disk"], action: CommandActions.presentRevisions),
             .init(id: "prefs",      title: "Settings…",                      category: .app,  shortcutHint: "⌘,",   synonyms: ["preferences", "options", "config"], action: CommandActions.presentPreferences,    isEnabled: { true }),
-            .init(id: "palette",    title: "Command Palette…",               category: .app,  shortcutHint: "⌘;",   synonyms: ["all commands", "fuzzy commands"],  action: CommandActions.presentCommandPalette, isEnabled: { true })
+            .init(id: "palette",    title: "Command Palette…",               category: .app,  shortcutHint: "⌘P",   synonyms: ["all commands", "fuzzy commands"],  action: CommandActions.presentCommandPalette, isEnabled: { true })
         ]
 
         // MARK: Search

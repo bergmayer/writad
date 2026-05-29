@@ -14,6 +14,12 @@ final class EditorSession {
     /// Lets cross-scene save loops (the dev-quit handler) write each
     /// session's `SessionRecord` under the correct key.
     var sceneUUID: String = ""
+    /// Per-window — used to be a single bool on the shared
+    /// PresentationState, which made the switcher overlay flip on every
+    /// open scene at once. The Show All Tabs button / ⌘⇧\ / palette
+    /// action targets the focused session's flag so multi-window setups
+    /// only show the overlay where the user interacted.
+    var tabSwitcherActive: Bool = false
 
     init() {
         let initial = TabModel()

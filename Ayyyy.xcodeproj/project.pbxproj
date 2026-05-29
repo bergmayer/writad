@@ -111,6 +111,10 @@
 		B2000064 /* TemplatesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000064 /* TemplatesStore.swift */; };
 		B2000065 /* NewDocumentLauncherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000065 /* NewDocumentLauncherView.swift */; };
 		B2000066 /* StaleSourceAlertModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000066 /* StaleSourceAlertModifier.swift */; };
+		B200009A /* OpenErrorAlertModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100009A /* OpenErrorAlertModifier.swift */; };
+		B200009B /* PendingCloseAlertModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100009B /* PendingCloseAlertModifier.swift */; };
+		B200009C /* EditorObserversModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100009C /* EditorObserversModifier.swift */; };
+		B200009D /* PhoneEditorToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100009D /* PhoneEditorToolbar.swift */; };
 		B2000067 /* UbiquityContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000067 /* UbiquityContainer.swift */; };
 		B2000068 /* BatchCloseAlertModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000068 /* BatchCloseAlertModifier.swift */; };
 		B2000069 /* TabOverviewContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000069 /* TabOverviewContextMenu.swift */; };
@@ -242,6 +246,10 @@
 		B1000064 /* TemplatesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplatesStore.swift; sourceTree = "<group>"; };
 		B1000065 /* NewDocumentLauncherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewDocumentLauncherView.swift; sourceTree = "<group>"; };
 		B1000066 /* StaleSourceAlertModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaleSourceAlertModifier.swift; sourceTree = "<group>"; };
+		B100009A /* OpenErrorAlertModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenErrorAlertModifier.swift; sourceTree = "<group>"; };
+		B100009B /* PendingCloseAlertModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingCloseAlertModifier.swift; sourceTree = "<group>"; };
+		B100009C /* EditorObserversModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorObserversModifier.swift; sourceTree = "<group>"; };
+		B100009D /* PhoneEditorToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneEditorToolbar.swift; sourceTree = "<group>"; };
 		B1000067 /* UbiquityContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UbiquityContainer.swift; sourceTree = "<group>"; };
 		B1000068 /* BatchCloseAlertModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchCloseAlertModifier.swift; sourceTree = "<group>"; };
 		B1000069 /* TabOverviewContextMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabOverviewContextMenu.swift; sourceTree = "<group>"; };
@@ -368,6 +376,10 @@
 				B1000058 /* MatchScrollMarksOverlay.swift */,
 				B1000059 /* ChangeHistoryGutterOverlay.swift */,
 				B1000066 /* StaleSourceAlertModifier.swift */,
+				B100009A /* OpenErrorAlertModifier.swift */,
+				B100009B /* PendingCloseAlertModifier.swift */,
+				B100009C /* EditorObserversModifier.swift */,
+				B100009D /* PhoneEditorToolbar.swift */,
 				B1000068 /* BatchCloseAlertModifier.swift */,
 				B1000069 /* TabOverviewContextMenu.swift */,
 				B100006A /* EditorStatusBar.swift */,
@@ -711,6 +723,10 @@
 				B2000064 /* TemplatesStore.swift in Sources */,
 				B2000065 /* NewDocumentLauncherView.swift in Sources */,
 				B2000066 /* StaleSourceAlertModifier.swift in Sources */,
+				B200009A /* OpenErrorAlertModifier.swift in Sources */,
+				B200009B /* PendingCloseAlertModifier.swift in Sources */,
+				B200009C /* EditorObserversModifier.swift in Sources */,
+				B200009D /* PhoneEditorToolbar.swift in Sources */,
 				B2000067 /* UbiquityContainer.swift in Sources */,
 				B2000068 /* BatchCloseAlertModifier.swift in Sources */,
 				B2000069 /* TabOverviewContextMenu.swift in Sources */,

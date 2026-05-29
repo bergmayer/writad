@@ -14,7 +14,15 @@ struct EditorStatusBar: View {
         if DeviceIdiom.isPhone || horizontalSizeClass == .compact {
             phoneBar
         } else {
-            wideBar
+            // Inspector / split view / Stage Manager all shrink the
+            // editor's effective width without changing the window's
+            // horizontalSizeClass. ViewThatFits drops to phoneBar
+            // (overflow menu) when wideBar's intrinsic width would
+            // overflow — same fallback the toolbar pill uses.
+            ViewThatFits(in: .horizontal) {
+                wideBar
+                phoneBar
+            }
         }
     }
 
@@ -211,6 +219,8 @@ struct EditorStatusBar: View {
     private var byteCountLabel: some View {
         let bytes = document.originalData?.count ?? document.text.utf8.count
         Text("\(bytes.formatted(.number)) bytes")
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
     }
 
     @ViewBuilder

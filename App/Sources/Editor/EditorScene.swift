@@ -71,10 +71,10 @@ struct EditorScene: View {
                     // (Stage Manager / Slide Over), leaving the
                     // editor stuck at a smaller-than-window size.
                     // Plain opacity is layout-safe and good enough.
-                    .opacity(bus.presentation.tabSwitcherActive ? 0 : 1)
-                    .allowsHitTesting(!bus.presentation.tabSwitcherActive)
+                    .opacity(session.tabSwitcherActive ? 0 : 1)
+                    .allowsHitTesting(!session.tabSwitcherActive)
 
-                if bus.presentation.tabSwitcherActive {
+                if session.tabSwitcherActive {
                     TabSwitcherView(
                         session: session,
                         namespace: tabSwitcherNS,
@@ -119,6 +119,40 @@ struct EditorScene: View {
                     bus.scenes.pendingShortcut = nil
                     applyHomeShortcut(pending)
                 }
+                let env = ProcessInfo.processInfo.environment
+                if let autoOpen = env["AYYYY_AUTO_OPEN"] {
+                    openURL(URL(fileURLWithPath: autoOpen))
+                }
+                if env["AYYYY_SHOW_PALETTE"] != nil {
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 800_000_000)
+                        CommandActions.presentCommandPalette()
+                    }
+                }
+                if env["AYYYY_SHOW_SIDEBAR"] != nil {
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 1_200_000_000)
+                        state.sidebarOpen = true
+                    }
+                }
+                if env["AYYYY_SHOW_INSPECTOR"] != nil {
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 1_200_000_000)
+                        state.inspectorOpen = true
+                    }
+                }
+                if env["AYYYY_SPLIT"] != nil {
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 1_200_000_000)
+                        state.splitOpen = true
+                    }
+                }
+                if env["AYYYY_SHOW_FIND"] != nil {
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 1_200_000_000)
+                        CommandActions.presentFindNavigator()
+                    }
+                }
             }
             .onOpenURL { url in
                 sceneReceivedOpenURL = true
@@ -141,6 +175,18 @@ struct EditorScene: View {
                 }
             }
             .background(SceneRegistrationBridge(sceneUUID: sceneUUID))
+            // ⌃P alias for the command palette. iPadOS only routes a
+            // keyboard chord when a Button claims it, so we attach an
+            // invisible button instead of duplicating the menu-bar
+            // entry. `.hidden()` keeps the button in the layout (so
+            // the shortcut registers) without drawing anything.
+            .background(
+                Button("Command Palette (⌃P)") {
+                    CommandActions.presentCommandPalette()
+                }
+                .keyboardShortcut("p", modifiers: .control)
+                .hidden()
+            )
             // Each picker on its own background — stacked
             // `.fileImporter`s on a single view silently coalesce to
             // one binding.
@@ -198,7 +244,11 @@ struct EditorScene: View {
                 bus.scenes.pendingShortcut = nil
             }
             .onChange(of: bus.presentation.revertRequestCount) { _, _ in
-                guard let url = document.fileURL else { return }
+                // Counter lives on the shared bus, so every scene
+                // observes the bump. Gate by isActive so only the
+                // window the user clicked Revert in reloads its file —
+                // backgrounded scenes ignore the tick.
+                guard isActive, let url = document.fileURL else { return }
                 try? document.load(from: url)
                 state.text = document.text
                 state.savedBaselineText = document.text
@@ -398,7 +448,7 @@ struct EditorScene: View {
 
     private func dismissSwitcher() {
         withAnimation(.appSwitcherMorph) {
-            bus.presentation.tabSwitcherActive = false
+            session.tabSwitcherActive = false
         }
     }
 

@@ -20,9 +20,15 @@ enum KeyboardAccessoryBar {
         let assistant = textView.inputAssistantItem
 
         if hasHardwareKeyboard {
+            // Hardware-keyboard mode → no soft keyboard, no accessory.
+            // `[]` would let iPadOS render its DEFAULT floating shortcut
+            // bar (undo/redo/brackets) at the window bottom — the exact
+            // "attaches to window, not soft keyboard" regression. A
+            // non-nil group with zero items tells iPadOS we're handling
+            // the bar ourselves with nothing in it; it draws no bar.
             textView.inputAccessoryView = nil
-            assistant.leadingBarButtonGroups = []
-            assistant.trailingBarButtonGroups = []
+            assistant.leadingBarButtonGroups = [Self.emptyGroup]
+            assistant.trailingBarButtonGroups = [Self.emptyGroup]
             detachIPadObserver(from: textView)
             return
         }
@@ -31,8 +37,12 @@ enum KeyboardAccessoryBar {
             if !(textView.inputAccessoryView is EditorAccessoryView) {
                 textView.inputAccessoryView = EditorAccessoryView(host: textView)
             }
-            assistant.leadingBarButtonGroups = []
-            assistant.trailingBarButtonGroups = []
+            // Same defensive group on iPhone — even though we own the
+            // accessoryView, iPadOS-style chrome shows up under some
+            // Stage Manager arrangements that report iPhone idiom in a
+            // resized window.
+            assistant.leadingBarButtonGroups = [Self.emptyGroup]
+            assistant.trailingBarButtonGroups = [Self.emptyGroup]
             detachIPadObserver(from: textView)
         } else {
             textView.inputAccessoryView = nil
@@ -46,6 +56,13 @@ enum KeyboardAccessoryBar {
             attachIPadObserver(observer, to: textView)
         }
     }
+
+    /// Sentinel "we are providing zero items" group. iPadOS treats it
+    /// as a deliberate empty-bar instruction rather than falling back
+    /// to its own undo/redo/brackets defaults at the window bottom.
+    private static let emptyGroup: UIBarButtonItemGroup = {
+        UIBarButtonItemGroup(barButtonItems: [], representativeItem: nil)
+    }()
 
     private static func attachHardwareKeyboardObserver(for textView: EditorEngine.TextView) {
         let holder = KeyboardObserverHolder { [weak textView] in

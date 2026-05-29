@@ -60,7 +60,15 @@ struct CommandPaletteSheet: View {
                     }
                 }
             }
-            .onAppear { fieldFocused = true }
+            // `.defaultFocus` (iOS 17+) claims focus as the scope mounts,
+            // not via `.onAppear` which fires AFTER the sheet's slide-up
+            // animation. The earlier focus claim is what stops the
+            // keyboard from dismissing-then-re-presenting when the
+            // palette opens over an editor whose text view is already
+            // first responder — the system reads it as a transfer
+            // between two text fields and the keyboard slides directly
+            // from one to the other.
+            .defaultFocus($fieldFocused, true)
             .onChange(of: query) { _, _ in selectionIndex = 0 }
             .onChange(of: selectedGroup) { _, _ in selectionIndex = 0 }
         }

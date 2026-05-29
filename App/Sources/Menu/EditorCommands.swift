@@ -67,7 +67,18 @@ struct EditorCommands: Commands {
             CommandGroup(after: .appInfo) {
                 Button("Command Palette…") { presentSheet(.commandPalette) }
                     .keyboardShortcut(AppShortcut.commandPalette)
+                // ⌃P alias is wired in-window via PaletteShortcutAlias
+                // (see EditorScene) rather than as a second menu entry,
+                // so the menu shows one canonical row.
             }
+            // `LSSupportsOpeningDocumentsInPlace = YES` auto-injects an
+            // "Open…" item (with a folder glyph) into the system's
+            // .importExport group, duplicating our own File ▸ Open.
+            // Replace it with empty content to suppress every iPadOS-
+            // default import/export glyph item; the Info.plist key
+            // still grants the app its Files-app / drag-and-drop
+            // capabilities.
+            CommandGroup(replacing: .importExport) { }
         }
 
         // MARK: File — New (new scene) / Open / Save / Save As
@@ -88,9 +99,6 @@ struct EditorCommands: Commands {
                 }
             }
             .keyboardShortcut(AppShortcut.newTab)
-            // Unshortcut'd: `LSSupportsOpeningDocumentsInPlace = YES`
-            // auto-injects ⌘O; binding to it collides and drops the
-            // whole `.newItem` replacement via `_UIMenuBuilderError`.
             Button(DeviceIdiom.supportsMultipleWindows ? "Open…" : "Open in New Tab…") {
                 claimFocus()
                 if DeviceIdiom.supportsMultipleWindows {
@@ -99,6 +107,7 @@ struct EditorCommands: Commands {
                     CommandActions.presentFileBrowserInNewTab()
                 }
             }
+            .keyboardShortcut(AppShortcut.openFile)
         }
         CommandGroup(replacing: .saveItem) {
             Button("Save", action: focused(CommandActions.saveFile))

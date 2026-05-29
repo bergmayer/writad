@@ -84,16 +84,22 @@ final class SessionsStore {
         self.defaults = defaults
         self.records = Self.load(from: defaults) ?? []
         guard observesScenes else { return }
-        NotificationCenter.default.addObserver(
-            forName: UIScene.didDisconnectNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] note in
-            guard let scene = note.object as? UIScene else { return }
-            let key = ObjectIdentifier(scene)
-            let session = scene.session
-            Task { @MainActor [weak self] in
-                guard let self else { return }
+        // `for await note in …` delivers each notification already on
+        // this Task's @MainActor context, sidestepping the Sendable-
+        // capture warnings from the older `addObserver(forName:…)`
+        // closure-based API. `Notification`'s `object`/`userInfo` are
+        // non-Sendable, so the closure form couldn't legally read
+        // `scene.session` (main-actor-isolated) under Swift 6 strict
+        // concurrency.
+        sceneDisconnectTask = Task { @MainActor [weak self] in
+            let stream = NotificationCenter.default.notifications(
+                named: UIScene.didDisconnectNotification
+            )
+            for await note in stream {
+                guard let self,
+                      let scene = note.object as? UIScene
+                else { continue }
+                let key = ObjectIdentifier(scene)
                 if let sceneUUID = self.sceneUUIDsByObjectIdentifier.removeValue(forKey: key) {
                     self.remove(forScene: sceneUUID)
                 }
@@ -106,13 +112,21 @@ final class SessionsStore {
                 // so there's no data loss — the launcher's Drafts
                 // section is our recently-closed UI.
                 UIApplication.shared.requestSceneSessionDestruction(
-                    session,
+                    scene.session,
                     options: nil,
                     errorHandler: nil
                 )
             }
         }
     }
+
+    /// Cancels the scene-disconnect observation on dealloc — without
+    /// this the Task would outlive the singleton in test injection.
+    deinit {
+        sceneDisconnectTask?.cancel()
+    }
+
+    private var sceneDisconnectTask: Task<Void, Never>?
 
     /// Called by `EditorScene` once it has both a `sceneUUID` and a
     /// live `UIWindowScene`. The disconnect observer above uses this

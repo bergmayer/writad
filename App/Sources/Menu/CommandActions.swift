@@ -127,9 +127,14 @@ enum CommandActions {
 
     // MARK: - Tabs
 
+    /// Per-window flag — used to live on the shared PresentationState,
+    /// which made every open scene flip in lockstep. Targets the
+    /// focused session so multi-window only flips the window the user
+    /// interacted with (or, for menu-bar invocations, the frontmost).
     static func showTabSwitcher() {
+        guard let session = Self.context.scenes.currentSession else { return }
         withAnimation(.appSwitcherMorph) {
-            Self.context.presentation.tabSwitcherActive.toggle()
+            session.tabSwitcherActive.toggle()
         }
     }
 
