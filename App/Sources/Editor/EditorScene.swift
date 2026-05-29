@@ -387,6 +387,9 @@ struct EditorScene: View {
             onPickClipboard: { text in
                 adoptClipboardIntoActiveTab(text)
             },
+            // Single-tab session means this launcher IS the window;
+            // sibling tabs mean it's just another tab.
+            isWindowScopeLauncher: session.tabs.count == 1,
             onCancel: {
                 // Cancel = "I'm done with this surface". If the
                 // launcher is one of several tabs, close just that

@@ -15,6 +15,11 @@ struct NewDocumentLauncherView: View {
     /// Seeds a fresh editor tab with the system pasteboard contents.
     /// Disabled when the pasteboard has no string payload.
     let onPickClipboard: (String) -> Void
+    /// `true` when this launcher is the only tab in the window —
+    /// drives the header copy ("New Window" vs "New Tab"). The
+    /// distinction is purely cosmetic: the surface and the picks
+    /// behave identically either way.
+    let isWindowScopeLauncher: Bool
     /// Closes this launcher surface without picking anything. The
     /// scene routes it to the same close path as ⌘W — if this is
     /// the only tab the window stays open with another launcher
@@ -64,7 +69,7 @@ struct NewDocumentLauncherView: View {
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("New Tab")
+                Text(isWindowScopeLauncher ? "New Window" : "New Tab")
                     .font(.title2.weight(.semibold))
                 Text("Pick a template, resume a draft, or open an existing file.")
                     .font(.footnote)
@@ -96,8 +101,8 @@ struct NewDocumentLauncherView: View {
             )
         } else {
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 160), spacing: 12)],
-                spacing: 12
+                columns: [GridItem(.adaptive(minimum: 110), spacing: 8)],
+                spacing: 8
             ) {
                 ForEach(templates) { template in
                     Button {
@@ -113,26 +118,24 @@ struct NewDocumentLauncherView: View {
 
     @ViewBuilder
     private func templateCard(_ template: TemplateRecord) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 6) {
             Image(systemName: template.symbol)
-                .font(.system(size: 28, weight: .regular))
+                .font(.system(size: 18, weight: .regular))
                 .foregroundStyle(.tint)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(template.displayName)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                Text(template.url.lastPathComponent)
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
+            Text(template.displayName)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+            Text(template.url.lastPathComponent)
+                .font(.caption2.monospaced())
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .contentShape(.rect)
     }
 
