@@ -2,8 +2,7 @@ import SwiftUI
 import FileEncoding
 import LineEnding
 
-/// iOS has no stock `.checkbox` Toggle style — this is the
-/// composed equivalent.
+/// iOS has no stock `.checkbox` Toggle style.
 private struct CheckboxRow: View {
     let label: String
     @Binding var isOn: Bool
@@ -81,7 +80,6 @@ private struct EditorPreferencesTab: View {
     @AppStorage(AppPreferenceKey.themeName) private var themeRaw: String = AppThemeName.automatic.rawValue
     @AppStorage(AppPreferenceKey.fontName) private var fontNameRaw: String = EditorFont.systemMono.rawValue
 
-    // Merged from the dropped Format tab.
     @AppStorage(AppPreferenceKey.defaultEncodingRaw) private var defaultEncodingRaw: Int = Int(String.Encoding.utf8.rawValue)
     @AppStorage(AppPreferenceKey.defaultLineEndingRaw) private var defaultLineEndingRaw: String = "\n"
     @AppStorage(AppPreferenceKey.defaultLanguage) private var defaultLanguageRaw: String = LanguageIdentifier.plain.rawValue
@@ -90,8 +88,7 @@ private struct EditorPreferencesTab: View {
     @AppStorage(AppPreferenceKey.syntaxLimitBytes) private var syntaxLimitRaw: Int = SyntaxLimit.up5MB.rawValue
     @AppStorage(AppPreferenceKey.iCloudSyncEnabled) private var iCloudSyncEnabled: Bool = true
 
-    /// Round-trips Int↔Double so the Double-backed `@AppStorage`
-    /// stays compatible with the live editor / menu zoom callers.
+    /// Int↔Double bridge — live editor/menu zoom callers use Int.
     private var fontSizeBinding: Binding<Int> {
         Binding(
             get: { Int(fontSize.rounded()) },
@@ -258,17 +255,12 @@ private struct EditorPreferencesTab: View {
 
             iCloudSection
         }
-        // No `.formStyle(.grouped)`: it runs sections edge-to-edge
-        // and looks bad on iPhone (sheet = screen width). Default
-        // resolves to `insetGrouped`, which has comfortable padding.
+        // Default formStyle (insetGrouped). `.grouped` runs edge-to-edge,
+        // which looks broken on iPhone where the sheet = screen width.
     }
 
-    /// Toggle for the iCloud Drive sync that drafts + templates
-    /// flow through. The launcher always reads from both iCloud and
-    /// local locations, so flipping the toggle is non-destructive —
-    /// nothing existing gets stranded or moved. The header copy
-    /// changes when iCloud is unavailable so the user understands
-    /// why the toggle is disabled.
+    /// Launcher always reads from both iCloud and local, so toggling sync
+    /// strands nothing — new content just stops landing in iCloud.
     @ViewBuilder
     private var iCloudSection: some View {
         let signedIn = UbiquityContainer.isAvailable
@@ -326,9 +318,6 @@ private struct TypingPreferencesTab: View {
                 Text("Pressing return on a list line repeats the bullet (-, *, +) or increments the number on the next line. Pressing return on an empty list line drops the marker.")
             }
 
-            // Ten fixed slots mirroring JS Transforms. The Text ▸
-            // Snippets menu and Edit ▸ Save Selection as Snippet both
-            // funnel here; tap a row to edit name + content.
             Section {
                 ForEach(snippetsStore.slots) { slot in
                     Button {
@@ -401,9 +390,8 @@ private struct TypingPreferencesTab: View {
                 Text("Each slot runs a snippet of JavaScript against the document or current selection. Invoke from the **Text ▸ JavaScript Transforms** menu or with ⌃⌥1–⌃⌥9 (⌃⌥0 for slot 10). The script's last expression — or its `output` variable — replaces the target text.")
             }
 
-            // No public API to add Text Replacement entries —
-            // `openSettingsURLString` is the closest we can get, and
-            // lands on the app's Settings page.
+            // No public API for Text Replacement; openSettingsURLString
+            // is the closest hop and lands on this app's Settings page.
             Section {
                 Button {
                     openSystemSettings()
@@ -511,9 +499,6 @@ private struct ToolbarPreferencesTab: View {
                 }
             }
         }
-        // No `.formStyle(.grouped)`: it runs sections edge-to-edge
-        // and looks bad on iPhone (sheet = screen width). Default
-        // resolves to `insetGrouped`, which has comfortable padding.
         .environment(\.editMode, .constant(.active))
         .sheet(isPresented: $addingSlot) {
             ToolbarSlotAdder()
@@ -536,8 +521,7 @@ private struct ToolbarPreferencesTab: View {
     }
 }
 
-/// Fuzzy-searched command picker + SF Symbol name input. Save
-/// appends via `ToolbarConfig.insert(_:)`.
+/// Fuzzy command picker + SF Symbol name. Save → ToolbarConfig.insert(_:).
 private struct ToolbarSlotAdder: View {
 
     @Environment(\.dismiss) private var dismiss
