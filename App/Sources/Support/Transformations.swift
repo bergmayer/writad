@@ -1,27 +1,20 @@
 import Foundation
 
 private extension String {
-    /// Pad with leading spaces so the total width is at least `width`.
     func padded(toLeftWidth width: Int) -> String {
         guard count < width else { return self }
         return String(repeating: " ", count: width - count) + self
     }
 }
 
-/// Text transformations exposed under the Text menu.
-///
-/// Each pure function takes a string and returns the transformed result.
-/// They operate on whole input — callers slice by selection.
+/// Pure text transformations behind the Text menu. Operate on whole input;
+/// callers slice by selection.
 enum Transformations {
 
     // MARK: - Case conversion
 
-    /// Title Case following common American (Chicago-ish) usage:
-    /// - First and last words are always capitalized.
-    /// - "Major" words are capitalized (nouns, verbs, adjectives, adverbs).
-    /// - Articles, coordinating conjunctions, and short prepositions are
-    ///   lowercased unless they are the first or last word.
-    /// - Whitespace and punctuation are preserved.
+    /// Chicago-ish Title Case: first/last word always capitalized; articles,
+    /// short prepositions, coordinating conjunctions otherwise lowercased.
     static func titleCase(_ input: String) -> String {
         guard !input.isEmpty else { return input }
 
@@ -35,7 +28,7 @@ enum Transformations {
         guard !ranges.isEmpty else { return input }
 
         var result = input
-        // Walk in reverse so earlier indices remain valid as we replace.
+        // Reverse: earlier indices stay valid as later ones are replaced.
         for (offset, range) in ranges.enumerated().reversed() {
             let word = String(input[range])
             let lower = word.lowercased()
@@ -117,17 +110,15 @@ enum Transformations {
 
     // MARK: - Helpers
 
-    /// Splits an arbitrary identifier-ish input into "words":
-    /// - underscore-separated, hyphen-separated, space-separated, or camelCase boundaries.
+    /// Splits identifier-ish input on underscore / hyphen / dot / slash /
+    /// space / camelCase boundaries.
     private static func components(of input: String) -> [String] {
-        // Replace separators with spaces, then split on camelCase boundaries.
         let separatorsReplaced = input
             .replacingOccurrences(of: "_", with: " ")
             .replacingOccurrences(of: "-", with: " ")
             .replacingOccurrences(of: ".", with: " ")
             .replacingOccurrences(of: "/", with: " ")
 
-        // Insert space before each uppercase letter that follows a lowercase letter or digit.
         var spaced = ""
         var previous: Character? = nil
         for character in separatorsReplaced {
@@ -151,8 +142,8 @@ enum Transformations {
         return first.uppercased() + word.dropFirst().lowercased()
     }
 
-    /// Curated lowercase-unless-first-or-last word list for Title Case.
-    /// Articles + coordinating conjunctions + short prepositions + a few extras.
+    /// Lowercase-unless-first-or-last word list for Title Case: articles +
+    /// coordinating conjunctions + short prepositions + a few extras.
     private static let titleCaseLowercaseWords: Set<String> = [
         "a", "an", "the",
         "and", "but", "for", "nor", "or", "so", "yet",
@@ -164,10 +155,8 @@ enum Transformations {
 
     // MARK: - Paragraph helpers
 
-    /// Splits `text` into paragraphs separated by blank lines (one or
-    /// more lines containing only whitespace). Each returned chunk
-    /// keeps its internal line breaks; only the blank delimiters are
-    /// dropped. Used by the Add/Remove Linebreaks commands.
+    /// Split on blank-line (whitespace-only) delimiters; chunks keep their
+    /// internal breaks. Used by Add/Remove Linebreaks.
     static func splitParagraphs(_ text: String) -> [String] {
         var paragraphs: [String] = []
         var current: [String] = []
@@ -188,9 +177,8 @@ enum Transformations {
 
     // MARK: - Lipsum
 
-    /// Returns `n` paragraphs of classic Lorem Ipsum text, separated by
-    /// `separator` (typically `"\n\n"`). The first paragraph always
-    /// starts with the canonical "Lorem ipsum dolor sit amet…" opening.
+    /// First paragraph always opens with the canonical "Lorem ipsum dolor
+    /// sit amet…" sentence; remaining sentences are randomly generated.
     static func lipsum(paragraphs n: Int, separator: String) -> String {
         guard n > 0 else { return "" }
         var rng = SystemRandomNumberGenerator()
@@ -224,20 +212,15 @@ enum Transformations {
 
     // MARK: - Line-wise prefix / suffix / numbering
 
-    /// Prepend `prefix` to every line in `text`. Line endings (`\n`,
-    /// `\r`, `\r\n`) are preserved.
     static func prefixLines(_ text: String, with prefix: String) -> String {
         mapLines(text) { prefix + $0 }
     }
 
-    /// Append `suffix` to the end of every line in `text` (before the
-    /// line break).
     static func suffixLines(_ text: String, with suffix: String) -> String {
         mapLines(text) { $0 + suffix }
     }
 
-    /// Prefix every line with a 1-based, right-aligned line number and
-    /// a `". "` separator. Trailing newlines are preserved.
+    /// 1-based, right-aligned line numbers with `". "` separator.
     static func addLineNumbers(_ text: String) -> String {
         let lines = splitKeepingNewlines(text)
         let width = String(lines.count).count
@@ -248,8 +231,7 @@ enum Transformations {
         }.joined()
     }
 
-    /// Strips a leading "N. " (or "N) " or " N. ") number prefix from
-    /// every line. Lines without a prefix are passed through unchanged.
+    /// Strips a leading `N. ` / `N) ` / ` N. ` prefix per line.
     static func removeLineNumbers(_ text: String) -> String {
         mapLines(text) { line in
             var i = line.startIndex
@@ -264,21 +246,17 @@ enum Transformations {
         }
     }
 
-    /// Drop lines that contain only whitespace.
     static func removeBlankLines(_ text: String) -> String {
         splitKeepingNewlines(text)
             .filter { !splitTrailingNewline($0).0.trimmingCharacters(in: .whitespaces).isEmpty }
             .joined()
     }
 
-    /// Prepend `"> "` to every line — the markdown "increase quote
-    /// level" gesture. Already-quoted lines just get another level.
     static func increaseQuoteLevel(_ text: String) -> String {
         mapLines(text) { "> \($0)" }
     }
 
-    /// Strip a single leading `>` (with optional space) from each line.
-    /// Lines without a quote marker pass through.
+    /// Strip one leading `>` (and optional space) per line.
     static func decreaseQuoteLevel(_ text: String) -> String {
         mapLines(text) { line in
             guard line.hasPrefix(">") else { return line }
@@ -290,12 +268,10 @@ enum Transformations {
 
     // MARK: - Whitespace / encoding
 
-    /// Collapse runs of spaces+tabs within each line to a single space.
-    /// Newlines are preserved as-is. Leading/trailing whitespace on each
-    /// line is preserved (use `trim` for that).
+    /// Collapse per-line runs of space/tab to one space. Newlines and
+    /// per-line leading/trailing whitespace untouched — use `trim` for that.
     static func normalizeSpaces(_ text: String) -> String {
         mapLines(text) { line in
-            // Walk the line once; replace consecutive (space|tab) runs.
             var out = ""
             out.reserveCapacity(line.count)
             var lastWasSpace = false
@@ -310,17 +286,15 @@ enum Transformations {
         }
     }
 
-    /// Replace tabs with `width` spaces. Naive — doesn't account for
-    /// column position (most "fancy" editors don't either when bulk-
-    /// converting; column-aware expansion is rarely what's wanted).
+    /// Tabs → `tabWidth` spaces. Naive — no column tracking; bulk-convert
+    /// editors rarely do column-aware expansion either.
     static func tabsToSpaces(_ text: String, tabWidth: Int) -> String {
         let pad = String(repeating: " ", count: max(1, tabWidth))
         return text.replacingOccurrences(of: "\t", with: pad)
     }
 
-    /// Convert runs of `tabWidth` leading spaces to single tabs on
-    /// each line. Only operates on the leading-indent region; spaces
-    /// inside the body are preserved (so prose isn't mangled).
+    /// Leading-indent only: runs of `tabWidth` spaces become single tabs.
+    /// Body spaces preserved so prose isn't mangled.
     static func spacesToTabs(_ text: String, tabWidth: Int) -> String {
         guard tabWidth > 0 else { return text }
         return mapLines(text) { line in
@@ -338,26 +312,18 @@ enum Transformations {
         }
     }
 
-    /// Replace every line ending (`\n`, `\r`, `\r\n`) with `ending`.
     static func normalizeLineEndings(_ text: String, to ending: String) -> String {
-        // Normalise CRLF first to LF, then translate every CR / LF.
         let lf = text.replacingOccurrences(of: "\r\n", with: "\n")
             .replacingOccurrences(of: "\r", with: "\n")
         return lf.replacingOccurrences(of: "\n", with: ending)
     }
 
-    /// "Zap gremlins" — strip ASCII control characters (except
-    /// newline/CR/tab) and zero-width / private-use / non-character
-    /// Unicode noise that often sneaks in from PDFs, Word, etc.
-    /// One-shot variant kept for backwards-compatible quick calls;
-    /// the sheet UI prefers `zapGremlins(_:options:)`.
+    /// Default-options convenience kept for callers that don't surface the
+    /// sheet UI.
     static func zapGremlins(_ text: String) -> String {
         zapGremlins(text, options: ZapGremlinsOptions())
     }
 
-    /// Configurable Zap Gremlins. Each toggle selects a category of
-    /// "gremlin"; `replacement` is the string substituted in (empty =
-    /// delete).
     static func zapGremlins(_ text: String, options: ZapGremlinsOptions) -> String {
         var out = String()
         out.reserveCapacity(text.count)
@@ -373,8 +339,7 @@ enum Transformations {
         return out
     }
 
-    /// Remove combining marks (NFD-decompose, drop combining range,
-    /// recompose). `café` → `cafe`, `naïve` → `naive`.
+    /// NFD-decompose, drop U+0300–U+036F combining marks, recompose.
     static func stripDiacritics(_ text: String) -> String {
         let folded = text.precomposedStringWithCanonicalMapping.decomposedStringWithCanonicalMapping
         var out = String()
@@ -385,8 +350,7 @@ enum Transformations {
         return out.precomposedStringWithCanonicalMapping
     }
 
-    /// Best-effort transliteration to ASCII. Uses Latin → ASCII via
-    /// `CFStringTransform`, then strips anything still non-ASCII.
+    /// CFStringTransform Latin→ASCII, then drops anything still >= 0x80.
     static func convertToASCII(_ text: String) -> String {
         let mutable = NSMutableString(string: text)
         CFStringTransform(mutable, nil, "Any-Latin; Latin-ASCII" as NSString, false)
@@ -394,9 +358,8 @@ enum Transformations {
         return String(folded.unicodeScalars.filter { $0.value < 128 })
     }
 
-    /// Interpret `\n`, `\t`, `\r`, `\\`, `\"`, `\'`, `\xHH`, `\uHHHH`
-    /// escape sequences as their literal characters. Unknown escapes
-    /// pass through unchanged.
+    /// Decode `\n` `\t` `\r` `\\` `\"` `\'` `\xHH` `\uHHHH`. Unknown escapes
+    /// pass through.
     static func interpretEscapeSequences(_ text: String) -> String {
         var out = String()
         out.reserveCapacity(text.count)
@@ -436,8 +399,7 @@ enum Transformations {
         return out
     }
 
-    /// Inverse of `interpretEscapeSequences` for the common cases: turn
-    /// real newline/tab/CR/backslash into `\n`, `\t`, `\r`, `\\`.
+    /// Inverse of `interpretEscapeSequences` for `\n` `\t` `\r` `\\` only.
     static func escapeSpecialCharacters(_ text: String) -> String {
         var out = String()
         out.reserveCapacity(text.count)
@@ -453,10 +415,8 @@ enum Transformations {
         return out
     }
 
-    /// "Educate" straight quotes into typographer's quotes. Tries to
-    /// pick opening vs. closing based on the surrounding character
-    /// (whitespace → opening; word char → closing). Apostrophe in
-    /// contractions becomes `’`.
+    /// Straight → curly. Opening vs closing picked from prior char:
+    /// whitespace/start → opening, otherwise closing.
     static func educateQuotes(_ text: String) -> String {
         let chars = Array(text)
         var out = String()
@@ -476,8 +436,6 @@ enum Transformations {
         return out
     }
 
-    /// Reverse of `educateQuotes` — collapse curly quotes back to
-    /// straight ASCII versions.
     static func straightenQuotes(_ text: String) -> String {
         var out = String()
         out.reserveCapacity(text.count)
@@ -493,9 +451,6 @@ enum Transformations {
 
     // MARK: - Helpers (line-wise)
 
-    /// Apply `f` to each line's body (newline characters preserved).
-    /// Used by the prefix/suffix/quote-level/etc helpers above so
-    /// they share a single, correctness-tested splitter.
     private static func mapLines(_ text: String, _ f: (String) -> String) -> String {
         splitKeepingNewlines(text).map { piece -> String in
             let (body, nl) = splitTrailingNewline(piece)
@@ -503,9 +458,8 @@ enum Transformations {
         }.joined()
     }
 
-    /// Split `text` into pieces, each piece being one line **including
-    /// its trailing line break**. The final piece carries no break if
-    /// the source ends mid-line.
+    /// Pieces are one line each **including the trailing line break**.
+    /// Final piece carries no break if the source ends mid-line.
     private static func splitKeepingNewlines(_ text: String) -> [String] {
         var pieces: [String] = []
         var current = ""
@@ -540,9 +494,7 @@ enum Transformations {
         return (piece, "")
     }
 
-    /// Read up to `count` hex digits from `text` starting at `start`.
-    /// Returns the substring and the index just past the last digit
-    /// consumed, or `nil` if we couldn't read any.
+    /// Returns substring + the index just past last digit, or nil if none.
     private static func takeHex(in text: String, from start: String.Index, count: Int) -> (String, String.Index)? {
         var i = start
         var consumed = 0
@@ -555,12 +507,9 @@ enum Transformations {
         return out.isEmpty ? nil : (out, i)
     }
 
-    /// Greedy word-wrap `paragraph` to `column` characters per line,
-    /// joining wrapped lines with `separator`. Whitespace inside the
-    /// paragraph is normalised to single spaces first so existing
-    /// hard wraps don't survive. A run of word + space won't be
-    /// broken mid-word — words longer than the column appear on a
-    /// line of their own.
+    /// Greedy word-wrap to `column`. Existing whitespace normalised to one
+    /// space first so prior hard wraps don't survive; words longer than
+    /// `column` land on their own line.
     static func wordWrap(_ paragraph: String, to column: Int, separator: String) -> String {
         let words = paragraph
             .components(separatedBy: CharacterSet.whitespacesAndNewlines)
@@ -583,16 +532,15 @@ enum Transformations {
     }
 }
 
-/// What counts as a "gremlin" and what to put in its place. Mirrors
-/// the categories surfaced in BBEdit's Zap Gremlins dialog.
+/// Categories mirror BBEdit's Zap Gremlins dialog.
 struct ZapGremlinsOptions: Equatable {
     /// C0 (0x00–0x1F except TAB/LF/CR), DEL (0x7F), and C1 (0x80–0x9F).
     var asciiControl: Bool = true
-    /// Zero-width joiners, BOM, word joiner, language tags, etc.
+    /// ZWJ/ZWNJ, BOM, word joiner, language tags, etc.
     var invisibleUnicode: Bool = true
-    /// Anything with a Unicode scalar value above 0x7F.
+    /// Anything with scalar value > 0x7F.
     var nonAscii: Bool = false
-    /// Empty string = delete the gremlin outright.
+    /// Empty = delete the gremlin outright.
     var replacement: String = ""
 
     func isGremlin(_ scalar: Unicode.Scalar) -> Bool {
