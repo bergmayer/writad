@@ -127,28 +127,20 @@ enum CommandActions {
 
     // MARK: - Tabs
 
-    /// EditorScene observes `tabSwitcherActive` and runs the
-    /// matchedGeometry morph. Second press dismisses (Safari parity).
     static func showTabSwitcher() {
         withAnimation(.appSwitcherMorph) {
             Self.context.editing.tabSwitcherActive.toggle()
         }
     }
 
-    // MARK: - Same-file new window (split-view surrogate)
-
-    /// iPad-native side-by-side: same URL, two scenes. Untitled
-    /// buffers no-op — no URL to reload from.
     static func openCurrentDocumentInNewWindow() {
         guard let url = Self.context.scenes.currentEditor?.fileURL else { return }
         Self.context.pending.newWindow = url
         Self.context.scenes.openWindow?(.editor)
     }
 
-    // MARK: - Sidebar
+    // MARK: - Sidebar / inspector / split
 
-    /// Compat shim — older callers used `toggleSidebar`; the sidebar
-    /// IS the outline panel, so the user-facing name is Show Outline.
     static func toggleSidebar() { showOutline() }
 
     static func showOutline() {
@@ -158,19 +150,12 @@ enum CommandActions {
         }
     }
 
-    /// `state.inspectorOpen` is the shared per-tab flag — menu and
-    /// the status-bar ⓘ both write it.
     static func toggleInspector() {
-        guard let state = Self.state else { return }
-        state.inspectorOpen.toggle()
+        Self.state?.inspectorOpen.toggle()
     }
 
-    // MARK: - Split editor view
-
-    /// One button for the three states (off → horizontal → vertical
-    /// → off) so the user doesn't juggle "toggle on" + "toggle
-    /// orientation" separately. Resets to 50/50 on each change so a
-    /// width↔height flip can't leave a sliver pane.
+    /// Cycles off → horizontal → vertical → off. Resets to 50/50
+    /// on each change so a width↔height flip can't leave a sliver.
     static func cycleSplitView() {
         guard let state = Self.state else { return }
         withAnimation(.appSnappyPanel) {
@@ -187,21 +172,13 @@ enum CommandActions {
         }
     }
 
-    /// Used for the cycle button's icon / accessibility label.
     static func currentSplitState() -> (open: Bool, orientation: SplitOrientation)? {
         guard let state = Self.state else { return nil }
         return (state.splitOpen, state.splitOrientation)
     }
 
-    // (Fold Selection moved to CommandActions+Folding.swift)
-    // (Tab move / close / duplicate / rename / navigate moved to
-    //  CommandActions+Tabs.swift)
-
     // MARK: - View setting toggles
 
-    /// Generic toggle for a boolean view setting. Flips both the
-    /// persisted preference (so other open windows pick it up via
-    /// `@AppStorage`) and the currently focused editor's state.
     private static func toggleViewSetting(
         defaultsKey: String,
         statePath: ReferenceWritableKeyPath<EditorState, Bool>
@@ -242,8 +219,6 @@ enum CommandActions {
         toggleViewSetting(defaultsKey: AppPreferenceKey.showChangeHistoryGutter, statePath: \.showChangeHistoryGutter)
     }
 
-    // (Find sections moved to CommandActions+Find.swift)
-
     // MARK: - Selection / line ops
 
     static func selectCurrentWord()       { actions?.selectCurrentWord() }
@@ -263,10 +238,6 @@ enum CommandActions {
         commitTextChange()
     }
 
-    // (Markdown formatting + list conversion moved to CommandActions+Markdown.swift)
-
-    // (Line operations moved to CommandActions+LineOps.swift)
-
     // MARK: - Inserts
 
     static func insertLoremIpsum(paragraphs: Int) {
@@ -274,8 +245,6 @@ enum CommandActions {
         insertAtSelection(Transformations.lipsum(paragraphs: paragraphs, separator: nl + nl))
     }
 
-    /// Form-feed (U+000C) — historical "next page" mark used by some
-    /// printers and a handful of tools that paginate plain text.
     static func insertPageBreak() {
         insertAtSelection("\u{000C}")
     }
@@ -287,20 +256,14 @@ enum CommandActions {
     static func presentInsertFileContents() { Self.context.pickers.pending = .insertFile }
     static func presentInsertFolderListing() { Self.context.pickers.pending = .insertFolder }
 
-    // MARK: - Navigation helpers
+    // MARK: - Navigation / text transforms
 
-    /// Scroll the cursor's line into view at vertical center. Reuses
-    /// the existing `goToLine` machinery (which centers as part of its
-    /// jump) so the implementation stays in the engine adapter.
     static func centerLine() {
         guard let textView = actions, let state = state else { return }
         let (line, _) = TextMetrics.lineColumn(for: textView.selectedRange.location, in: textView.text as NSString)
         state.textView?.goToLine(line)
     }
 
-    /// Applies a one-shot prefix and/or suffix to every line in the
-    /// selection (whole text if no selection). Both can be empty
-    /// independently — typical use is prefix-only.
     static func applyPrefixSuffix(prefix: String, suffix: String) {
         transformSelection { text in
             var out = text
@@ -310,10 +273,6 @@ enum CommandActions {
         }
     }
 
-    /// Wrap the current selection with `prefix` + `suffix`. Empty
-    /// selection collapses to `prefix|suffix` with the cursor between
-    /// the two markers so the user can keep typing the wrapped
-    /// content. Used by the Text ▸ Surround Selection… sheet.
     static func surroundSelection(prefix: String, suffix: String) {
         guard let textView = actions else { return }
         let range = textView.selectedRange
@@ -325,20 +284,14 @@ enum CommandActions {
             guard let selected = textView.text(in: range) else { return }
             let wrapped = prefix + selected + suffix
             textView.replace(range, withText: wrapped)
-            // Restore the selection over the inner content so the
-            // user can keep editing it; matches the bold/italic
-            // wrap UX in the markdown helpers.
             let newLoc = range.location + (prefix as NSString).length
             textView.setSelection(NSRange(location: newLoc, length: range.length))
         }
         commitTextChange()
     }
 
-    // MARK: - Speak Selection
+    // MARK: - Speech
 
-    /// Speak the current selection (or whole document if none) via the
-    /// system speech synthesizer. Calling again while speaking stops
-    /// playback — toggles "say it" vs "shut up."
     static func speakSelection() {
         guard let textView = actions else { return }
         if Self.speechSynth.isSpeaking {
@@ -362,20 +315,14 @@ enum CommandActions {
 
     private static let speechSynth = AVSpeechSynthesizer()
 
-    // MARK: - Snippets / Clipboard history
+    // MARK: - Snippets / clipboard history
 
-    /// Insert the named slot's body at the current cursor (replacing
-    /// the selection if any). Empty/unconfigured slots no-op so menu
-    /// shortcuts can't insert blank strings.
     static func insertSnippet(slotID: Int) {
         guard let slot = SnippetsStore.shared.slot(id: slotID),
               slot.isConfigured else { return }
         insertAtSelection(slot.content)
     }
 
-    /// Save the current selection into the first unconfigured slot,
-    /// named with a timestamp. Silently no-ops if every slot is in
-    /// use — the user manages the ten-slot pool from Manage Snippets.
     static func saveSelectionAsSnippet() {
         guard let textView = actions else { return }
         let range = textView.selectedRange
@@ -384,21 +331,15 @@ enum CommandActions {
         SnippetsStore.shared.saveToFirstEmpty(name: name, content: body)
     }
 
-    static func presentSnippetsManager()  { presentSheet(.snippetsManager) }
-    static func presentClipboardHistory() { presentSheet(.clipboardHistory) }
-    /// Open the drafts-recovery sheet on demand — surfaces the
-    /// same list that the launch-time banner shows, so the user can
-    /// re-find an unrecovered draft mid-session without having to
-    /// relaunch the app. Drafts persist until explicitly discarded
-    /// or saved-as.
-    static func presentDraftsRecovery()   { presentSheet(.draftsRecovery) }
+    static func presentSnippetsManager()   { presentSheet(.snippetsManager) }
+    static func presentClipboardHistory()  { presentSheet(.clipboardHistory) }
+    static func presentDraftsRecovery()    { presentSheet(.draftsRecovery) }
     static func presentProcessLines()      { presentSheet(.processLines) }
     static func presentCanonize()          { presentSheet(.canonize) }
     static func presentCharacterPanel()    { presentSheet(.characterPanel) }
 
-    /// Used by `ClipboardHistorySheet` to insert any prior copy. Bypasses
-    /// `UIPasteboard.string =` (which would mark the history dirty
-    /// again) — writes straight into the text view at the cursor.
+    /// Writes straight into the text view at the cursor so the
+    /// clipboard history doesn't churn its own changeCount.
     static func pasteString(_ s: String) {
         insertAtSelection(s)
     }
@@ -408,10 +349,6 @@ enum CommandActions {
         f.dateFormat = "yyyy-MM-dd HH:mm"
         return f
     }()
-
-    // (Reflow, Sort by capture, Process Lines, Canonize, and Case /
-    //  encoding transforms moved to CommandActions+TextTransforms.swift)
-    // (Bookmark line ops moved to CommandActions+Bookmarks.swift)
 
     // MARK: - Inserts
 
@@ -423,49 +360,30 @@ enum CommandActions {
     static func insertTab()      { insertAtSelection("\t") }
     static func insertNewline()  { insertAtSelection(state?.lineEnding.string ?? "\n") }
 
-    // MARK: - Line ending application
+    // MARK: - Document settings
 
+    /// Rewrites every break in the buffer to match. Use
+    /// `setLineEnding(_:)` to change the preference without
+    /// rewriting existing content.
     static func applyLineEnding(_ lineEnding: LineEnding) {
         guard let state = state, let actions = actions else { return }
         state.lineEnding = lineEnding
-        // Read from the engine (live buffer), not `state.text` —
-        // the latter is a 300 ms debounced snapshot that may lag
-        // recent keystrokes.
         let converted = actions.text.replacingLineEndings(with: lineEnding)
         actions.text = converted
         actions.applyLineEndingRawValue(lineEnding.rawValue)
         state.setText?(converted)
     }
 
-    static func setEncoding(_ encoding: FileEncoding) {
-        state?.fileEncoding = encoding
-    }
-
-    /// Lightweight "set the document's line-ending preference"
-    /// — only affects how subsequent newline insertions render.
-    /// Use `applyLineEnding(_:)` to also rewrite every existing
-    /// break in the buffer.
-    static func setLineEnding(_ lineEnding: LineEnding) {
-        state?.lineEnding = lineEnding
-    }
-
+    static func setEncoding(_ encoding: FileEncoding)    { state?.fileEncoding = encoding }
+    static func setLineEnding(_ lineEnding: LineEnding)  { state?.lineEnding = lineEnding }
     static func reinterpretWithEncoding(_ encoding: FileEncoding) {
         state?.reinterpretWithEncoding?(encoding)
     }
-
     static func setLanguage(_ identifier: LanguageIdentifier) {
         state?.languageIdentifier = identifier
     }
-
-    static func setIndentUsesTabs(_ value: Bool) {
-        state?.usesTabs = value
-    }
-
-    static func setIndentWidth(_ width: Int) {
-        state?.indentWidth = width
-    }
-
-    // (Select / filter lines moved to CommandActions+SelectLines.swift)
+    static func setIndentUsesTabs(_ value: Bool) { state?.usesTabs = value }
+    static func setIndentWidth(_ width: Int)     { state?.indentWidth = width }
 
     // MARK: - Font size
 
@@ -526,9 +444,6 @@ enum CommandActions {
         commitTextChange()
     }
 
-    // (Spell check moved to CommandActions+Spelling.swift)
-    // (Folding moved to CommandActions+Folding.swift)
-
     // MARK: - Brackets
 
     static func goToMatchingBracket() {
@@ -536,12 +451,8 @@ enum CommandActions {
         recordPositionIfJumped()
     }
 
-    // (Bookmark slot ops moved to CommandActions+Bookmarks.swift)
-
     // MARK: - Position history
 
-    /// Records the current cursor location if it represents a jump (see
-    /// PositionHistory.jumpThreshold). Trims forward history on insert.
     static func recordPositionIfJumped() {
         guard let textView = actions, let state = state else { return }
         state.positionHistory.record(textView.selectedRange.location)
@@ -563,16 +474,14 @@ enum CommandActions {
 
     // MARK: - Query Replace
 
-    /// Performs one step of a query-replace iteration. Sheet logic owns the
-    /// match cursor; this just operates on the next/current match.
     struct QueryReplaceMatch {
         let range: NSRange
         let replacement: String
     }
 
-    /// Find the next match. `preferLast` means "if scanning the entire
-    /// search range, take the *last* match rather than the first" — that's
-    /// how we get reverse-direction matching from the same forward primitives.
+    /// `preferLast` lets the sheet drive reverse-direction matching
+    /// off the same forward primitives — it scans the full range and
+    /// returns the last hit instead of the first.
     static func nextQueryReplaceMatch(
         query: String,
         replacement: String,
@@ -629,27 +538,13 @@ enum CommandActions {
 
     // MARK: - Helpers
 
-    /// Test seam: swap this for a stub `CommandContext` (via
-    /// `CommandActions.context = stub`) to drive commands in
-    /// isolation. Production code path is untouched — the default
-    /// is the real bus singleton. Every helper below routes through
-    /// `Self.context`, so a stubbed context flows through all
-    /// reads / writes the command issues.
+    /// Test seam: swap for a stub `CommandContext` to drive commands
+    /// in isolation. Every helper below routes through `Self.context`.
     static var context: any CommandContext = AppStateBus.shared
 
-    // `internal` (no `private`) so the +Find / +Folding / +Markdown
-    // extensions in their own files can reach the same shared helpers.
-    static var state: EditorState? {
-        context.scenes.currentEditor
-    }
-
-    static var session: EditorSession? {
-        context.scenes.currentSession
-    }
-
-    static var actions: (any EditorActions)? {
-        state?.textView
-    }
+    static var state: EditorState?       { context.scenes.currentEditor }
+    static var session: EditorSession?   { context.scenes.currentSession }
+    static var actions: (any EditorActions)? { state?.textView }
 
     static func commitTextChange() {
         if let textView = actions { state?.setText?(textView.text) }
@@ -683,7 +578,7 @@ enum CommandActions {
         commitTextChange()
     }
 
-    // DateFormatter construction is multi-millisecond on cold cache, so cache.
+    // DateFormatter construction is multi-ms on cold cache; cache.
     private static let dateTimeFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .medium
