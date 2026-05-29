@@ -525,15 +525,40 @@ final class PlainTextDocument {
         return LineEnding(rawValue: raw.first ?? "\n") ?? .lf
     }
 
+    /// Operates on Unicode scalars because Swift treats `\r\n` as a
+    /// single extended grapheme cluster — the prior Character-level
+    /// split silently failed on CRLF buffers.
     nonisolated private static func trimmingTrailingWhitespace(from input: String) -> String {
-        input
-            .split(omittingEmptySubsequences: false, whereSeparator: { $0 == "\n" || $0 == "\r" })
-            .map { line -> Substring in
-                var s = line
-                while let last = s.last, last == " " || last == "\t" { s = s.dropLast() }
-                return s
+        var output = ""
+        output.reserveCapacity(input.unicodeScalars.count)
+        var line = ""
+        line.reserveCapacity(80)
+        func flushLine() {
+            while let last = line.unicodeScalars.last, last == " " || last == "\t" {
+                line.unicodeScalars.removeLast()
             }
-            .joined(separator: "\n")
+            output.append(line)
+            line.removeAll(keepingCapacity: true)
+        }
+        let scalars = Array(input.unicodeScalars)
+        var i = 0
+        while i < scalars.count {
+            let s = scalars[i]
+            if s == "\r" {
+                flushLine()
+                output.append("\n")
+                if i + 1 < scalars.count, scalars[i + 1] == "\n" { i += 2 } else { i += 1 }
+            } else if s == "\n" {
+                flushLine()
+                output.append("\n")
+                i += 1
+            } else {
+                line.unicodeScalars.append(s)
+                i += 1
+            }
+        }
+        flushLine()
+        return output
     }
 }
 

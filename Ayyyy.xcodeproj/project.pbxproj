@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B2000092 /* DraftsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000092 /* DraftsStoreTests.swift */; };
+		B2000093 /* ClosedTabsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000093 /* ClosedTabsStoreTests.swift */; };
+		B2000094 /* RevisionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000094 /* RevisionStoreTests.swift */; };
+		B2000095 /* SessionsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000095 /* SessionsStoreTests.swift */; };
+		B2000096 /* PlainTextDocumentEncodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000096 /* PlainTextDocumentEncodeTests.swift */; };
 		B2000090 /* TransformationsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000090 /* TransformationsTests.swift */; };
 		B2000091 /* FuzzyMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000091 /* FuzzyMatcherTests.swift */; };
 		B2000001 /* AyyyyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001 /* AyyyyApp.swift */; };
@@ -131,6 +136,11 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		B1000092 /* DraftsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftsStoreTests.swift; sourceTree = "<group>"; };
+		B1000093 /* ClosedTabsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClosedTabsStoreTests.swift; sourceTree = "<group>"; };
+		B1000094 /* RevisionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevisionStoreTests.swift; sourceTree = "<group>"; };
+		B1000095 /* SessionsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsStoreTests.swift; sourceTree = "<group>"; };
+		B1000096 /* PlainTextDocumentEncodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainTextDocumentEncodeTests.swift; sourceTree = "<group>"; };
 		B1010004 /* AyyyyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AyyyyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B1000090 /* TransformationsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationsTests.swift; sourceTree = "<group>"; };
 		B1000091 /* FuzzyMatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuzzyMatcherTests.swift; sourceTree = "<group>"; };
@@ -487,6 +497,11 @@
 		B5000022 /* AyyyyTests */ = {
 			isa = PBXGroup;
 			children = (
+				B1000092 /* DraftsStoreTests.swift */,
+				B1000093 /* ClosedTabsStoreTests.swift */,
+				B1000094 /* RevisionStoreTests.swift */,
+				B1000095 /* SessionsStoreTests.swift */,
+				B1000096 /* PlainTextDocumentEncodeTests.swift */,
 				B1000090 /* TransformationsTests.swift */,
 				B1000091 /* FuzzyMatcherTests.swift */,
 			);
@@ -707,6 +722,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B2000092 /* DraftsStoreTests.swift in Sources */,
+				B2000093 /* ClosedTabsStoreTests.swift in Sources */,
+				B2000094 /* RevisionStoreTests.swift in Sources */,
+				B2000095 /* SessionsStoreTests.swift in Sources */,
+				B2000096 /* PlainTextDocumentEncodeTests.swift in Sources */,
 				B2000090 /* TransformationsTests.swift in Sources */,
 				B2000091 /* FuzzyMatcherTests.swift in Sources */,
 			);

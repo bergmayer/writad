@@ -39,18 +39,23 @@ struct ClosedTabRecord: Identifiable, Codable {
 final class ClosedTabsStore {
 
     static let shared = ClosedTabsStore()
-    private let cap = 25
+    static let cap = 25
+
+    /// Tests pass an isolated `UserDefaults(suiteName:)` so the standard
+    /// suite isn't polluted across runs.
+    private let defaults: UserDefaults
 
     private(set) var records: [ClosedTabRecord]
 
-    private init() {
-        self.records = Self.load() ?? []
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        self.records = Self.load(from: defaults) ?? []
     }
 
     func record(_ entry: ClosedTabRecord) {
         records.insert(entry, at: 0)
-        if records.count > cap {
-            records.removeLast(records.count - cap)
+        if records.count > Self.cap {
+            records.removeLast(records.count - Self.cap)
         }
         save()
     }
@@ -74,11 +79,11 @@ final class ClosedTabsStore {
 
     private func save() {
         guard let data = try? JSONEncoder().encode(records) else { return }
-        UserDefaults.standard.set(data, forKey: AppPreferenceKey.closedTabRecords)
+        defaults.set(data, forKey: AppPreferenceKey.closedTabRecords)
     }
 
-    private static func load() -> [ClosedTabRecord]? {
-        guard let data = UserDefaults.standard.data(forKey: AppPreferenceKey.closedTabRecords),
+    private static func load(from defaults: UserDefaults) -> [ClosedTabRecord]? {
+        guard let data = defaults.data(forKey: AppPreferenceKey.closedTabRecords),
               let decoded = try? JSONDecoder().decode([ClosedTabRecord].self, from: data)
         else { return nil }
         return decoded

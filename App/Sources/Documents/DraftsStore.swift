@@ -52,12 +52,27 @@ final class DraftsStore {
     /// stays glance-readable.
     static let maxDrafts = 6
 
+    /// Tests pass an isolated temp directory here; production leaves it
+    /// nil and we resolve through `UbiquityContainer` so the iCloud /
+    /// local pick follows the live Settings toggle.
+    private let rootOverride: URL?
+
+    init(rootOverride: URL? = nil) {
+        self.rootOverride = rootOverride
+        // Eagerly ensure draft directories exist so first-write doesn't
+        // race with directory creation when the user toggles iCloud
+        // mid-session.
+        for root in roots {
+            let dir = root.appendingPathComponent("Drafts", isDirectory: true)
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+    }
+
     /// Where new drafts get written. Resolved on access so a Settings
     /// toggle of "Sync via iCloud Drive" takes effect immediately
-    /// without needing a relaunch — both local and iCloud roots get
-    /// ensured up front so either is ready when first write hits.
+    /// without needing a relaunch.
     var directory: URL {
-        let root = UbiquityContainer.documentsURLForWrite
+        let root = rootOverride ?? UbiquityContainer.documentsURLForWrite
         let dir = root.appendingPathComponent("Drafts", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
@@ -68,21 +83,16 @@ final class DraftsStore {
     /// toggle never hides existing files; the user's old iCloud
     /// drafts stay browseable even after going local-only.
     var readDirectories: [URL] {
-        UbiquityContainer.documentsRootsForRead.map { root in
+        roots.map { root in
             let dir = root.appendingPathComponent("Drafts", isDirectory: true)
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             return dir
         }
     }
 
-    private init() {
-        // Eagerly ensure both potential draft directories exist so
-        // first-write doesn't race with directory creation when the
-        // user toggles iCloud mid-session.
-        for root in UbiquityContainer.documentsRootsForRead {
-            let dir = root.appendingPathComponent("Drafts", isDirectory: true)
-            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        }
+    private var roots: [URL] {
+        if let rootOverride { return [rootOverride] }
+        return UbiquityContainer.documentsRootsForRead
     }
 
     /// Creates a new UUID-named file on first write, overwrites in

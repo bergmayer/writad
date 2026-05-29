@@ -47,7 +47,11 @@ final class SessionsStore {
 
     /// Cap on stored records — old launch groups sit here until
     /// evicted by newer writes.
-    private let cap = 60
+    static let cap = 60
+
+    /// Tests pass an isolated UserDefaults suite and skip the global
+    /// UIScene observer; production wires both to standard.
+    private let defaults: UserDefaults
 
     private(set) var records: [SessionRecord]
 
@@ -76,8 +80,10 @@ final class SessionsStore {
     /// correlate a cold-launch scene to our record.
     private var persistentIdsByUUID: [String: String] = [:]
 
-    private init() {
-        self.records = Self.load() ?? []
+    init(defaults: UserDefaults = .standard, observesScenes: Bool = true) {
+        self.defaults = defaults
+        self.records = Self.load(from: defaults) ?? []
+        guard observesScenes else { return }
         NotificationCenter.default.addObserver(
             forName: UIScene.didDisconnectNotification,
             object: nil,
@@ -208,8 +214,8 @@ final class SessionsStore {
     func save(_ record: SessionRecord) {
         records.removeAll { $0.sceneUUID == record.sceneUUID }
         records.insert(record, at: 0)
-        if records.count > cap {
-            records.removeLast(records.count - cap)
+        if records.count > Self.cap {
+            records.removeLast(records.count - Self.cap)
         }
         persist()
     }
@@ -221,11 +227,11 @@ final class SessionsStore {
 
     private func persist() {
         guard let data = try? JSONEncoder().encode(records) else { return }
-        UserDefaults.standard.set(data, forKey: AppPreferenceKey.sessionRecords)
+        defaults.set(data, forKey: AppPreferenceKey.sessionRecords)
     }
 
-    private static func load() -> [SessionRecord]? {
-        guard let data = UserDefaults.standard.data(forKey: AppPreferenceKey.sessionRecords),
+    private static func load(from defaults: UserDefaults) -> [SessionRecord]? {
+        guard let data = defaults.data(forKey: AppPreferenceKey.sessionRecords),
               let decoded = try? JSONDecoder().decode([SessionRecord].self, from: data)
         else { return nil }
         return decoded

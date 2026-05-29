@@ -26,10 +26,24 @@ final class RevisionStore {
     /// Cap on stored revisions per file (excluding the original,
     /// which is always kept). 50 covers ~an hour of busy editing
     /// with the 60 s auto-coalesce window.
-    private let maxRevisions = 50
+    let maxRevisions: Int
     /// Auto-saves within this window of the previous auto revision
     /// overwrite it instead of adding a new entry.
-    private let autoCoalesceWindow: TimeInterval = 60
+    let autoCoalesceWindow: TimeInterval
+
+    /// Tests pass an isolated temp directory; production leaves it nil
+    /// and we resolve through `applicationSupportDirectory`.
+    private let supportDirOverride: URL?
+
+    init(
+        supportDirOverride: URL? = nil,
+        maxRevisions: Int = 50,
+        autoCoalesceWindow: TimeInterval = 60
+    ) {
+        self.supportDirOverride = supportDirOverride
+        self.maxRevisions = maxRevisions
+        self.autoCoalesceWindow = autoCoalesceWindow
+    }
 
     enum Kind: String, Codable {
         case original
@@ -265,6 +279,9 @@ final class RevisionStore {
     }
 
     private var revisionsRoot: URL {
+        if let supportDirOverride {
+            return supportDirOverride.appendingPathComponent("Revisions", isDirectory: true)
+        }
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
             .first ?? FileManager.default.temporaryDirectory
         return support.appendingPathComponent("Ayyyy/Revisions", isDirectory: true)
