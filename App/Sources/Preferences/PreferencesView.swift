@@ -441,8 +441,6 @@ private struct ToolbarPreferencesTab: View {
     @State private var addingSlot: Bool = false
     @State private var editingIndex: Int?
 
-    private let registry: [EditorCommandSpec] = CommandRegistry.all()
-
     var body: some View {
         Form {
             Section {
@@ -512,7 +510,7 @@ private struct ToolbarPreferencesTab: View {
     }
 
     private func commandTitle(for id: String) -> String {
-        registry.first(where: { $0.id == id })?.title ?? id
+        CommandRegistry.lookup(id: id)?.title ?? id
     }
 
     private struct EditingSlotID: Identifiable {

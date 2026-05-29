@@ -72,11 +72,30 @@ struct EditorCommandSpec: Identifiable {
 }
 
 /// Built dynamically so per-language / per-encoding entries are
-/// included alongside the static commands.
+/// included alongside the static commands. Built once per launch and
+/// cached — the spec list is pure for the app's lifetime since the
+/// per-device branches (e.g. `DeviceIdiom`) resolve at startup.
 @MainActor
 enum CommandRegistry {
 
-    static func all() -> [EditorCommandSpec] {
+    private static let cache: (commands: [EditorCommandSpec], index: [String: Int]) = {
+        let commands = build()
+        var index: [String: Int] = [:]
+        index.reserveCapacity(commands.count)
+        for (i, spec) in commands.enumerated() { index[spec.id] = i }
+        return (commands, index)
+    }()
+
+    static func all() -> [EditorCommandSpec] { cache.commands }
+
+    /// O(1) lookup; nil when no command has that id (e.g. a stale
+    /// `ToolbarConfig` slot pointing at a removed command).
+    static func lookup(id: String) -> EditorCommandSpec? {
+        guard let i = cache.index[id] else { return nil }
+        return cache.commands[i]
+    }
+
+    private static func build() -> [EditorCommandSpec] {
         var commands: [EditorCommandSpec] = []
 
         if DeviceIdiom.supportsMultipleWindows {

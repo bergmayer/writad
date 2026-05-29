@@ -41,7 +41,6 @@ struct WindowToolbar: View {
     }
 
     var body: some View {
-        let registry = CommandRegistry.all()
         GeometryReader { proxy in
             // iPad scene chrome (●●● stoplight) takes the top-left
             // — ~60 pt + breathing room so the title isn't behind it.
@@ -58,13 +57,11 @@ struct WindowToolbar: View {
             if compact {
                 compactBody(proxy: proxy,
                             stoplightInset: stoplightInset,
-                            trailingZone: trailingZone,
-                            registry: registry)
+                            trailingZone: trailingZone)
             } else {
                 regularBody(proxy: proxy,
                             stoplightInset: stoplightInset,
-                            trailingZone: trailingZone,
-                            registry: registry)
+                            trailingZone: trailingZone)
             }
         }
         .frame(height: Self.touchTarget + Self.pillInsetV * 2 + Self.verticalPadding * 2)
@@ -78,8 +75,7 @@ struct WindowToolbar: View {
     private func regularBody(
         proxy: GeometryProxy,
         stoplightInset: CGFloat,
-        trailingZone: CGFloat,
-        registry: [EditorCommandSpec]
+        trailingZone: CGFloat
     ) -> some View {
         let estimatedPill = min(
             CGFloat(config.slots.count + 1) * (Self.touchTarget + Self.buttonSpacing) + Self.pillInsetH * 2,
@@ -99,7 +95,7 @@ struct WindowToolbar: View {
                            alignment: .leading)
                 Spacer(minLength: 0)
             }
-            pill(visible: visible, overflow: overflow, registry: registry)
+            pill(visible: visible, overflow: overflow)
             HStack(spacing: 0) {
                 Spacer(minLength: 0)
                 trailingControls
@@ -115,8 +111,7 @@ struct WindowToolbar: View {
     private func compactBody(
         proxy: GeometryProxy,
         stoplightInset: CGFloat,
-        trailingZone: CGFloat,
-        registry: [EditorCommandSpec]
+        trailingZone: CGFloat
     ) -> some View {
         // No stoplight chrome in compact widths — system chrome
         // collapses to a single icon.
@@ -128,7 +123,7 @@ struct WindowToolbar: View {
                 .layoutPriority(1)
             Spacer(minLength: 0)
             if !config.slots.isEmpty {
-                compactOverflowMenu(registry: registry)
+                compactOverflowMenu
             }
             trailingControls
                 .padding(.trailing, Self.outerPadding)
@@ -137,10 +132,10 @@ struct WindowToolbar: View {
     }
 
     @ViewBuilder
-    private func compactOverflowMenu(registry: [EditorCommandSpec]) -> some View {
+    private var compactOverflowMenu: some View {
         Menu {
             ForEach(Array(config.slots.enumerated()), id: \.element.id) { _, slot in
-                if let cmd = registry.first(where: { $0.id == slot.commandId }) {
+                if let cmd = CommandRegistry.lookup(id: slot.commandId) {
                     Button {
                         onInteraction?()
                         if cmd.isEnabled() { cmd.action() }
@@ -224,18 +219,18 @@ struct WindowToolbar: View {
     }
 
     @ViewBuilder
-    private func pill(visible: [ToolbarSlot], overflow: [ToolbarSlot], registry: [EditorCommandSpec]) -> some View {
+    private func pill(visible: [ToolbarSlot], overflow: [ToolbarSlot]) -> some View {
         HStack(spacing: Self.buttonSpacing) {
             ForEach(visible) { slot in
                 ToolbarSlotButton(
                     slot: slot,
-                    command: command(for: slot.commandId, in: registry),
+                    command: CommandRegistry.lookup(id: slot.commandId),
                     onLongPress: { editSlot(slot) },
                     onInteraction: onInteraction
                 )
             }
             if !overflow.isEmpty {
-                overflowMenu(items: overflow, registry: registry)
+                overflowMenu(items: overflow)
             }
         }
         .padding(.horizontal, Self.pillInsetH)
@@ -261,10 +256,10 @@ struct WindowToolbar: View {
     }
 
     @ViewBuilder
-    private func overflowMenu(items: [ToolbarSlot], registry: [EditorCommandSpec]) -> some View {
+    private func overflowMenu(items: [ToolbarSlot]) -> some View {
         Menu {
             ForEach(items) { slot in
-                if let cmd = command(for: slot.commandId, in: registry) {
+                if let cmd = CommandRegistry.lookup(id: slot.commandId) {
                     Button {
                         if cmd.isEnabled() { cmd.action() }
                     } label: {
@@ -280,10 +275,6 @@ struct WindowToolbar: View {
                 .contentShape(.rect)
         }
         .menuStyle(.borderlessButton)
-    }
-
-    private func command(for id: String, in registry: [EditorCommandSpec]) -> EditorCommandSpec? {
-        registry.first { $0.id == id }
     }
 
     private func editSlot(_ slot: ToolbarSlot) {

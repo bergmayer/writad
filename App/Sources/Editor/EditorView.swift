@@ -566,7 +566,6 @@ struct EditorView: View {
 
     @ViewBuilder
     private var phoneCombinedMenu: some View {
-        let registry = CommandRegistry.all()
         let slots = ToolbarConfig.shared.slots
         Menu {
             // Palette pinned at top — same affordance with toolbar off.
@@ -579,7 +578,7 @@ struct EditorView: View {
             if !slots.isEmpty {
                 Divider()
                 ForEach(slots) { slot in
-                    if let cmd = registry.first(where: { $0.id == slot.commandId }) {
+                    if let cmd = CommandRegistry.lookup(id: slot.commandId) {
                         Button {
                             claimFocus()
                             if cmd.isEnabled() { cmd.action() }
