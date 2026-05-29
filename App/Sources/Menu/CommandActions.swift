@@ -179,45 +179,20 @@ enum CommandActions {
 
     // MARK: - View setting toggles
 
-    private static func toggleViewSetting(
-        defaultsKey: String,
-        statePath: ReferenceWritableKeyPath<EditorState, Bool>
-    ) {
-        let newValue = !UserDefaults.standard.bool(forKey: defaultsKey)
-        UserDefaults.standard.set(newValue, forKey: defaultsKey)
-        Self.context.scenes.currentEditor?[keyPath: statePath] = newValue
+    private static func togglePref(_ keyPath: ReferenceWritableKeyPath<AppPreferencesStore, Bool>) {
+        AppPreferencesStore.shared[keyPath: keyPath].toggle()
     }
 
-    static func toggleShowLineNumbers() {
-        toggleViewSetting(defaultsKey: AppPreferenceKey.showLineNumbers, statePath: \.showLineNumbers)
-    }
-    static func toggleWrapLines() {
-        toggleViewSetting(defaultsKey: AppPreferenceKey.wrapLines, statePath: \.wrapLines)
-    }
-    static func toggleShowInvisibles() {
-        toggleViewSetting(defaultsKey: AppPreferenceKey.showInvisibles, statePath: \.showInvisibles)
-    }
-    static func toggleShowPageGuide() {
-        toggleViewSetting(defaultsKey: AppPreferenceKey.showPageGuide, statePath: \.showPageGuide)
-    }
-    static func toggleShowStatusBar() {
-        toggleViewSetting(defaultsKey: AppPreferenceKey.showStatusBar, statePath: \.showStatusBar)
-    }
-    static func toggleShowToolbar() {
-        toggleViewSetting(defaultsKey: AppPreferenceKey.showToolbar, statePath: \.showToolbar)
-    }
-    static func toggleLiveMatchHighlight() {
-        toggleViewSetting(defaultsKey: AppPreferenceKey.liveMatchHighlight, statePath: \.liveMatchHighlight)
-    }
-    static func toggleHighlightCurrentLine() {
-        toggleViewSetting(defaultsKey: AppPreferenceKey.highlightCurrentLine, statePath: \.highlightCurrentLine)
-    }
-    static func toggleHighlightMatchingBrackets() {
-        toggleViewSetting(defaultsKey: AppPreferenceKey.highlightMatchingBrackets, statePath: \.highlightMatchingBrackets)
-    }
-    static func toggleShowChangeHistoryGutter() {
-        toggleViewSetting(defaultsKey: AppPreferenceKey.showChangeHistoryGutter, statePath: \.showChangeHistoryGutter)
-    }
+    static func toggleShowLineNumbers()         { togglePref(\.showLineNumbers) }
+    static func toggleWrapLines()               { togglePref(\.wrapLines) }
+    static func toggleShowInvisibles()          { togglePref(\.showInvisibles) }
+    static func toggleShowPageGuide()           { togglePref(\.showPageGuide) }
+    static func toggleShowStatusBar()           { togglePref(\.showStatusBar) }
+    static func toggleShowToolbar()             { togglePref(\.showToolbar) }
+    static func toggleLiveMatchHighlight()      { togglePref(\.liveMatchHighlight) }
+    static func toggleHighlightCurrentLine()    { togglePref(\.highlightCurrentLine) }
+    static func toggleHighlightMatchingBrackets() { togglePref(\.highlightMatchingBrackets) }
+    static func toggleShowChangeHistoryGutter() { togglePref(\.showChangeHistoryGutter) }
 
     // MARK: - Selection / line ops
 
@@ -409,13 +384,13 @@ enum CommandActions {
 
     static func resetFontSize() {
         guard let state = state else { return }
-        let stored = UserDefaults.standard.double(forKey: AppPreferenceKey.fontSize)
-        applyFontSize(stored > 0 ? stored : 14, to: state)
+        applyFontSize(AppPreferencesStore.shared.fontSize > 0 ? AppPreferencesStore.shared.fontSize : 14, to: state)
     }
 
+    /// Writes through the EditorState setter so an active per-window
+    /// font-size override moves; otherwise the global pref moves.
     private static func applyFontSize(_ value: Double, to state: EditorState) {
         state.fontSize = value
-        UserDefaults.standard.set(value, forKey: AppPreferenceKey.fontSize)
     }
 
     // MARK: - Cursor / character ops

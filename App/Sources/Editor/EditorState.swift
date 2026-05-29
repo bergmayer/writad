@@ -4,12 +4,15 @@ import FileEncoding
 import LineEnding
 
 /// Per-document state shared by SwiftUI views and the menu bar
-/// (via FocusedValues). Initial values seed from `AppPreferences`.
+/// (via FocusedValues). Preferences read through `AppPreferencesStore`;
+/// overridable ones (theme / font / fontSize) consult a per-window
+/// override slot first. Settings changes propagate via Observation
+/// without a sync layer.
 @MainActor
 @Observable
 final class EditorState {
 
-    // Document
+    // MARK: Document
     var text: String = ""
     var fileEncoding: FileEncoding = .utf8
     var lineEnding: LineEnding = .lf
@@ -35,55 +38,15 @@ final class EditorState {
     /// tree-sitter, fold discovery, and the markdown decorator.
     var isLargeFile: Bool = false
 
-    // View settings
-    var showLineNumbers: Bool
-    var wrapLines: Bool
-    var highlightCurrentLine: Bool
-    var highlightMatchingBrackets: Bool
-    var showPageGuide: Bool
-    var pageGuideColumn: Int
-    /// Off by default — the per-line diff is cheap but caretRect
-    /// lookups grow with line count, and `Timing
-    /// .changeHistoryGutterByteLimit` short-circuits past the ceiling.
-    var showChangeHistoryGutter: Bool
-    /// Adds a 10-line scrollable cushion below the last line so it
-    /// isn't pinned to the window's bottom edge.
-    var overscroll: Bool
-    var themeName: AppThemeName
-    /// Non-nil → per-window theme picked via the info inspector,
-    /// wins over Settings. Lives in memory only; cleared with the tab.
+    // MARK: Per-window overrides (info inspector)
+    /// Non-nil → wins over the matching global pref. Lives in memory
+    /// only; cleared with the tab. The matching `themeName` / `font` /
+    /// `fontSize` computed properties consult this first.
     var themeOverride: AppThemeName?
     var fontOverride: EditorFont?
     var fontSizeOverride: Double?
 
-    // Invisibles — master toggle plus per-kind selection
-    var showInvisibles: Bool
-    var showInvisibleSpace: Bool
-    var showInvisibleTab: Bool
-    var showInvisibleNewline: Bool
-    var showInvisibleNonBreakingSpace: Bool
-
-    // Status-bar items
-    var statusShowsLineCol: Bool
-    var statusShowsCharCount: Bool
-    var statusShowsLineCount: Bool
-
-    // Indentation
-    var usesTabs: Bool
-    var indentWidth: Int
-
-    // Typing behavior
-    var insertCharacterPairs: Bool
-    var autoCorrect: Bool
-    var autoCapitalize: Bool
-    var smartQuotes: Bool
-    var spellCheck: Bool
-    var autoLinkDetection: Bool
-
-    // UI
-    var showStatusBar: Bool
-    var showToolbar: Bool
-    var liveMatchHighlight: Bool
+    // MARK: Runtime UI state
     /// Selection-occurrence count for the status bar; 0 when nothing's
     /// highlighted.
     var liveMatchCount: Int = 0
@@ -96,15 +59,11 @@ final class EditorState {
     var armedAccessoryControl: Bool = false
     var armedAccessoryCommand: Bool = false
     var armedAccessoryOption: Bool = false
-    var font: EditorFont
-    var fontSize: Double
-    var lineHeight: Double
-    var ligatures: Bool
 
-    // Selection / cursor (mirrored from editor engine)
+    /// Selection / cursor (mirrored from editor engine).
     var selectedRange: NSRange = NSRange(location: 0, length: 0)
 
-    // Bookmarks: digit (0–9) → cursor location in the document.
+    /// Bookmarks: digit (0–9) → cursor location in the document.
     var bookmarks: [Int: Int] = [:]
     /// Fold Selection ranges (the body lines that collapse). Language
     /// fold discovery doesn't know about these — the engine draws an
@@ -139,54 +98,182 @@ final class EditorState {
 
     init() {
         let d = UserDefaults.standard
-        self.languageIdentifier            = d.string(forKey: AppPreferenceKey.defaultLanguage)
-                                                .flatMap(LanguageIdentifier.init(rawValue:)) ?? .plain
-        self.themeName                     = AppThemeName(stored: d.string(forKey: AppPreferenceKey.themeName))
-
-        self.showLineNumbers               = d.bool(forKey: AppPreferenceKey.showLineNumbers)
-        self.wrapLines                     = d.bool(forKey: AppPreferenceKey.wrapLines)
-        self.highlightCurrentLine          = d.bool(forKey: AppPreferenceKey.highlightCurrentLine)
-        self.highlightMatchingBrackets     = d.bool(forKey: AppPreferenceKey.highlightMatchingBrackets)
-        self.showPageGuide                 = d.bool(forKey: AppPreferenceKey.showPageGuide)
-        self.pageGuideColumn               = d.integer(forKey: AppPreferenceKey.pageGuideColumn)
-        self.showChangeHistoryGutter       = d.bool(forKey: AppPreferenceKey.showChangeHistoryGutter)
-        self.overscroll                    = d.bool(forKey: AppPreferenceKey.overscroll)
-        self.showStatusBar                 = d.bool(forKey: AppPreferenceKey.showStatusBar)
-        self.showToolbar                   = d.bool(forKey: AppPreferenceKey.showToolbar)
-        self.liveMatchHighlight            = d.bool(forKey: AppPreferenceKey.liveMatchHighlight)
-
-        self.showInvisibles                = d.bool(forKey: AppPreferenceKey.showInvisibles)
-        self.showInvisibleSpace            = d.bool(forKey: AppPreferenceKey.showInvisibleSpace)
-        self.showInvisibleTab              = d.bool(forKey: AppPreferenceKey.showInvisibleTab)
-        self.showInvisibleNewline          = d.bool(forKey: AppPreferenceKey.showInvisibleNewline)
-        self.showInvisibleNonBreakingSpace = d.bool(forKey: AppPreferenceKey.showInvisibleNonBreakingSpace)
-
-        self.statusShowsLineCol            = d.bool(forKey: AppPreferenceKey.statusShowsLineCol)
-        self.statusShowsCharCount          = d.bool(forKey: AppPreferenceKey.statusShowsCharCount)
-        self.statusShowsLineCount          = d.bool(forKey: AppPreferenceKey.statusShowsLineCount)
-
-        self.usesTabs                      = d.bool(forKey: AppPreferenceKey.usesTabs)
-        self.indentWidth                   = d.integer(forKey: AppPreferenceKey.indentWidth)
-
-        self.insertCharacterPairs          = d.bool(forKey: AppPreferenceKey.insertCharacterPairs)
-        self.autoCorrect                   = d.bool(forKey: AppPreferenceKey.autoCorrect)
-        self.autoCapitalize                = d.bool(forKey: AppPreferenceKey.autoCapitalize)
-        self.smartQuotes                   = d.bool(forKey: AppPreferenceKey.smartQuotes)
-        self.spellCheck                    = d.bool(forKey: AppPreferenceKey.spellCheck)
-        self.autoLinkDetection             = d.bool(forKey: AppPreferenceKey.autoLinkDetection)
-
-        self.font                          = EditorFont(stored: d.string(forKey: AppPreferenceKey.fontName))
-        let storedFontSize                 = d.double(forKey: AppPreferenceKey.fontSize)
-        self.fontSize                      = storedFontSize > 0 ? storedFontSize : 14
-        let storedLineHeight               = d.double(forKey: AppPreferenceKey.lineHeight)
-        self.lineHeight                    = storedLineHeight > 0 ? storedLineHeight : 1.2
-        self.ligatures                     = d.bool(forKey: AppPreferenceKey.ligatures)
-
-        // Seed-only — Settings changes propagate via EditorView's
-        // `@AppStorage` + `.onChange`. A NotificationCenter observer
-        // here would fire once per open tab on every UserDefaults
-        // write; inactive tabs catch up on their next body eval.
+        self.languageIdentifier = d.string(forKey: AppPreferenceKey.defaultLanguage)
+            .flatMap(LanguageIdentifier.init(rawValue:)) ?? .plain
     }
+
+    // MARK: - Preferences (pass-through to AppPreferencesStore)
+    //
+    // Stored fields used to mirror UserDefaults and were kept in sync by
+    // EditorPrefSync. Now each reads through the @Observable preferences
+    // store directly — views that read `state.fontSize` register a
+    // dependency on `prefs.fontSize` (not on state), so Settings changes
+    // propagate to every open tab without a separate sync layer.
+
+    /// Per-window override (info inspector) wins over the global pref.
+    var themeName: AppThemeName {
+        get { themeOverride ?? AppThemeName(stored: prefs.themeName) }
+        set {
+            if themeOverride != nil {
+                themeOverride = newValue
+            } else {
+                prefs.themeName = newValue.rawValue
+            }
+        }
+    }
+
+    /// Per-window override wins over the global pref.
+    var font: EditorFont {
+        get { fontOverride ?? EditorFont(stored: prefs.fontName) }
+        set {
+            if fontOverride != nil {
+                fontOverride = newValue
+            } else {
+                prefs.fontName = newValue.rawValue
+            }
+        }
+    }
+
+    /// Per-window override wins over the global pref.
+    var fontSize: Double {
+        get { fontSizeOverride ?? prefs.fontSize }
+        set {
+            if fontSizeOverride != nil {
+                fontSizeOverride = newValue
+            } else {
+                prefs.fontSize = newValue
+            }
+        }
+    }
+
+    var showLineNumbers: Bool {
+        get { prefs.showLineNumbers }
+        set { prefs.showLineNumbers = newValue }
+    }
+    var wrapLines: Bool {
+        get { prefs.wrapLines }
+        set { prefs.wrapLines = newValue }
+    }
+    var highlightCurrentLine: Bool {
+        get { prefs.highlightCurrentLine }
+        set { prefs.highlightCurrentLine = newValue }
+    }
+    var highlightMatchingBrackets: Bool {
+        get { prefs.highlightMatchingBrackets }
+        set { prefs.highlightMatchingBrackets = newValue }
+    }
+    var showPageGuide: Bool {
+        get { prefs.showPageGuide }
+        set { prefs.showPageGuide = newValue }
+    }
+    var pageGuideColumn: Int {
+        get { prefs.pageGuideColumn }
+        set { prefs.pageGuideColumn = newValue }
+    }
+    /// Off by default — the per-line diff is cheap but caretRect
+    /// lookups grow with line count, and `Timing
+    /// .changeHistoryGutterByteLimit` short-circuits past the ceiling.
+    var showChangeHistoryGutter: Bool {
+        get { prefs.showChangeHistoryGutter }
+        set { prefs.showChangeHistoryGutter = newValue }
+    }
+    /// Adds a 10-line scrollable cushion below the last line.
+    var overscroll: Bool {
+        get { prefs.overscroll }
+        set { prefs.overscroll = newValue }
+    }
+
+    var showInvisibles: Bool {
+        get { prefs.showInvisibles }
+        set { prefs.showInvisibles = newValue }
+    }
+    var showInvisibleSpace: Bool {
+        get { prefs.showInvisibleSpace }
+        set { prefs.showInvisibleSpace = newValue }
+    }
+    var showInvisibleTab: Bool {
+        get { prefs.showInvisibleTab }
+        set { prefs.showInvisibleTab = newValue }
+    }
+    var showInvisibleNewline: Bool {
+        get { prefs.showInvisibleNewline }
+        set { prefs.showInvisibleNewline = newValue }
+    }
+    var showInvisibleNonBreakingSpace: Bool {
+        get { prefs.showInvisibleNonBreakingSpace }
+        set { prefs.showInvisibleNonBreakingSpace = newValue }
+    }
+
+    var statusShowsLineCol: Bool {
+        get { prefs.statusShowsLineCol }
+        set { prefs.statusShowsLineCol = newValue }
+    }
+    var statusShowsCharCount: Bool {
+        get { prefs.statusShowsCharCount }
+        set { prefs.statusShowsCharCount = newValue }
+    }
+    var statusShowsLineCount: Bool {
+        get { prefs.statusShowsLineCount }
+        set { prefs.statusShowsLineCount = newValue }
+    }
+
+    var usesTabs: Bool {
+        get { prefs.usesTabs }
+        set { prefs.usesTabs = newValue }
+    }
+    var indentWidth: Int {
+        get { prefs.indentWidth }
+        set { prefs.indentWidth = newValue }
+    }
+
+    var insertCharacterPairs: Bool {
+        get { prefs.insertCharacterPairs }
+        set { prefs.insertCharacterPairs = newValue }
+    }
+    var autoCorrect: Bool {
+        get { prefs.autoCorrect }
+        set { prefs.autoCorrect = newValue }
+    }
+    var autoCapitalize: Bool {
+        get { prefs.autoCapitalize }
+        set { prefs.autoCapitalize = newValue }
+    }
+    var smartQuotes: Bool {
+        get { prefs.smartQuotes }
+        set { prefs.smartQuotes = newValue }
+    }
+    var spellCheck: Bool {
+        get { prefs.spellCheck }
+        set { prefs.spellCheck = newValue }
+    }
+    var autoLinkDetection: Bool {
+        get { prefs.autoLinkDetection }
+        set { prefs.autoLinkDetection = newValue }
+    }
+
+    var showStatusBar: Bool {
+        get { prefs.showStatusBar }
+        set { prefs.showStatusBar = newValue }
+    }
+    var showToolbar: Bool {
+        get { prefs.showToolbar }
+        set { prefs.showToolbar = newValue }
+    }
+    var liveMatchHighlight: Bool {
+        get { prefs.liveMatchHighlight }
+        set { prefs.liveMatchHighlight = newValue }
+    }
+
+    var lineHeight: Double {
+        get { prefs.lineHeight }
+        set { prefs.lineHeight = newValue }
+    }
+    var ligatures: Bool {
+        get { prefs.ligatures }
+        set { prefs.ligatures = newValue }
+    }
+
+    private var prefs: AppPreferencesStore { AppPreferencesStore.shared }
 }
 
 enum SplitOrientation {

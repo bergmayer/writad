@@ -240,8 +240,6 @@ struct InfoInspectorSheet: View {
                     if state.fontSizeOverride != nil {
                         Button("Inherit Global") {
                             state.fontSizeOverride = nil
-                            let stored = UserDefaults.standard.double(forKey: AppPreferenceKey.fontSize)
-                            state.fontSize = stored > 0 ? stored : 14
                         }
                         .buttonStyle(.borderless)
                         .font(.callout)
@@ -263,10 +261,9 @@ struct InfoInspectorSheet: View {
         .formStyle(.grouped)
     }
 
-    /// Binding for the Font picker — set writes both override and
-    /// live `state.font` so the editor re-renders immediately;
-    /// Inherit clears the override and snaps to whatever Settings
-    /// currently has.
+    /// `.inherit` clears the per-window override and `state.font` falls
+    /// back through to the global pref automatically; `.override(face)`
+    /// promotes the override and `state.font` resolves to it.
     private var windowFontBinding: Binding<WindowFontChoice> {
         Binding(
             get: {
@@ -275,29 +272,20 @@ struct InfoInspectorSheet: View {
             },
             set: { choice in
                 switch choice {
-                case .inherit:
-                    state.fontOverride = nil
-                    let raw = UserDefaults.standard.string(forKey: AppPreferenceKey.fontName)
-                    state.font = EditorFont(stored: raw)
-                case .override(let face):
-                    state.fontOverride = face
-                    state.font = face
+                case .inherit:           state.fontOverride = nil
+                case .override(let f):   state.fontOverride = f
                 }
             }
         )
     }
 
-    /// Binding for the Font Size stepper. Every change sets the
-    /// override (so user intent isn't subtly inherited back from
-    /// global the next time Settings changes); the Inherit Global
-    /// button next to it explicitly clears the override.
+    /// Every stepper change writes the override (so user intent isn't
+    /// inherited back from global on the next Settings change). The
+    /// "Inherit Global" button next to it explicitly clears the override.
     private var windowFontSizeBinding: Binding<Double> {
         Binding(
             get: { state.fontSize },
-            set: { newValue in
-                state.fontSizeOverride = newValue
-                state.fontSize = newValue
-            }
+            set: { state.fontSizeOverride = $0 }
         )
     }
 
@@ -306,11 +294,8 @@ struct InfoInspectorSheet: View {
         case override(EditorFont)
     }
 
-    /// Two-way binding mapping the picker's `WindowThemeChoice` to
-    /// `state.themeOverride`. Picking a theme writes both the
-    /// override and the live themeName so the editor recolours
-    /// immediately; picking Inherit clears the override and snaps
-    /// back to whatever Settings currently says.
+    /// `.inherit` clears the per-window override and `state.themeName`
+    /// falls back through to the global pref automatically.
     private var windowThemeBinding: Binding<WindowThemeChoice> {
         Binding(
             get: {
@@ -319,13 +304,8 @@ struct InfoInspectorSheet: View {
             },
             set: { choice in
                 switch choice {
-                case .inherit:
-                    state.themeOverride = nil
-                    let raw = UserDefaults.standard.string(forKey: AppPreferenceKey.themeName)
-                    state.themeName = AppThemeName(stored: raw)
-                case .override(let theme):
-                    state.themeOverride = theme
-                    state.themeName = theme
+                case .inherit:             state.themeOverride = nil
+                case .override(let theme): state.themeOverride = theme
                 }
             }
         )

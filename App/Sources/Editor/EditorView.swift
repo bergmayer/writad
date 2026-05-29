@@ -19,14 +19,7 @@ struct EditorView: View {
 
     @Bindable private var bus = AppStateBus.shared
     @Environment(\.openWindow) private var openWindow
-    /// Read direct from `@AppStorage` so View ▸ Show Toolbar reaches every
-    /// window, not just the one that was active when the flag flipped.
-    @AppStorage(AppPreferenceKey.showToolbar) private var showToolbarPref: Bool = true
-    /// `.onChange` syncs into `state.themeName` so Settings reaches every
-    /// open scene, not only newly-spawned ones.
-    @AppStorage(AppPreferenceKey.themeName) private var themeNamePref: String = AppThemeName.automatic.rawValue
-    @AppStorage(AppPreferenceKey.fontSize) private var fontSizePref: Double = 14
-    @AppStorage(AppPreferenceKey.fontName) private var fontNamePref: String = EditorFont.systemMono.rawValue
+    @Bindable private var prefs = AppPreferencesStore.shared
     var body: some View {
         observeStateForEngineUpdates()
         // Editor ignores keyboard safe area; UITextView's own contentInset
@@ -138,24 +131,10 @@ struct EditorView: View {
         // `currentEditor` is weak — nils on EditorState dealloc.
         .onChange(of: state.fileEncoding) { _, newValue in document.fileEncoding = newValue }
         .onChange(of: state.lineEnding)   { _, newValue in document.lineEnding = newValue }
-        .onChange(of: themeNamePref) { _, raw in
-            // Per-window override (info inspector) outranks Settings.
-            guard state.themeOverride == nil else { return }
-            state.themeName = AppThemeName(stored: raw)
-        }
-        .onChange(of: fontSizePref) { _, newValue in
-            // Ignore 0 in case UserDefaults returns 0 mid-write.
-            guard state.fontSizeOverride == nil else { return }
-            if newValue > 0 { state.fontSize = newValue }
-        }
-        .onChange(of: fontNamePref) { _, newRaw in
-            guard state.fontOverride == nil else { return }
-            state.font = EditorFont(stored: newRaw)
-        }
-        // Settings → live state. Without this, prefs only land on freshly
-        // opened tabs. Extracted to a modifier to keep this body's
-        // .onChange chain inside the type-checker budget.
-        .modifier(EditorPrefSync(state: state))
+        // Pref → live state propagation is automatic: every preference
+        // field on EditorState is a computed read through
+        // AppPreferencesStore, so Settings changes show up via Observation
+        // without an explicit .onChange chain.
         // `bufferRevision` is a UInt64 bumped per edit — O(1) to observe.
         // Watching `document.text` would cascade the whole String through
         // the observation graph per keystroke (the McCartney-file freeze).
@@ -193,7 +172,7 @@ struct EditorView: View {
         // iPad swaps the system nav bar for the WindowToolbar pill;
         // iPhone keeps the system bar (where the filename lives).
         .toolbar(
-            (DeviceIdiom.supportsMultipleWindows && showToolbarPref) ? .hidden : .visible,
+            (DeviceIdiom.supportsMultipleWindows && prefs.showToolbar) ? .hidden : .visible,
             for: .navigationBar
         )
         .toolbar {
@@ -398,20 +377,6 @@ struct EditorView: View {
         if let url = document.fileURL {
             state.languageIdentifier = LanguageRegistry.identifier(for: url)
         }
-        // Background tabs miss `.onChange(of:)` while unmounted —
-        // re-seed from defaults on appear unless user set a per-window
-        // override.
-        let d = UserDefaults.standard
-        if state.themeOverride == nil {
-            state.themeName = AppThemeName(stored: d.string(forKey: AppPreferenceKey.themeName))
-        }
-        if state.fontOverride == nil {
-            state.font = EditorFont(stored: d.string(forKey: AppPreferenceKey.fontName))
-        }
-        if state.fontSizeOverride == nil {
-            let stored = d.double(forKey: AppPreferenceKey.fontSize)
-            state.fontSize = stored > 0 ? stored : 14
-        }
         // Weak captures: closures stored on `state` would ARC-cycle.
         state.setText = { [weak state, weak document] newText in
             guard state != nil, let document else { return }
@@ -484,7 +449,7 @@ struct EditorView: View {
 
     @ViewBuilder
     private var phonePaletteEntry: some View {
-        if showToolbarPref {
+        if prefs.showToolbar {
             phoneCombinedMenu
         } else {
             Button {

@@ -95,7 +95,6 @@
 		B200005A /* CommandActions+TextTransforms.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100005A /* CommandActions+TextTransforms.swift */; };
 		B200005B /* CommandActions+Bookmarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100005B /* CommandActions+Bookmarks.swift */; };
 		B200005C /* CommandActions+Spelling.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100005C /* CommandActions+Spelling.swift */; };
-		B200005D /* EditorPrefSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100005D /* EditorPrefSync.swift */; };
 		B200005E /* CommandActions+Tabs.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100005E /* CommandActions+Tabs.swift */; };
 		B200005F /* CommandActions+LineOps.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100005F /* CommandActions+LineOps.swift */; };
 		B2000060 /* CommandActions+SelectLines.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000060 /* CommandActions+SelectLines.swift */; };
@@ -208,7 +207,6 @@
 		B100005A /* CommandActions+TextTransforms.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CommandActions+TextTransforms.swift"; sourceTree = "<group>"; };
 		B100005B /* CommandActions+Bookmarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CommandActions+Bookmarks.swift"; sourceTree = "<group>"; };
 		B100005C /* CommandActions+Spelling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CommandActions+Spelling.swift"; sourceTree = "<group>"; };
-		B100005D /* EditorPrefSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorPrefSync.swift; sourceTree = "<group>"; };
 		B100005E /* CommandActions+Tabs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CommandActions+Tabs.swift"; sourceTree = "<group>"; };
 		B100005F /* CommandActions+LineOps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CommandActions+LineOps.swift"; sourceTree = "<group>"; };
 		B1000060 /* CommandActions+SelectLines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CommandActions+SelectLines.swift"; sourceTree = "<group>"; };
@@ -341,7 +339,6 @@
 				B1000057 /* BookmarkGutterOverlay.swift */,
 				B1000058 /* MatchScrollMarksOverlay.swift */,
 				B1000059 /* ChangeHistoryGutterOverlay.swift */,
-				B100005D /* EditorPrefSync.swift */,
 				B1000066 /* StaleSourceAlertModifier.swift */,
 				B1000068 /* BatchCloseAlertModifier.swift */,
 				B1000069 /* TabOverviewContextMenu.swift */,
@@ -622,7 +619,6 @@
 				B200005A /* CommandActions+TextTransforms.swift in Sources */,
 				B200005B /* CommandActions+Bookmarks.swift in Sources */,
 				B200005C /* CommandActions+Spelling.swift in Sources */,
-				B200005D /* EditorPrefSync.swift in Sources */,
 				B200005E /* CommandActions+Tabs.swift in Sources */,
 				B200005F /* CommandActions+LineOps.swift in Sources */,
 				B2000060 /* CommandActions+SelectLines.swift in Sources */,
