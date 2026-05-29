@@ -267,6 +267,7 @@
 				B5000013 /* App */,
 				B5000014 /* Documents */,
 				B5000015 /* Editor */,
+				B5000021 /* State */,
 				B5000016 /* Menu */,
 				B5000017 /* Features */,
 				B5000019 /* Preferences */,
@@ -301,6 +302,10 @@
 				B1000026 /* RevisionStore.swift */,
 				B1000028 /* DocumentPickerBridge.swift */,
 				B100002B /* TextFileWrapperProxy.swift */,
+				B100004A /* SessionsStore.swift */,
+				B1000054 /* ClosedTabsStore.swift */,
+				B1000055 /* DraftsStore.swift */,
+				B100002F /* DocumentLocation.swift */,
 			);
 			path = Documents;
 			sourceTree = "<group>";
@@ -310,7 +315,6 @@
 			children = (
 				B1000003 /* EditorState.swift */,
 				B100000E /* EditorActions.swift */,
-				B1000013 /* AppStateBus.swift */,
 				B1000004 /* EditorTextView.swift */,
 				B100006B /* EditorTextViewCoordinator.swift */,
 				B1000018 /* EditorSupport.swift */,
@@ -323,19 +327,9 @@
 				B1000029 /* FileBrowserScene.swift */,
 				B100002C /* EditorSheet.swift */,
 				B100002D /* TabBarView.swift */,
-				B100002F /* DocumentLocation.swift */,
-				B1000031 /* FocusedSceneValues.swift */,
 				B1000034 /* EditableTitleView.swift */,
-				B100004A /* SessionsStore.swift */,
-				B100004D /* FindState.swift */,
-				B100004E /* SceneRouter.swift */,
-				B100004F /* PickerIntents.swift */,
-				B1000050 /* PresentationState.swift */,
-				B1000051 /* PendingURLs.swift */,
 				B1000052 /* TabModel.swift */,
 				B1000053 /* EditorSession.swift */,
-				B1000054 /* ClosedTabsStore.swift */,
-				B1000055 /* DraftsStore.swift */,
 				B1000057 /* BookmarkGutterOverlay.swift */,
 				B1000058 /* MatchScrollMarksOverlay.swift */,
 				B1000059 /* ChangeHistoryGutterOverlay.swift */,
@@ -345,6 +339,20 @@
 				B100006A /* EditorStatusBar.swift */,
 			);
 			path = Editor;
+			sourceTree = "<group>";
+		};
+		B5000021 /* State */ = {
+			isa = PBXGroup;
+			children = (
+				B1000013 /* AppStateBus.swift */,
+				B100004E /* SceneRouter.swift */,
+				B1000050 /* PresentationState.swift */,
+				B1000051 /* PendingURLs.swift */,
+				B100004F /* PickerIntents.swift */,
+				B1000031 /* FocusedSceneValues.swift */,
+				B100004D /* FindState.swift */,
+			);
+			path = State;
 			sourceTree = "<group>";
 		};
 		B5000016 /* Menu */ = {
