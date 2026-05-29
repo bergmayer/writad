@@ -6,17 +6,17 @@
 #
 name: Ayyyy
 options:
-  bundleIdPrefix: com.bergmayer
+  bundleIdPrefix: com.palefire
   deploymentTarget:
     iOS: "26.0"
   developmentLanguage: en
   createIntermediateGroups: true
 
 packages:
-  EditorCore:
-    path: Packages/EditorCore
-  Runestone:
-    path: Packages/Runestone
+  EditorKit:
+    path: Packages/EditorKit
+  TreeSitterTypst:
+    path: Packages/TreeSitterTypst
 
 targets:
   Ayyyy:
@@ -30,19 +30,21 @@ targets:
     entitlements:
       path: App/Resources/Ayyyy.entitlements
     dependencies:
-      - package: EditorCore
+      - package: EditorKit
         product: FileEncoding
-      - package: EditorCore
+      - package: EditorKit
         product: LineEnding
-      - package: EditorCore
+      - package: EditorKit
         product: LineSort
-      - package: EditorCore
+      - package: EditorKit
         product: CharacterInfo
-      - package: Runestone
-        product: Runestone
+      - package: EditorKit
+        product: EditorEngine
+      - package: EditorKit
+        product: AyyyySyntax
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.bergmayer.Ayyyy
+        PRODUCT_BUNDLE_IDENTIFIER: com.palefire.ayyyy
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: "6.0"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -51,3 +53,4 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
         GENERATE_INFOPLIST_FILE: "NO"
+        CODE_SIGN_ENTITLEMENTS: App/Resources/Ayyyy.entitlements

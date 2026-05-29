@@ -19,16 +19,16 @@ iOS 26 Simulator clean build verified. Ready to run from Xcode.
 - Find / Find Next / Find Previous via Runestone's `UIFindInteraction` (system-presented).
 - Go to Line (⌘L) with bounds-checked input.
 
-### Document layer (from CotEditor `EditorCore`)
+### Document layer (CotEditor-derived modules in `EditorKit`)
 
 - BOM-aware encoding detection on open, with declaration scanning.
 - Full encoding picker (every encoding the system knows) + Convert vs. **Re-interpret bytes** (original `Data` is retained, so re-decoding doesn't lose information).
 - Line-ending detection (LF / CR / CRLF / NEL / LS / PS), conversion on apply or save.
-- Sort Lines (case / numeric / locale / descending / keep-first-line via `EditorCore.LineSort`).
+- Sort Lines (case / numeric / locale / descending / keep-first-line via `EditorKit.LineSort`).
 - Unique Lines, Reverse Lines.
 - Trim Trailing Whitespace.
 - Case conversion (UPPER / lower / Capitalized).
-- Character Inspector — Unicode glyph view with scalar table (`EditorCore.CharacterInfo`).
+- Character Inspector — Unicode glyph view with scalar table (`EditorKit.CharacterInfo`).
 - Insert Date & Time / File Path / Filename.
 
 ### iPadOS menu bar
@@ -111,21 +111,24 @@ xcodebuild -project Ayyyy.xcodeproj -scheme Ayyyy \
 
 ```
 ayyyy/
-├── Ayyyy.xcodeproj/        # iOS 26 app target, three local SPM dependencies
+├── Ayyyy.xcodeproj/        # iOS 26 app target; two local SPM dependencies
 ├── App/
 │   ├── Sources/
-│   │   ├── App/            # @main, DocumentGroup + Preferences scenes
-│   │   ├── Documents/      # PlainTextDocument: FileDocument w/ encoding round-trip + retained Data
-│   │   ├── Editor/         # EditorState, RunestoneTextView, EditorView, EditorActions
+│   │   ├── App/            # @main, scene wiring (WindowGroup + Preferences)
+│   │   ├── Documents/      # PlainTextDocument: @Observable doc w/ encoding round-trip + retained Data
+│   │   ├── Editor/         # EditorState, EditorTextView (Runestone wrapper), EditorView, EditorScene, drafts/session stores
 │   │   ├── Menu/           # EditorCommands: the iPadOS menu bar
-│   │   ├── Features/       # Picker / inspector / sort / go-to-line sheets
-│   │   ├── Preferences/    # AppPreferences (keys/defaults), PreferencesView (4-tab Form)
-│   │   └── Support/        # AppTheme (Runestone Theme), LanguageRegistry (ext → identifier)
+│   │   ├── Features/       # Pickers / inspectors / sheets / launcher
+│   │   ├── Preferences/    # AppPreferences (keys/defaults), PreferencesView (multi-tab Form)
+│   │   └── Support/        # AppTheme, LanguageRegistry, DeviceIdiom, Timing, UbiquityContainer
 │   └── Resources/          # Info.plist, entitlements, Assets.xcassets
 ├── Packages/
-│   ├── EditorCore/         # vendored from coteditor/CotEditor (Apache 2.0)
-│   ├── Runestone/          # vendored from simonbs/Runestone (MIT)
-│   └── AyyyySyntax/        # new: 10 tree-sitter grammars + highlights queries
+│   ├── EditorKit/          # consolidated package — vendored modules + new code:
+│   │                       #   EditorEngine     (vendored from simonbs/Runestone, MIT)
+│   │                       #   FileEncoding, LineEnding, LineSort, CharacterInfo,
+│   │                       #     StringUtils, ValueRange (vendored from coteditor/CotEditor, Apache 2.0)
+│   │                       #   AyyyySyntax      (tree-sitter grammar bridging)
+│   └── TreeSitterTypst/    # local Typst grammar vendor (MIT)
 ├── project.yml             # XcodeGen spec (fallback)
 ├── NOTICE.md
 └── README.md
@@ -135,19 +138,19 @@ ayyyy/
 
 ### EditorActions protocol — module name collision workaround
 
-Both Runestone and `EditorCore.LineEnding` export a type named `LineEnding`. Swift can't disambiguate `LineEnding.LineEnding` when both modules are in scope. To avoid the conflict, menu code (`EditorCommands`) imports only `LineEnding` (EditorCore), the Runestone wrapper imports only `Runestone`, and they communicate via a Foundation-only `EditorActions` protocol that uses raw `Character` values for line endings.
+`EditorEngine` (the Runestone fork) and `EditorKit.LineEnding` both export a type named `LineEnding`. Swift can't disambiguate `LineEnding.LineEnding` when both modules are in scope. To avoid the conflict, menu code (`EditorCommands`) imports only `LineEnding` (the CotEditor module), the `EditorEngine` wrapper imports only `EditorEngine`, and they communicate via a Foundation-only `EditorActions` protocol that uses raw `Character` values for line endings.
 
 ### Tree-sitter bridging
 
-Each tree-sitter grammar SPM package forward-declares its own `typedef struct TSLanguage TSLanguage`. Swift sees each as a distinct type even though the underlying C struct is identical. `AyyyySyntax.SyntaxRegistry` bridges with `unsafeBitCast` to `TreeSitter.TSLanguage` (Runestone's canonical type). The build emits two warnings for this — expected and intentional.
+Each tree-sitter grammar SPM package forward-declares its own `typedef struct TSLanguage TSLanguage`. Swift sees each as a distinct type even though the underlying C struct is identical. `AyyyySyntax.SyntaxRegistry` bridges with `unsafeBitCast` to `TreeSitter.TSLanguage` (the canonical type from the upstream `tree-sitter` SPM package that `EditorEngine` also depends on). The build emits warnings for this — expected and intentional.
 
 ### Concurrency
 
-`Coordinator` (UIViewRepresentable coordinator) is `@MainActor` with a `@preconcurrency` conformance to `Runestone.TextViewDelegate`. Runestone calls back on the main thread; the annotation tells Swift 6 to trust that.
+`Coordinator` (UIViewRepresentable coordinator) is `@MainActor` with a `@preconcurrency` conformance to `EditorEngine.TextViewDelegate`. The engine calls back on the main thread; the annotation tells Swift 6 to trust that.
 
-### SwiftLint stripped from vendored EditorCore
+### SwiftLint stripped from vendored CotEditor modules
 
-CotEditor's upstream `EditorCore/Package.swift` attaches `SwiftLintBuildToolPlugin`. SwiftLint's binary fails inside `xcodebuild`'s plugin sandbox on some setups, so the plugin attachment was removed from our fork.
+CotEditor's upstream `EditorCore/Package.swift` attaches `SwiftLintBuildToolPlugin`. SwiftLint's binary fails inside `xcodebuild`'s plugin sandbox on some setups, so the plugin attachment was removed when those modules were folded into `EditorKit`.
 
 ## Known limitations
 
@@ -168,11 +171,12 @@ rm -rf Ayyyy.xcodeproj
 xcodegen generate
 ```
 
-Or in Xcode: File → New → Project → iOS → Document App, delete its default sources, drag in `App/Sources/`, add `Packages/EditorCore`, `Packages/Runestone`, `Packages/AyyyySyntax` as local Swift Package dependencies, and link products `FileEncoding`, `LineEnding`, `LineSort`, `CharacterInfo`, `Runestone`, `AyyyySyntax`.
+Or in Xcode: File → New → Project → iOS → App, delete its default sources, drag in `App/Sources/`, add `Packages/EditorKit` and `Packages/TreeSitterTypst` as local Swift Package dependencies, and link products `FileEncoding`, `LineEnding`, `LineSort`, `CharacterInfo`, `EditorEngine`, `AyyyySyntax`.
 
 ## Upstream
 
-- CotEditor: https://github.com/coteditor/CotEditor (Apache 2.0)
-- Runestone: https://github.com/simonbs/Runestone (MIT)
+- CotEditor: https://github.com/coteditor/CotEditor (Apache 2.0) — modules `FileEncoding`, `LineEnding`, `LineSort`, `CharacterInfo`, `StringUtils`, `ValueRange` inside `EditorKit`.
+- Runestone: https://github.com/simonbs/Runestone (MIT) — vendored into `EditorKit` as `EditorEngine`.
+- tree-sitter and language grammars: https://github.com/tree-sitter (MIT) — pulled remotely via SwiftPM by `EditorKit`, plus a local Typst grammar at `Packages/TreeSitterTypst/`.
 
 See `NOTICE.md` for full attribution.
