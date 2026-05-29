@@ -1,92 +1,116 @@
 # ayyyy
 
-iPad-native plain-text/code editor. Built on **Runestone** for the editor surface, with **CotEditor** document-level features layered on top, and **most commands lifted into the iPadOS menu bar**.
+iPad-native plain-text/code editor with multi-window tabs, a launcher-style entry point on every new tab/window, and a Mac-style autosave model that keeps a recoverable draft of every dirty buffer in iCloud Drive.
 
 ## Status
 
-iOS 26 Simulator clean build verified. Ready to run from Xcode.
+iOS 26 simulator clean build verified.
 
 ## What's in the box
 
+### Launcher
+
+Every new tab/window opens onto a launcher surface — never a blank buffer. The launcher has four entry points:
+
+- **Open File…** — embeds `UIDocumentBrowserViewController` in-tab; picking a file flips the tab to editor mode in place. A Back chip returns to the launcher without closing the tab.
+- **From Clipboard** — seeds a fresh Untitled buffer with `UIPasteboard.general.string`.
+- **Templates** — grid of files from `Documents/Templates/` (seeded with Blank.txt, Notes.md, Data.csv on first launch). User-added templates surface automatically; default seeds are re-installed if missing (so app updates can ship new defaults) but never overwrite a user file.
+- **Unsaved Drafts** — list of `DraftRecord`s from the launcher's union of iCloud + local roots. Tapping a draft adopts its bytes into the active tab; the file is deleted from the synced folder (the "checkout"), so the same draft can't be open simultaneously on two devices. On close, the buffer is re-committed.
+
+The launcher renders inside the editor's text region, leaving the toolbar, status bar, and keyboard accessory intact. Switching tabs and coming back preserves it.
+
 ### Editor
 
-- Tree-sitter syntax highlighting via Runestone for **Bash, C, CSS, Go, HTML, JavaScript, Python, Ruby, Rust, Swift** (10 languages). Highlight queries vendored from CotEditor's `SyntaxParsers` package.
-- Configurable line numbers, line wrap, invisibles (tabs / spaces / line breaks / NBSP / soft line breaks), page guide.
-- Themes: Default (Runestone built-in), Light, Dark.
-- Adjustable font size (9–32 pt).
-- Tabs vs. spaces, configurable indent width (2/3/4/6/8 or any via Preferences).
-- Automatic character pair insertion (`()` `[]` `{}` `""` `''` `` `` ``).
-- Find / Find Next / Find Previous via Runestone's `UIFindInteraction` (system-presented).
-- Go to Line (⌘L) with bounds-checked input.
+- Tree-sitter syntax highlighting for **Bash, C, C++, CSS, Go, HTML, Java, JavaScript, LaTeX, Markdown, Python, Ruby, Rust, Swift, TypeScript, Typst** (16 languages). Grammars pulled via SwiftPM; highlight queries vendored from CotEditor's `SyntaxParsers` set plus locally-added equivalents.
+- Configurable line numbers, line wrap, invisibles (tabs / spaces / line breaks / NBSP), page guide, configurable overscroll.
+- Themes registered from a `PortedThemes` catalog (Default / Light / Dark + CotEditor's full set).
+- Font picker (system mono + system proportional families); adjustable size.
+- Tabs vs. spaces, configurable indent width.
+- Automatic character-pair insertion.
+- Find / Find Next / Find Previous via `UIFindInteraction`; multi-file search across open editors / file browsers / chosen folders.
+- Go to Line, Go to Matching Bracket, position back/forward history.
+- Code folding (fold at cursor, fold all, unfold all, fold selection block).
+- Bookmarks per line, jump-to-bookmark.
+- Outline sidebar (iPad) driven by tree-sitter language queries.
+- Per-line change-history gutter (green/yellow/red bars vs. last saved baseline).
+- Live match highlighting (current selection occurrences tinted everywhere).
+- Live spell check + walk-through Check Spelling sheet (Change / Ignore / Ignore All / Learn).
+- Sticky modifier keys + caret-jump utilities in the keyboard accessory (iPhone) / QuickType bar (iPad), plus the standard set when a hardware keyboard is attached.
+- Split view (horizontal / vertical) over the same document.
 
-### Document layer (CotEditor-derived modules in `EditorKit`)
+### Document, drafts, sessions
 
-- BOM-aware encoding detection on open, with declaration scanning.
-- Full encoding picker (every encoding the system knows) + Convert vs. **Re-interpret bytes** (original `Data` is retained, so re-decoding doesn't lose information).
-- Line-ending detection (LF / CR / CRLF / NEL / LS / PS), conversion on apply or save.
+- **Custom `PlainTextDocument`** (`@Observable`, not `FileDocument`) — works around an iOS 26.5 simulator FileProvider bug; loads via `URLSession.data(from:)` so cancellation actually aborts a hung pull.
+- BOM-aware encoding detection with declaration scanning; full system encoding picker (Convert vs. Re-interpret).
+- Line-ending detection (LF / CR / CRLF / NEL / LS / PS); conversion on apply or save.
+- Stale-source safeguard: per-document mtime + size baseline. Before ⌘S we re-read disk; on draft adoption we compare against the draft's recorded baseline. Three alert flavors: source missing, changed since draft was captured, changed since load.
+- Mac-style autosave to scratch + recoverable draft. Per-keystroke (800 ms debounced): scratch only. On close / app-background: also commits a draft to the synced Drafts folder. `commitDraft: Bool` on `autoSave` is the gate.
+- "Save as Draft" close-confirmation action and title-context-menu entry. Batch close (Other / To-the-Right / All) routes through one prompt when any tab is dirty.
+
+### Tabs and windows
+
+- Custom tab pills (iPad chrome) + tab switcher sheet (iPhone + iPad, expose-style with cards).
+- Tab pill long-press: pin, move to new window (iPad only), close.
+- Overview button long-press: open new tab, close this / others / right / all. Same `TabOverviewContextMenu` on iPhone status bar and iPad chrome.
+- Pinned tabs survive batch closes.
+- Closed-tab pool: ⇧⌘T reopens.
+- "Untitled" docs get a monotonic per-launch number ("Untitled", "Untitled 2", …).
+- Closing the last tab spawns a fresh launcher in its place; Cancel on a single-tab launcher closes the window (iPad) or is hidden (iPhone).
+- Session restoration applies only to involuntary kills (OOM, reboot). User-swiped sessions go away forever; the cold-launch filter in `AppDelegateBridge.configurationForConnecting` destroys iPadOS-level ghosts that don't have a backing `SessionRecord`.
+
+### iCloud sync
+
+`UbiquityContainer` resolves the app's iCloud Drive container (`iCloud.com.palefire.ayyyy`). With `NSUbiquitousContainerIsDocumentScopePublic = YES` in Info.plist, Drafts and Templates show up as "Ayyyy" in Files.app and sync across devices. The PreferencesView "iCloud" section gates this with a `Toggle("Sync via iCloud Drive")`; reads always union iCloud + local roots so flipping the toggle is non-destructive.
+
+### Text utilities
+
 - Sort Lines (case / numeric / locale / descending / keep-first-line via `EditorKit.LineSort`).
 - Unique Lines, Reverse Lines.
 - Trim Trailing Whitespace.
 - Case conversion (UPPER / lower / Capitalized).
+- Process Lines (per-line regex pipeline).
+- Canonize (pair-based substitutions).
+- Prefix / Suffix Lines, Select Lines Containing.
+- Zap Gremlins (clean non-printing characters).
+- Reflow paragraphs, organize footnotes.
+- Markdown wrappers (bold / italic / code / quote / etc.) + heading levels + table builder + structural inserts.
 - Character Inspector — Unicode glyph view with scalar table (`EditorKit.CharacterInfo`).
-- Insert Date & Time / File Path / Filename.
+- Insert Date / Time / File Path / Filename / Lorem Ipsum / File Contents / Folder Listing.
+- 10-slot Snippets (⌥⌘1–9, ⌥⌘0). Slots persist across launches; "Save Selection as Snippet" writes into the first empty slot.
+- 10-slot JavaScript Transforms (⌃⌥1–9, ⌃⌥0) — each slot runs a JS snippet against document or selection.
+- Clipboard history (⇧⌘V) with persistent ring buffer.
 
-### iPadOS menu bar
+### Markdown preview
 
-Everything above is reachable from the menu bar. Layout:
+`MarkdownPreviewScene` is its own `WindowGroup`. Pipes the focused editor's text through `marked.js` in a WKWebView; toolbar Share / Print → Save as PDF.
 
-```
-Ayyyy
-  Preferences…                   ⌘,
+### Menu bar + command palette
 
-File
-  New, Open, Save, Save As       (DocumentGroup)
-  Text Encoding ▸                (10 common + "More Encodings…")
-  Line Endings ▸                 (LF/CR/CRLF/NEL/LS/PS)
+Every command is registered in `CommandRegistry` with id, title, category, optional shortcut hint, synonyms, and `isEnabled` predicate. `CommandPaletteSheet` (⌘;) searches across them. The iPadOS menu bar is built from `EditorCommands` (a SwiftUI `Commands` builder) and mirrors the same set into native menus + keyboard shortcuts.
 
-Edit
-  Undo, Redo, Cut, Copy, Paste, Select All
-  Find…                          ⌘F
-  Find Next                      ⌘G
-  Find Previous                  ⇧⌘G
-  Go to Line…                    ⌘L
+### Preferences
 
-View
-  Show Line Numbers              ⇧⌘L
-  Wrap Lines                     ⌥⌘W
-  Show Invisibles                ⇧⌘I
-  Show Page Guide
-  Theme ▸                        (Default / Light / Dark)
-  Syntax Language ▸              (24 entries)
-  Indentation ▸                  (Tabs/Spaces + width 2/3/4/6/8)
+Opens as its own `WindowGroup` (separate window on iPad). Multi-tab Form:
 
-Text
-  Sort Lines…
-  Reverse Lines
-  Unique Lines
-  Trim Trailing Whitespace
-  Convert Case ▸                 (UPPER / lower / Capitalized)
-  Insert ▸                       (Date & Time / File Path / Filename)
-  Character Inspector…           ⌃⌘I
-  Auto-insert Character Pairs    (toggle)
-```
+- **Appearance** — theme, font face, font size, line height, ligatures.
+- **Editor** — line numbers, wrap, current-line highlight, bracket matching, page guide, status-bar items, change-history gutter, overscroll.
+- **Invisibles** — master toggle + per-kind glyphs (space / tab / newline / NBSP).
+- **Indentation** — tabs vs. spaces, indent width.
+- **Typing** — auto-correct, auto-capitalize, smart quotes, live spell check, auto-continue lists.
+- **Snippets** — manage the 10-slot pool.
+- **JS Transforms** — manage the 10-slot pool.
+- **Save** — trailing newline, trim trailing whitespace, save UTF-8 BOM.
+- **Defaults for new documents** — encoding, line ending, syntax language.
+- **Large files** — syntax-applies-up-to threshold (above which the document opens in plain-text mode).
+- **iCloud** — Sync via iCloud Drive toggle.
+- **Toolbar** — slot editor for the per-window in-app toolbar (symbol + command id per slot).
+- **System Text Replacement** — link to iOS Settings.
 
-### Preferences (separate window)
-
-Invoked via `⌘,` (or Ayyyy → Preferences…). Opens as its own scene via `WindowGroup(id: "preferences")` — on iPadOS this becomes a separate window in Stage Manager / Split View.
-
-Tabs:
-
-- **General** — Theme, Font Size.
-- **Editor** — Line Numbers, Wrap Lines, Invisibles, Page Guide column, Tabs vs. Spaces, Indent Width, Character Pairs.
-- **Format** — Default encoding, line endings, syntax language for new documents.
-- **Typing** — Auto-correct, Auto-capitalize, Smart Quotes & Dashes, Spelling check (all off by default — these change the bytes you type).
-
-All preferences persisted via `@AppStorage` and seeded into new `EditorState`s on document open.
+All preferences persisted via `@AppStorage`. New `EditorState`s seed from them at construction; `EditorPrefSync` mirrors live changes onto open documents.
 
 ### Status bar
 
-Bottom of every editor: `Ln, Col · char count, line count` on the left; tappable Encoding / Line Endings / Language pills on the right that open their respective pickers.
+Bottom of every editor (compact / wide variants by horizontal size class). Left: `Ln, Col · char count, line count`. Right: Encoding / Line Endings / Language pills that open their pickers. Live match count appears when match highlighting fires.
 
 ## Build & run
 
@@ -154,12 +178,11 @@ CotEditor's upstream `EditorCore/Package.swift` attaches `SwiftLintBuildToolPlug
 
 ## Known limitations
 
-- No outline view yet (Runestone doesn't render outlines directly; would need a sidebar driven by tree-sitter `outline.scm` queries).
-- No preferences-driven font *family* selection — only size. Monospaced system font is hard-coded.
-- No custom theme editor; themes are code-defined.
-- No Markdown / TypeScript / JSON syntax (Markdown's tree-sitter has no highlights query in CotEditor's set; TypeScript / JSON could be added by following the pattern in `Packages/AyyyySyntax/SyntaxRegistry.swift`).
-- No localization beyond what `EditorCore` already ships.
+- No custom theme editor; themes are code-defined (catalog in `PortedThemes`).
+- No localization beyond what the CotEditor-derived modules already ship.
 - No tests in the app target (packages have their own).
+- iCloud cross-device conflict UI not yet built (`NSFileVersion`-based resolution sheet is on the list). Simultaneous edits on two devices fall back to iCloud's default last-writer-wins.
+- App can intercept window-close to write drafts but not to present a dialog — iPadOS has no `windowShouldClose` equivalent. Drafts are flushed automatically on `.background` / `.onDisappear`; the launcher's Drafts list is the next-launch recovery surface.
 
 ## Recovery if `Ayyyy.xcodeproj` fails to open
 
