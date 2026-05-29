@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B2000090 /* TransformationsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000090 /* TransformationsTests.swift */; };
+		B2000091 /* FuzzyMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000091 /* FuzzyMatcherTests.swift */; };
 		B2000001 /* AyyyyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001 /* AyyyyApp.swift */; };
 		B2000002 /* PlainTextDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002 /* PlainTextDocument.swift */; };
 		B2000003 /* EditorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000003 /* EditorState.swift */; };
@@ -117,7 +119,21 @@
 		B2020006 /* AyyyySyntax in Frameworks */ = {isa = PBXBuildFile; productRef = B4000006 /* AyyyySyntax */; };
 /* End PBXBuildFile section */
 
+
+/* Begin PBXContainerItemProxy section */
+		BC000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B8000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B6000001;
+			remoteInfo = Ayyyy;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		B1010004 /* AyyyyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AyyyyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1000090 /* TransformationsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationsTests.swift; sourceTree = "<group>"; };
+		B1000091 /* FuzzyMatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuzzyMatcherTests.swift; sourceTree = "<group>"; };
 		B1000000 /* Ayyyy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ayyyy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B1000001 /* AyyyyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AyyyyApp.swift; sourceTree = "<group>"; };
 		B1000002 /* PlainTextDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainTextDocument.swift; sourceTree = "<group>"; };
@@ -240,6 +256,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B3000007 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -248,6 +271,7 @@
 			children = (
 				B5000010 /* App */,
 				B5000020 /* Packages */,
+				B5000022 /* AyyyyTests */,
 				B5000030 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -455,8 +479,18 @@
 			isa = PBXGroup;
 			children = (
 				B1000000 /* Ayyyy.app */,
+				B1010004 /* AyyyyTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B5000022 /* AyyyyTests */ = {
+			isa = PBXGroup;
+			children = (
+				B1000090 /* TransformationsTests.swift */,
+				B1000091 /* FuzzyMatcherTests.swift */,
+			);
+			path = AyyyyTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -486,6 +520,24 @@
 			productName = Ayyyy;
 			productReference = B1000000 /* Ayyyy.app */;
 			productType = "com.apple.product-type.application";
+		};
+		B6000002 /* AyyyyTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B7000003 /* Build configuration list for PBXNativeTarget "AyyyyTests" */;
+			buildPhases = (
+				B3000006 /* Sources */,
+				B3000007 /* Frameworks */,
+				B3000008 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				BB000001 /* PBXTargetDependency */,
+			);
+			name = AyyyyTests;
+			productName = AyyyyTests;
+			productReference = B1010004 /* AyyyyTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -519,6 +571,7 @@
 			projectRoot = "";
 			targets = (
 				B6000001 /* Ayyyy */,
+				B6000002 /* AyyyyTests */,
 			);
 		};
 /* End PBXProject section */
@@ -529,6 +582,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				B2010001 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B3000008 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -643,7 +703,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B3000006 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B2000090 /* TransformationsTests.swift in Sources */,
+				B2000091 /* FuzzyMatcherTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+
+/* Begin PBXTargetDependency section */
+		BB000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B6000001 /* Ayyyy */;
+			targetProxy = BC000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		BA000001 /* Debug */ = {
@@ -825,6 +903,44 @@
 			};
 			name = Release;
 		};
+		BA000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2T9LB27UWT;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.palefire.ayyyy.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ayyyy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Ayyyy";
+			};
+			name = Debug;
+		};
+		BA000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2T9LB27UWT;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.palefire.ayyyy.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ayyyy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Ayyyy";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -842,6 +958,15 @@
 			buildConfigurations = (
 				BA000003 /* Debug */,
 				BA000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B7000003 /* Build configuration list for PBXNativeTarget "AyyyyTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BA000005 /* Debug */,
+				BA000006 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

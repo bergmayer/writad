@@ -460,37 +460,48 @@ enum Transformations {
 
     /// Pieces are one line each **including the trailing line break**.
     /// Final piece carries no break if the source ends mid-line.
+    ///
+    /// Operates on Unicode scalars rather than `Character` because Swift
+    /// treats `\r\n` as a single extended grapheme cluster — iterating
+    /// by `Character` never matches `"\r"` or `"\n"` once the platform
+    /// has combined them, and CRLF-ended files would silently come out
+    /// as one giant line.
     private static func splitKeepingNewlines(_ text: String) -> [String] {
         var pieces: [String] = []
         var current = ""
-        var i = text.startIndex
-        while i < text.endIndex {
-            let ch = text[i]
-            current.append(ch)
-            if ch == "\n" {
-                pieces.append(current); current.removeAll(keepingCapacity: true)
-                i = text.index(after: i)
-            } else if ch == "\r" {
-                if let next = text.index(i, offsetBy: 1, limitedBy: text.endIndex),
-                   next < text.endIndex, text[next] == "\n" {
-                    current.append("\n")
-                    i = text.index(after: next)
+        let scalars = Array(text.unicodeScalars)
+        var i = 0
+        while i < scalars.count {
+            let s = scalars[i]
+            if s == "\r" {
+                current.unicodeScalars.append(s)
+                if i + 1 < scalars.count, scalars[i + 1] == "\n" {
+                    current.unicodeScalars.append(scalars[i + 1])
+                    i += 2
                 } else {
-                    i = text.index(after: i)
+                    i += 1
                 }
                 pieces.append(current); current.removeAll(keepingCapacity: true)
+            } else if s == "\n" {
+                current.unicodeScalars.append(s)
+                pieces.append(current); current.removeAll(keepingCapacity: true)
+                i += 1
             } else {
-                i = text.index(after: i)
+                current.unicodeScalars.append(s)
+                i += 1
             }
         }
         if !current.isEmpty { pieces.append(current) }
         return pieces
     }
 
+    /// "\r\n" is one extended grapheme cluster in Swift, so dropLast()
+    /// (count 1) is correct for it — `dropLast(2)` would over-drop into
+    /// the preceding character.
     private static func splitTrailingNewline(_ piece: String) -> (String, String) {
-        if piece.hasSuffix("\r\n") { return (String(piece.dropLast(2)), "\r\n") }
-        if piece.hasSuffix("\n")   { return (String(piece.dropLast()),  "\n") }
-        if piece.hasSuffix("\r")   { return (String(piece.dropLast()),  "\r") }
+        if piece.hasSuffix("\r\n") { return (String(piece.dropLast()), "\r\n") }
+        if piece.hasSuffix("\n")   { return (String(piece.dropLast()), "\n") }
+        if piece.hasSuffix("\r")   { return (String(piece.dropLast()), "\r") }
         return (piece, "")
     }
 
