@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ToolbarPreferencesTab: View {
 
-    @AppStorage(AppPreferenceKey.showToolbar) private var showToolbar: Bool = true
+    @Bindable private var prefs = AppPreferencesStore.shared
     @State private var config = ToolbarConfig.shared
     @State private var addingSlot: Bool = false
     @State private var editingIndex: Int?
@@ -10,7 +10,7 @@ struct ToolbarPreferencesTab: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Show toolbar at top of every window", isOn: $showToolbar)
+                Toggle("Show toolbar at top of every window", isOn: $prefs.showToolbar)
             } footer: {
                 Text("Tap an item to edit its icon or assigned command. Drag the handle to reorder.")
                     .font(.footnote)

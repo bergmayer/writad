@@ -2,11 +2,7 @@ import SwiftUI
 
 struct TypingPreferencesTab: View {
 
-    @AppStorage(AppPreferenceKey.autoCorrect) private var autoCorrect: Bool = false
-    @AppStorage(AppPreferenceKey.autoCapitalize) private var autoCapitalize: Bool = false
-    @AppStorage(AppPreferenceKey.smartQuotes) private var smartQuotes: Bool = false
-    @AppStorage(AppPreferenceKey.spellCheck) private var spellCheck: Bool = false
-    @AppStorage(AppPreferenceKey.autoContinueLists) private var autoContinueLists: Bool = true
+    @Bindable private var prefs = AppPreferencesStore.shared
 
     @State private var snippetsStore = SnippetsStore.shared
     @State private var editingSnippet: Snippet?
@@ -17,10 +13,10 @@ struct TypingPreferencesTab: View {
     var body: some View {
         Form {
             Section("System Input Assistance") {
-                Toggle("Auto-correct", isOn: $autoCorrect)
-                Toggle("Auto-capitalize", isOn: $autoCapitalize)
-                Toggle("Smart Quotes & Dashes", isOn: $smartQuotes)
-                Toggle("Live Spell Check", isOn: $spellCheck)
+                Toggle("Auto-correct", isOn: $prefs.autoCorrect)
+                Toggle("Auto-capitalize", isOn: $prefs.autoCapitalize)
+                Toggle("Smart Quotes & Dashes", isOn: $prefs.smartQuotes)
+                Toggle("Live Spell Check", isOn: $prefs.spellCheck)
             }
 
             Section {
@@ -30,7 +26,7 @@ struct TypingPreferencesTab: View {
             }
 
             Section {
-                Toggle("Auto-continue lists", isOn: $autoContinueLists)
+                Toggle("Auto-continue lists", isOn: $prefs.autoContinueLists)
             } header: {
                 Text("Editing Helpers")
             } footer: {

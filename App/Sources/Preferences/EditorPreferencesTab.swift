@@ -28,71 +28,48 @@ private struct CheckboxRow: View {
 
 struct EditorPreferencesTab: View {
 
-    @AppStorage(AppPreferenceKey.fontSize) private var fontSize: Double = 14
-    @AppStorage(AppPreferenceKey.showLineNumbers) private var showLineNumbers: Bool = true
-    @AppStorage(AppPreferenceKey.wrapLines) private var wrapLines: Bool = true
-    @AppStorage(AppPreferenceKey.overscroll) private var overscroll: Bool = true
-    @AppStorage(AppPreferenceKey.showInvisibles) private var showInvisibles: Bool = false
-    @AppStorage(AppPreferenceKey.showInvisibleSpace) private var showInvisibleSpace: Bool = true
-    @AppStorage(AppPreferenceKey.showInvisibleTab) private var showInvisibleTab: Bool = true
-    @AppStorage(AppPreferenceKey.showInvisibleNewline) private var showInvisibleNewline: Bool = true
-    @AppStorage(AppPreferenceKey.showInvisibleNonBreakingSpace) private var showInvisibleNBSP: Bool = true
-    @AppStorage(AppPreferenceKey.showPageGuide) private var showPageGuide: Bool = false
-    @AppStorage(AppPreferenceKey.pageGuideColumn) private var pageGuideColumn: Int = 80
-    @AppStorage(AppPreferenceKey.usesTabs) private var usesTabs: Bool = false
-    @AppStorage(AppPreferenceKey.indentWidth) private var indentWidth: Int = 4
-    @AppStorage(AppPreferenceKey.insertCharacterPairs) private var insertCharacterPairs: Bool = true
-    @AppStorage(AppPreferenceKey.themeName) private var themeRaw: String = AppThemeName.automatic.rawValue
-    @AppStorage(AppPreferenceKey.fontName) private var fontNameRaw: String = EditorFont.systemMono.rawValue
-
-    @AppStorage(AppPreferenceKey.defaultEncodingRaw) private var defaultEncodingRaw: Int = Int(String.Encoding.utf8.rawValue)
-    @AppStorage(AppPreferenceKey.defaultLineEndingRaw) private var defaultLineEndingRaw: String = "\n"
-    @AppStorage(AppPreferenceKey.defaultLanguage) private var defaultLanguageRaw: String = LanguageIdentifier.plain.rawValue
-    @AppStorage(AppPreferenceKey.ensureTrailingNewline) private var ensureTrailingNewline: Bool = false
-    @AppStorage(AppPreferenceKey.trimTrailingWhitespaceOnSave) private var trimTrailingWhitespace: Bool = false
-    @AppStorage(AppPreferenceKey.syntaxLimitBytes) private var syntaxLimitRaw: Int = SyntaxLimit.up5MB.rawValue
-    @AppStorage(AppPreferenceKey.iCloudSyncEnabled) private var iCloudSyncEnabled: Bool = true
+    @Bindable private var prefs = AppPreferencesStore.shared
 
     /// Int↔Double bridge — live editor/menu zoom callers use Int.
     private var fontSizeBinding: Binding<Int> {
         Binding(
-            get: { Int(fontSize.rounded()) },
-            set: { fontSize = Double($0) }
+            get: { Int(prefs.fontSize.rounded()) },
+            set: { prefs.fontSize = Double($0) }
         )
     }
 
     private var defaultEncodingBinding: Binding<UInt> {
         Binding(
-            get: { UInt(defaultEncodingRaw) },
-            set: { defaultEncodingRaw = Int($0) }
+            get: { UInt(prefs.defaultEncodingRaw) },
+            set: { prefs.defaultEncodingRaw = Int($0) }
         )
     }
 
     private var defaultLineEndingBinding: Binding<LineEnding> {
         Binding(
-            get: { LineEnding(rawValue: defaultLineEndingRaw.first ?? "\n") ?? .lf },
-            set: { defaultLineEndingRaw = String($0.rawValue) }
+            get: { LineEnding(rawValue: prefs.defaultLineEndingRaw.first ?? "\n") ?? .lf },
+            set: { prefs.defaultLineEndingRaw = String($0.rawValue) }
         )
     }
 
     private var defaultLanguageBinding: Binding<LanguageIdentifier> {
         Binding(
-            get: { LanguageIdentifier(rawValue: defaultLanguageRaw) ?? .plain },
-            set: { defaultLanguageRaw = $0.rawValue }
+            get: { LanguageIdentifier(rawValue: prefs.defaultLanguage) ?? .plain },
+            set: { prefs.defaultLanguage = $0.rawValue }
         )
     }
 
     private var syntaxLimitBinding: Binding<SyntaxLimit> {
         Binding(
-            get: { SyntaxLimit(rawValue: syntaxLimitRaw) ?? .up5MB },
-            set: { syntaxLimitRaw = $0.rawValue }
+            get: { SyntaxLimit(rawValue: prefs.syntaxLimitBytes) ?? .up5MB },
+            set: { prefs.syntaxLimitBytes = $0.rawValue }
         )
     }
 
     private var themeBinding: Binding<AppThemeName> {
         Binding(
-            get: { AppThemeName(stored: themeRaw) },
-            set: { themeRaw = $0.rawValue }
+            get: { AppThemeName(stored: prefs.themeName) },
+            set: { prefs.themeName = $0.rawValue }
         )
     }
 
@@ -115,7 +92,7 @@ struct EditorPreferencesTab: View {
             }
 
             Section("Display") {
-                Picker("Font", selection: $fontNameRaw) {
+                Picker("Font", selection: $prefs.fontName) {
                     // Monospaced first — typical code-editor pick.
                     Section("Monospaced") {
                         ForEach(EditorFont.allCases.filter(\.isMonospaced), id: \.rawValue) { face in
@@ -135,13 +112,13 @@ struct EditorPreferencesTab: View {
                             .frame(minWidth: 56, alignment: .trailing)
                     }
                 }
-                Toggle("Show Line Numbers", isOn: $showLineNumbers)
-                Toggle("Wrap Lines", isOn: $wrapLines)
-                Toggle("Scroll Past Last Line", isOn: $overscroll)
-                Toggle("Show Page Guide", isOn: $showPageGuide)
+                Toggle("Show Line Numbers", isOn: $prefs.showLineNumbers)
+                Toggle("Wrap Lines", isOn: $prefs.wrapLines)
+                Toggle("Scroll Past Last Line", isOn: $prefs.overscroll)
+                Toggle("Show Page Guide", isOn: $prefs.showPageGuide)
                 LabeledContent("Page Guide Column") {
-                    Stepper(value: $pageGuideColumn, in: 20...200, step: 1) {
-                        Text("\(pageGuideColumn)")
+                    Stepper(value: $prefs.pageGuideColumn, in: 20...200, step: 1) {
+                        Text("\(prefs.pageGuideColumn)")
                             .monospacedDigit()
                             .frame(minWidth: 40, alignment: .trailing)
                     }
@@ -149,11 +126,11 @@ struct EditorPreferencesTab: View {
             }
 
             Section {
-                Toggle("Show Invisible Characters", isOn: $showInvisibles)
-                CheckboxRow(label: "Space",              isOn: $showInvisibleSpace)
-                CheckboxRow(label: "Tab",                isOn: $showInvisibleTab)
-                CheckboxRow(label: "Newline",            isOn: $showInvisibleNewline)
-                CheckboxRow(label: "Non-Breaking Space", isOn: $showInvisibleNBSP)
+                Toggle("Show Invisible Characters", isOn: $prefs.showInvisibles)
+                CheckboxRow(label: "Space",              isOn: $prefs.showInvisibleSpace)
+                CheckboxRow(label: "Tab",                isOn: $prefs.showInvisibleTab)
+                CheckboxRow(label: "Newline",            isOn: $prefs.showInvisibleNewline)
+                CheckboxRow(label: "Non-Breaking Space", isOn: $prefs.showInvisibleNonBreakingSpace)
             } header: {
                 Text("Invisible Characters")
             } footer: {
@@ -161,13 +138,13 @@ struct EditorPreferencesTab: View {
             }
 
             Section("Indentation") {
-                Picker("Indent With", selection: $usesTabs) {
+                Picker("Indent With", selection: $prefs.usesTabs) {
                     Text("Spaces").tag(false)
                     Text("Tabs").tag(true)
                 }
                 LabeledContent("Width") {
-                    Stepper(value: $indentWidth, in: 1...12, step: 1) {
-                        Text("\(indentWidth)")
+                    Stepper(value: $prefs.indentWidth, in: 1...12, step: 1) {
+                        Text("\(prefs.indentWidth)")
                             .monospacedDigit()
                             .frame(minWidth: 30, alignment: .trailing)
                     }
@@ -175,7 +152,7 @@ struct EditorPreferencesTab: View {
             }
 
             Section("Editing") {
-                Toggle("Insert Closing Brackets / Quotes Automatically", isOn: $insertCharacterPairs)
+                Toggle("Insert Closing Brackets / Quotes Automatically", isOn: $prefs.insertCharacterPairs)
             }
 
             Section("Defaults for New Documents") {
@@ -198,8 +175,8 @@ struct EditorPreferencesTab: View {
             }
 
             Section {
-                Toggle("Ensure file ends with a newline", isOn: $ensureTrailingNewline)
-                Toggle("Trim trailing whitespace", isOn: $trimTrailingWhitespace)
+                Toggle("Ensure file ends with a newline", isOn: $prefs.ensureTrailingNewline)
+                Toggle("Trim trailing whitespace", isOn: $prefs.trimTrailingWhitespaceOnSave)
             } header: {
                 Text("On Save")
             } footer: {
@@ -230,7 +207,7 @@ struct EditorPreferencesTab: View {
     private var iCloudSection: some View {
         let signedIn = UbiquityContainer.isAvailable
         Section {
-            Toggle("Sync via iCloud Drive", isOn: $iCloudSyncEnabled)
+            Toggle("Sync via iCloud Drive", isOn: $prefs.iCloudSyncEnabled)
                 .disabled(!signedIn)
         } header: {
             Text("iCloud")
