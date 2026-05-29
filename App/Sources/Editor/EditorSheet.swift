@@ -1,7 +1,7 @@
 import Foundation
 
 /// Drives `.sheet(item:)` on the active editor scene via
-/// `AppStateBus.shared.editing.presentedSheet`.
+/// `AppStateBus.shared.presentation.presentedSheet`.
 enum EditorSheet: Identifiable {
     case encodingPicker
     case lineEndingPicker

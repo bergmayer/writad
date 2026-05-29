@@ -72,10 +72,10 @@ struct EditorScene: View {
                     // (Stage Manager / Slide Over), leaving the
                     // editor stuck at a smaller-than-window size.
                     // Plain opacity is layout-safe and good enough.
-                    .opacity(bus.editing.tabSwitcherActive ? 0 : 1)
-                    .allowsHitTesting(!bus.editing.tabSwitcherActive)
+                    .opacity(bus.presentation.tabSwitcherActive ? 0 : 1)
+                    .allowsHitTesting(!bus.presentation.tabSwitcherActive)
 
-                if bus.editing.tabSwitcherActive {
+                if bus.presentation.tabSwitcherActive {
                     TabSwitcherView(
                         session: session,
                         namespace: tabSwitcherNS,
@@ -92,7 +92,7 @@ struct EditorScene: View {
         .focusedSceneValue(\.presentEditorSheet, SheetPresenter { [session] sheet in
             AppStateBus.shared.scenes.currentSession = session
             AppStateBus.shared.scenes.currentEditor = session.activeTab.state
-            AppStateBus.shared.editing.presentedSheet = sheet
+            AppStateBus.shared.presentation.presentedSheet = sheet
         })
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
@@ -198,7 +198,7 @@ struct EditorScene: View {
                 applyHomeShortcut(shortcut)
                 bus.scenes.pendingShortcut = nil
             }
-            .onChange(of: bus.editing.revertRequestCount) { _, _ in
+            .onChange(of: bus.presentation.revertRequestCount) { _, _ in
                 guard let url = document.fileURL else { return }
                 try? document.load(from: url)
                 state.text = document.text
@@ -341,7 +341,7 @@ struct EditorScene: View {
                 tab.state.languageIdentifier = LanguageRegistry.identifier(for: resolved.url)
                 tab.state.savedBaselineText = ""
                 tab.kind = .editor
-                bus.editing.sourceStaleCheck = .missing(
+                bus.presentation.sourceStaleCheck = .missing(
                     tabID: tab.id,
                     displayName: resolved.url.lastPathComponent
                 )
@@ -370,7 +370,7 @@ struct EditorScene: View {
                let recordedSize = draft.metadata?.sourceSize,
                let liveAttrs = attrs,
                liveAttrs.mtime != recordedMtime || liveAttrs.size != recordedSize {
-                bus.editing.sourceStaleCheck = .changedOnAdopt(
+                bus.presentation.sourceStaleCheck = .changedOnAdopt(
                     tabID: tab.id,
                     displayName: resolved.url.lastPathComponent
                 )
@@ -399,7 +399,7 @@ struct EditorScene: View {
 
     private func dismissSwitcher() {
         withAnimation(.appSwitcherMorph) {
-            bus.editing.tabSwitcherActive = false
+            bus.presentation.tabSwitcherActive = false
         }
     }
 
@@ -418,7 +418,7 @@ struct EditorScene: View {
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let data = try? Data(contentsOf: url) else { return }
         guard data.count <= 5 * 1024 * 1024 else {
-            bus.editing.openErrorMessage = "\(url.lastPathComponent) is too large to insert (>5 MB)."
+            bus.presentation.openErrorMessage = "\(url.lastPathComponent) is too large to insert (>5 MB)."
             return
         }
         if let s = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) {
@@ -553,7 +553,7 @@ struct EditorScene: View {
                 document.isLoading = false
                 return
             } catch {
-                AppStateBus.shared.editing.openErrorMessage = error.localizedDescription
+                AppStateBus.shared.presentation.openErrorMessage = error.localizedDescription
                 return
             }
             if Task.isCancelled { return }

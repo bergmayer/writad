@@ -125,7 +125,7 @@ final class JSTransformStore {
 
 /// Runs a slot's JavaScript against the slot's scoped input and writes
 /// the result back to the editor. Captured exceptions surface through
-/// `bus.editing.openErrorMessage` rather than crashing the JSContext.
+/// `bus.presentation.openErrorMessage` rather than crashing the JSContext.
 @MainActor
 enum JSTransformRunner {
 
@@ -153,7 +153,7 @@ enum JSTransformRunner {
         case .ok(let output):
             textView.replace(replaceRange, withText: output)
         case .failed(let message):
-            AppStateBus.shared.editing.openErrorMessage =
+            AppStateBus.shared.presentation.openErrorMessage =
                 "\(slot.displayName): \(message)"
         }
     }

@@ -34,7 +34,7 @@ struct EditorCommands: Commands {
         if let focusedPresenter {
             focusedPresenter(sheet)
         } else {
-            bus.editing.presentedSheet = sheet
+            bus.presentation.presentedSheet = sheet
         }
     }
 
@@ -111,7 +111,7 @@ struct EditorCommands: Commands {
             .disabled(!isEnabled)
             Divider()
             Button("Revert to Saved") {
-                focused { AppStateBus.shared.editing.revertRequestCount += 1 }
+                focused { AppStateBus.shared.presentation.revertRequestCount += 1 }
             }
             .disabled(!isEnabled)
             Button("Show Revisions…") { presentSheet(.revisions) }

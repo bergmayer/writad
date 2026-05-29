@@ -186,8 +186,8 @@ private final class IPadAccessoryObserver {
             return
         }
         let bus = AppStateBus.shared
-        if bus.editing.presentedSheet != nil {
-            bus.editing.presentedSheet = nil
+        if bus.presentation.presentedSheet != nil {
+            bus.presentation.presentedSheet = nil
             return
         }
         if host.selectedRange.length > 0 {
@@ -613,8 +613,8 @@ final class EditorAccessoryView: UIInputView {
             return
         }
         let bus = AppStateBus.shared
-        if bus.editing.presentedSheet != nil {
-            bus.editing.presentedSheet = nil
+        if bus.presentation.presentedSheet != nil {
+            bus.presentation.presentedSheet = nil
             return
         }
         if let host, host.selectedRange.length > 0 {

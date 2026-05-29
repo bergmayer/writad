@@ -190,7 +190,7 @@ struct FileBrowserRepresentable: UIViewControllerRepresentable {
             let message = error?.localizedDescription
                 ?? "Couldn't open \(documentURL.lastPathComponent)."
             Task { @MainActor in
-                AppStateBus.shared.editing.openErrorMessage = message
+                AppStateBus.shared.presentation.openErrorMessage = message
             }
         }
 

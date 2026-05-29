@@ -39,7 +39,7 @@ final class RevisionStore {
 
     /// Failure modes the public API surfaces. Internally these are
     /// caught at the boundary (e.g. `PlainTextDocument.autoSave`),
-    /// routed to `AppStateBus.shared.editing.openErrorMessage`, and never
+    /// routed to `AppStateBus.shared.presentation.openErrorMessage`, and never
     /// silently swallowed.
     enum Failure: LocalizedError {
         case directoryCreateFailed(URL, any Error)

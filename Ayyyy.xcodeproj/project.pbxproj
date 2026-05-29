@@ -82,7 +82,7 @@
 		B200004D /* FindState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100004D /* FindState.swift */; };
 		B200004E /* SceneRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100004E /* SceneRouter.swift */; };
 		B200004F /* PickerIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100004F /* PickerIntents.swift */; };
-		B2000050 /* EditingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000050 /* EditingState.swift */; };
+		B2000050 /* PresentationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000050 /* PresentationState.swift */; };
 		B2000051 /* PendingURLs.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000051 /* PendingURLs.swift */; };
 		B2000052 /* TabModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000052 /* TabModel.swift */; };
 		B2000053 /* EditorSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000053 /* EditorSession.swift */; };
@@ -194,7 +194,7 @@
 		B100004D /* FindState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindState.swift; sourceTree = "<group>"; };
 		B100004E /* SceneRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneRouter.swift; sourceTree = "<group>"; };
 		B100004F /* PickerIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickerIntents.swift; sourceTree = "<group>"; };
-		B1000050 /* EditingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingState.swift; sourceTree = "<group>"; };
+		B1000050 /* PresentationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationState.swift; sourceTree = "<group>"; };
 		B1000051 /* PendingURLs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingURLs.swift; sourceTree = "<group>"; };
 		B1000052 /* TabModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabModel.swift; sourceTree = "<group>"; };
 		B1000053 /* EditorSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSession.swift; sourceTree = "<group>"; };
@@ -330,7 +330,7 @@
 				B100004D /* FindState.swift */,
 				B100004E /* SceneRouter.swift */,
 				B100004F /* PickerIntents.swift */,
-				B1000050 /* EditingState.swift */,
+				B1000050 /* PresentationState.swift */,
 				B1000051 /* PendingURLs.swift */,
 				B1000052 /* TabModel.swift */,
 				B1000053 /* EditorSession.swift */,
@@ -606,7 +606,7 @@
 				B200004D /* FindState.swift in Sources */,
 				B200004E /* SceneRouter.swift in Sources */,
 				B200004F /* PickerIntents.swift in Sources */,
-				B2000050 /* EditingState.swift in Sources */,
+				B2000050 /* PresentationState.swift in Sources */,
 				B2000051 /* PendingURLs.swift in Sources */,
 				B2000052 /* TabModel.swift in Sources */,
 				B2000053 /* EditorSession.swift in Sources */,

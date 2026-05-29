@@ -398,7 +398,7 @@ final class PlainTextDocument {
         do {
             return try body()
         } catch {
-            AppStateBus.shared.editing.openErrorMessage = error.localizedDescription
+            AppStateBus.shared.presentation.openErrorMessage = error.localizedDescription
             return nil
         }
     }

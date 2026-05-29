@@ -8,7 +8,7 @@ import LineSort
 enum CommandActions {
 
     static func presentSheet(_ sheet: EditorSheet) {
-        Self.context.editing.presentedSheet = sheet
+        Self.context.presentation.presentedSheet = sheet
     }
 
     static func newWindow() {
@@ -33,19 +33,19 @@ enum CommandActions {
     }
 
     static func revertToSaved() {
-        Self.context.editing.revertRequestCount += 1
+        Self.context.presentation.revertRequestCount += 1
     }
 
     static func presentPreferences() {
         if DeviceIdiom.isPhone {
-            Self.context.editing.presentedSheet = .preferences
+            Self.context.presentation.presentedSheet = .preferences
         } else {
             Self.context.scenes.openWindow?(.preferences)
         }
     }
 
     static func presentCommandPalette() {
-        Self.context.editing.presentedSheet = .commandPalette
+        Self.context.presentation.presentedSheet = .commandPalette
     }
 
     /// Window destination: one fresh browser scene per pick. Tab
@@ -57,7 +57,7 @@ enum CommandActions {
             Self.context.scenes.requestOpenWindow(.fileBrowser)
             Self.context.scenes.openWindow?(.fileBrowser)
         case .tab:
-            Self.context.editing.presentedSheet = .fileBrowser
+            Self.context.presentation.presentedSheet = .fileBrowser
         }
     }
 
@@ -129,7 +129,7 @@ enum CommandActions {
 
     static func showTabSwitcher() {
         withAnimation(.appSwitcherMorph) {
-            Self.context.editing.tabSwitcherActive.toggle()
+            Self.context.presentation.tabSwitcherActive.toggle()
         }
     }
 

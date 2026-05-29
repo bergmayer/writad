@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor
 @Observable
-final class EditingState {
+final class PresentationState {
 
     var presentedSheet: EditorSheet?
     var tabSwitcherActive: Bool = false

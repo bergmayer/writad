@@ -13,7 +13,7 @@ final class AppStateBus: CommandContext {
     var find    = FindState()
     var scenes  = SceneRouter()
     var pickers = PickerIntents()
-    var editing = EditingState()
+    var presentation = PresentationState()
     var pending = PendingURLs()
 
     private init() {}
@@ -26,7 +26,7 @@ protocol CommandContext: AnyObject {
     var find: FindState     { get }
     var scenes: SceneRouter  { get }
     var pickers: PickerIntents { get }
-    var editing: EditingState  { get }
+    var presentation: PresentationState  { get }
     var pending: PendingURLs   { get }
 }
 

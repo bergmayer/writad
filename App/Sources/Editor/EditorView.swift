@@ -61,15 +61,15 @@ struct EditorView: View {
             if document.isLoading { loadingOverlay }
         }
         // isActive gate: shared bus flag surfaces only on the focused window.
-        .sheet(item: isActive ? $bus.editing.presentedSheet : .constant(nil)) { sheet in
+        .sheet(item: isActive ? $bus.presentation.presentedSheet : .constant(nil)) { sheet in
             sheetContent(for: sheet)
         }
         .alert(
             "Couldn't open file",
             isPresented: openErrorAlertBinding,
-            presenting: bus.editing.openErrorMessage
+            presenting: bus.presentation.openErrorMessage
         ) { _ in
-            Button("OK") { bus.editing.openErrorMessage = nil }
+            Button("OK") { bus.presentation.openErrorMessage = nil }
         } message: { message in
             Text(message)
         }
@@ -77,9 +77,9 @@ struct EditorView: View {
         // an anchor, and close paths come from disparate places (tab
         // strip, switcher, ⌘W, palette) with no single sensible anchor.
         .alert(
-            "Close \(bus.editing.pendingClose?.displayName ?? "tab")?",
+            "Close \(bus.presentation.pendingClose?.displayName ?? "tab")?",
             isPresented: pendingCloseBinding,
-            presenting: bus.editing.pendingClose
+            presenting: bus.presentation.pendingClose
         ) { pending in
             // Saved files write back to the existing URL; untitled
             // buffers open Save As, then the tab closes.
@@ -107,15 +107,15 @@ struct EditorView: View {
         .modifier(StaleSourceAlertModifier(
             title: staleAlertTitle,
             presented: staleCheckBinding,
-            check: bus.editing.sourceStaleCheck,
-            cancel: { bus.editing.sourceStaleCheck = nil }
+            check: bus.presentation.sourceStaleCheck,
+            cancel: { bus.presentation.sourceStaleCheck = nil }
         ))
         // Fires for Close Other / Close to Right / Close All when at least
         // one tab in the set is dirty. Extracted for same type-checker
         // reason as the stale alert.
         .modifier(BatchCloseAlertModifier(
             presented: pendingBatchCloseBinding,
-            pending: bus.editing.pendingBatchClose,
+            pending: bus.presentation.pendingBatchClose,
             message: batchCloseMessage
         ))
         .onAppear {
@@ -157,7 +157,7 @@ struct EditorView: View {
         // movement within the same word, never while another sheet is up.
         .onChange(of: state.selectedRange) { oldValue, newValue in
             guard newValue.length == 0,
-                  AppStateBus.shared.editing.presentedSheet == nil,
+                  AppStateBus.shared.presentation.presentedSheet == nil,
                   let actions = state.textView,
                   let entered = actions.misspellingRange(at: newValue.location),
                   actions.misspellingRange(at: oldValue.location) != entered
@@ -229,7 +229,7 @@ struct EditorView: View {
     private var pendingCloseBinding: Binding<Bool> {
         Binding(
             get: {
-                guard let pending = bus.editing.pendingClose else { return false }
+                guard let pending = bus.presentation.pendingClose else { return false }
                 let mySession = bus.scenes.allOpenSessions.first { session in
                     session.tabs.contains { $0.state === state }
                 }
@@ -239,7 +239,7 @@ struct EditorView: View {
                 return ObjectIdentifier(mySession) == pending.sessionID
             },
             set: { newValue in
-                if !newValue { bus.editing.pendingClose = nil }
+                if !newValue { bus.presentation.pendingClose = nil }
             }
         )
     }
@@ -248,13 +248,13 @@ struct EditorView: View {
     private var pendingBatchCloseBinding: Binding<Bool> {
         Binding(
             get: {
-                guard let pending = bus.editing.pendingBatchClose,
+                guard let pending = bus.presentation.pendingBatchClose,
                       let mySession = session
                 else { return false }
                 return ObjectIdentifier(mySession) == pending.sessionID
             },
             set: { newValue in
-                if !newValue { bus.editing.pendingBatchClose = nil }
+                if !newValue { bus.presentation.pendingBatchClose = nil }
             }
         )
     }
@@ -271,7 +271,7 @@ struct EditorView: View {
     private var staleCheckBinding: Binding<Bool> {
         Binding(
             get: {
-                guard let check = bus.editing.sourceStaleCheck else { return false }
+                guard let check = bus.presentation.sourceStaleCheck else { return false }
                 let tabID: UUID
                 switch check {
                 case .missing(let t, _), .changedOnAdopt(let t, _), .changedOnSave(let t, _):
@@ -280,13 +280,13 @@ struct EditorView: View {
                 return session?.tabs.contains(where: { $0.id == tabID }) ?? false
             },
             set: { newValue in
-                if !newValue { bus.editing.sourceStaleCheck = nil }
+                if !newValue { bus.presentation.sourceStaleCheck = nil }
             }
         )
     }
 
     private var staleAlertTitle: String {
-        switch bus.editing.sourceStaleCheck {
+        switch bus.presentation.sourceStaleCheck {
         case .missing:        return "Source file missing"
         case .changedOnAdopt: return "Source file changed"
         case .changedOnSave:  return "Source file changed"
@@ -300,9 +300,9 @@ struct EditorView: View {
 
     private var openErrorAlertBinding: Binding<Bool> {
         Binding(
-            get: { isActive && bus.editing.openErrorMessage != nil },
+            get: { isActive && bus.presentation.openErrorMessage != nil },
             set: { newValue in
-                if !newValue { bus.editing.openErrorMessage = nil }
+                if !newValue { bus.presentation.openErrorMessage = nil }
             }
         )
     }

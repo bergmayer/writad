@@ -51,7 +51,7 @@ extension CommandActions {
     static func requestCloseTab(_ tabID: UUID, in session: EditorSession) {
         guard let tab = session.tabs.first(where: { $0.id == tabID }) else { return }
         if shouldWarnBeforeClose(tab) {
-            Self.context.editing.pendingClose = PendingClose(
+            Self.context.presentation.pendingClose = PendingClose(
                 sessionID: ObjectIdentifier(session),
                 tabID: tabID,
                 displayName: tab.document.displayName,
@@ -66,7 +66,7 @@ extension CommandActions {
     /// ClosedTabsStore — a deliberate throw-away mustn't be
     /// resurrectable via ⇧⌘T. Drops the scratch shadow too.
     static func confirmDiscardAndClose(_ pending: PendingClose) {
-        defer { Self.context.editing.pendingClose = nil }
+        defer { Self.context.presentation.pendingClose = nil }
         guard let (session, tab) = Self.resolveSession(for: pending) else { return }
         tab.document.deleteScratchFile()
         session.closeTab(pending.tabID, disposition: .discard)
@@ -77,24 +77,24 @@ extension CommandActions {
     /// tab — closing would silently destroy the buffer.
     static func confirmSaveAndClose(_ pending: PendingClose) {
         guard let (session, tab) = Self.resolveSession(for: pending) else {
-            Self.context.editing.pendingClose = nil
+            Self.context.presentation.pendingClose = nil
             return
         }
         guard tab.document.fileURL != nil else {
             Self.context.pickers.pending = .saveAs
-            Self.context.editing.pendingClose = nil
+            Self.context.presentation.pendingClose = nil
             return
         }
         do {
             try tab.document.save()
         } catch {
-            Self.context.editing.openErrorMessage =
+            Self.context.presentation.openErrorMessage =
                 "Couldn't save \(pending.displayName): \(error.localizedDescription)"
-            Self.context.editing.pendingClose = nil
+            Self.context.presentation.pendingClose = nil
             return
         }
         session.closeTab(pending.tabID)
-        Self.context.editing.pendingClose = nil
+        Self.context.presentation.pendingClose = nil
     }
 
     /// "Save as Draft" path from the close dialog + title menu:
@@ -104,7 +104,7 @@ extension CommandActions {
     /// shape as autoSave but synchronous to the user's tap so we
     /// don't lose the last keystroke when the debounce hadn't fired.
     static func saveAsDraftAndClose(_ pending: PendingClose) {
-        defer { Self.context.editing.pendingClose = nil }
+        defer { Self.context.presentation.pendingClose = nil }
         guard let (session, tab) = Self.resolveSession(for: pending) else { return }
         snapshotDraft(for: tab)
         session.closeTab(pending.tabID)
@@ -130,7 +130,7 @@ extension CommandActions {
     }
 
     static func cancelPendingClose() {
-        Self.context.editing.pendingClose = nil
+        Self.context.presentation.pendingClose = nil
     }
 
     // MARK: - Stale-source safeguard
@@ -149,7 +149,7 @@ extension CommandActions {
            let loadMtime = tab.document.sourceMtimeAtLoad,
            let loadSize = tab.document.sourceSizeAtLoad,
            attrs.mtime != loadMtime || attrs.size != loadSize {
-            Self.context.editing.sourceStaleCheck = .changedOnSave(
+            Self.context.presentation.sourceStaleCheck = .changedOnSave(
                 tabID: tab.id,
                 displayName: tab.document.displayName
             )
@@ -162,8 +162,8 @@ extension CommandActions {
     /// check and writes over whatever's there now. The user
     /// acknowledged data loss.
     static func forceSaveAfterStale() {
-        defer { Self.context.editing.sourceStaleCheck = nil }
-        guard let check = Self.context.editing.sourceStaleCheck,
+        defer { Self.context.presentation.sourceStaleCheck = nil }
+        guard let check = Self.context.presentation.sourceStaleCheck,
               let (_, tab) = resolveTab(for: check)
         else { return }
         _ = performSave(tab: tab)
@@ -173,8 +173,8 @@ extension CommandActions {
     /// in-memory state and re-reads the source from disk. Lossy
     /// for whatever wasn't yet ⌘S'd.
     static func reloadAfterStale() {
-        defer { Self.context.editing.sourceStaleCheck = nil }
-        guard let check = Self.context.editing.sourceStaleCheck,
+        defer { Self.context.presentation.sourceStaleCheck = nil }
+        guard let check = Self.context.presentation.sourceStaleCheck,
               let (_, tab) = resolveTab(for: check),
               let url = tab.document.fileURL
         else { return }
@@ -188,7 +188,7 @@ extension CommandActions {
                 tab.state.fileURL = url
                 tab.state.savedBaselineText = tab.document.text
             } catch {
-                Self.context.editing.openErrorMessage =
+                Self.context.presentation.openErrorMessage =
                     "Couldn't reload \(check.displayName): \(error.localizedDescription)"
             }
         }
@@ -199,8 +199,8 @@ extension CommandActions {
     /// the disk's current attrs so the next ⌘S doesn't re-warn for
     /// the same drift.
     static func acceptStaleAdopt() {
-        defer { Self.context.editing.sourceStaleCheck = nil }
-        guard let check = Self.context.editing.sourceStaleCheck,
+        defer { Self.context.presentation.sourceStaleCheck = nil }
+        guard let check = Self.context.presentation.sourceStaleCheck,
               case .changedOnAdopt = check,
               let (_, tab) = resolveTab(for: check),
               let url = tab.document.fileURL,
@@ -214,8 +214,8 @@ extension CommandActions {
     /// the buffer drops its URL link and becomes Untitled. Draft
     /// stays around as recovery for the bytes themselves.
     static func acknowledgeSourceMissing() {
-        defer { Self.context.editing.sourceStaleCheck = nil }
-        guard let check = Self.context.editing.sourceStaleCheck,
+        defer { Self.context.presentation.sourceStaleCheck = nil }
+        guard let check = Self.context.presentation.sourceStaleCheck,
               case .missing = check,
               let (_, tab) = resolveTab(for: check)
         else { return }
@@ -237,7 +237,7 @@ extension CommandActions {
             tab.state.savedBaselineText = tab.document.text
             return true
         } catch {
-            Self.context.editing.openErrorMessage =
+            Self.context.presentation.openErrorMessage =
                 "Couldn't save \(tab.document.displayName): \(error.localizedDescription)"
             return false
         }
@@ -402,7 +402,7 @@ extension CommandActions {
             state.fileURL = newURL
             RecentFilesStore.shared.record(newURL)
         } catch {
-            Self.context.editing.openErrorMessage =
+            Self.context.presentation.openErrorMessage =
                 "Couldn't rename \(oldURL.lastPathComponent): \(error.localizedDescription)"
         }
     }
@@ -478,7 +478,7 @@ extension CommandActions {
             for tab in victims { session.closeTab(tab.id) }
             return
         }
-        Self.context.editing.pendingBatchClose = PendingBatchClose(
+        Self.context.presentation.pendingBatchClose = PendingBatchClose(
             sessionID: ObjectIdentifier(session),
             tabIDs: victims.map(\.id),
             description: description,
@@ -489,7 +489,7 @@ extension CommandActions {
     /// "Discard All" path — wipes scratch + draft for every dirty tab
     /// so the bytes can't resurrect from the launcher or ⇧⌘T.
     static func confirmBatchDiscard(_ pending: PendingBatchClose) {
-        defer { Self.context.editing.pendingBatchClose = nil }
+        defer { Self.context.presentation.pendingBatchClose = nil }
         guard let session = resolveSession(for: pending) else { return }
         for tabID in pending.tabIDs {
             guard let tab = session.tabs.first(where: { $0.id == tabID }) else { continue }
@@ -503,7 +503,7 @@ extension CommandActions {
     /// untitled goes to the recovery pool), then close everything
     /// with `.archive` disposition so ⇧⌘T can resurrect them too.
     static func confirmBatchSaveAsDrafts(_ pending: PendingBatchClose) {
-        defer { Self.context.editing.pendingBatchClose = nil }
+        defer { Self.context.presentation.pendingBatchClose = nil }
         guard let session = resolveSession(for: pending) else { return }
         for tabID in pending.tabIDs {
             guard let tab = session.tabs.first(where: { $0.id == tabID }) else { continue }
@@ -513,7 +513,7 @@ extension CommandActions {
     }
 
     static func cancelBatchClose() {
-        Self.context.editing.pendingBatchClose = nil
+        Self.context.presentation.pendingBatchClose = nil
     }
 
     /// Resolves the originating session for a PendingBatchClose,

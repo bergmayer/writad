@@ -118,7 +118,7 @@ extension CommandActions {
     static func sortLinesByCapture(_ pattern: String, captureIndex: Int = 1, ascending: Bool = true) {
         guard let textView = actions else { return }
         guard let regex = try? NSRegularExpression(pattern: pattern) else {
-            Self.context.editing.openErrorMessage = "Bad sort pattern: \(pattern)"
+            Self.context.presentation.openErrorMessage = "Bad sort pattern: \(pattern)"
             return
         }
         let nsText = textView.text as NSString
@@ -189,7 +189,7 @@ extension CommandActions {
 
         let regexObj: NSRegularExpression? = regex ? (try? NSRegularExpression(pattern: pattern)) : nil
         if regex, regexObj == nil {
-            Self.context.editing.openErrorMessage = "Bad pattern: \(pattern)"
+            Self.context.presentation.openErrorMessage = "Bad pattern: \(pattern)"
             return
         }
         let matches: (String) -> Bool = { line in
