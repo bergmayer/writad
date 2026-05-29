@@ -9,7 +9,6 @@ struct EditorStatusBar: View {
 
     @Bindable private var bus = AppStateBus.shared
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @AppStorage(AppPreferenceKey.showToolbar) private var showToolbarPref: Bool = true
 
     var body: some View {
         if DeviceIdiom.isPhone || horizontalSizeClass == .compact {

@@ -1,12 +1,8 @@
 import Foundation
 
-/// Centralized list of UserDefaults keys.
-///
-/// The PreferencesView and Settings.bundle write into these keys directly
-/// via `@AppStorage` / system Settings.app. `EditorState` reads them at
-/// document-open time to seed per-document defaults. Menu actions that
-/// mutate state (font size, view toggles) write back here so the change
-/// survives relaunch.
+/// UserDefaults key constants. `AppPreferencesStore` is the typed
+/// `@Observable` surface that reads/writes these; views @Bindable into
+/// that store rather than touching keys directly.
 enum AppPreferenceKey {
 
     // MARK: Appearance

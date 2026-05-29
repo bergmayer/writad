@@ -782,7 +782,7 @@ struct MultiFileSearchSheet: View {
         case .url(let url):
             return try applyReplacementToFile(url: url, query: query, replacement: replacement, context: ctx, limitToFirst: limitToFirst)
         case .tab(let id):
-            return applyReplacementToTab(tabID: id, query: query, replacement: replacement, context: ctx, limitToFirst: limitToFirst)
+            return try applyReplacementToTab(tabID: id, query: query, replacement: replacement, context: ctx, limitToFirst: limitToFirst)
         }
     }
 
@@ -810,7 +810,7 @@ struct MultiFileSearchSheet: View {
         replacement: String,
         context ctx: FindContext,
         limitToFirst: Bool
-    ) -> Int {
+    ) throws -> Int {
         var foundTab: TabModel?
         for session in AppStateBus.shared.scenes.allOpenSessions {
             if let tab = session.tabs.first(where: { $0.id == tabID }) {
@@ -820,7 +820,8 @@ struct MultiFileSearchSheet: View {
         }
         guard let tab = foundTab else { return 0 }
         let liveText = tab.state.textView?.text ?? tab.document.text
-        guard let (replaced, count) = try? replaceInString(liveText, query: query, replacement: replacement, context: ctx, limitToFirst: limitToFirst), count > 0 else { return 0 }
+        let (replaced, count) = try replaceInString(liveText, query: query, replacement: replacement, context: ctx, limitToFirst: limitToFirst)
+        guard count > 0 else { return 0 }
         if let tv = tab.state.textView {
             tv.text = replaced
         }

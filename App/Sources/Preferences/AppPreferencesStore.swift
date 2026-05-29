@@ -1,16 +1,12 @@
 import SwiftUI
 
-/// `@Observable` mirror over UserDefaults. One declaration per preference;
-/// reads seed from `UserDefaults.standard` at init, writes propagate via
-/// `didSet`. SwiftUI views @Bindable into this rather than declaring a
-/// fresh `@AppStorage` per field per file — the three Settings tabs
-/// alone used to declare 28 of them.
-///
-/// `EditorState` + `EditorPrefSync` still mirror these into per-document
-/// state for the engine to observe; they keep working because writes
-/// here fire the same `UserDefaults.didChangeNotification` that
-/// `@AppStorage` listens for. Migrating EditorState off the mirror is a
-/// future pass.
+/// `@Observable` mirror over UserDefaults. Single source of truth for
+/// every preference; reads seed from `UserDefaults.standard` at init,
+/// writes propagate via `didSet`. Views @Bindable into this rather than
+/// declaring a fresh `@AppStorage` per field per file, and
+/// `EditorState`'s preference properties are computed pass-throughs
+/// rather than mirrored copies — Settings changes reach the engine
+/// without a sync layer.
 @MainActor
 @Observable
 final class AppPreferencesStore {

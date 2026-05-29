@@ -16,8 +16,7 @@ struct EditorScene: View {
     @State private var sceneReceivedOpenURL = false
     @State private var didApplySessionRecord = false
     @State private var sceneUUID: String = ""
-    @AppStorage(AppPreferenceKey.themeName) private var themeNamePref: String = AppThemeName.automatic.rawValue
-    @AppStorage(AppPreferenceKey.showToolbar) private var showToolbarPref: Bool = true
+    @Bindable private var prefs = AppPreferencesStore.shared
 
     @Namespace private var tabSwitcherNS
 
@@ -213,7 +212,7 @@ struct EditorScene: View {
     @ViewBuilder
     private var editorStack: some View {
         VStack(spacing: 0) {
-            if DeviceIdiom.supportsMultipleWindows && showToolbarPref {
+            if DeviceIdiom.supportsMultipleWindows && prefs.showToolbar {
                 WindowToolbar(
                     title: documentTitle,
                     subtitle: documentSubtitle,
@@ -404,7 +403,7 @@ struct EditorScene: View {
     }
 
     private var scenePreferredScheme: ColorScheme? {
-        switch AppThemeName(stored: themeNamePref).preferredColorScheme {
+        switch AppThemeName(stored: prefs.themeName).preferredColorScheme {
         case .light: return .light
         case .dark:  return .dark
         case .none:  return nil
