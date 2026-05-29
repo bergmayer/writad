@@ -384,6 +384,9 @@ struct EditorScene: View {
             onPickOpenFile: {
                 session.activeTab.kind = .fileBrowser
             },
+            onPickClipboard: { text in
+                adoptClipboardIntoActiveTab(text)
+            },
             onCancel: {
                 // Cancel = "I'm done with this surface". If the
                 // launcher is one of several tabs, close just that
@@ -415,6 +418,22 @@ struct EditorScene: View {
         let tab = session.activeTab
         tab.kind = .editor
         openURL(url)
+    }
+
+    /// Seeds the active launcher tab with the pasteboard's text as
+    /// a fresh Untitled buffer. The buffer is marked dirty so the
+    /// autosave loop picks it up immediately — closing the window
+    /// without saving leaves it recoverable from the launcher's
+    /// Drafts list.
+    private func adoptClipboardIntoActiveTab(_ text: String) {
+        let tab = session.activeTab
+        tab.document.text = text
+        tab.document.fileURL = nil
+        tab.document.isDirty = !text.isEmpty
+        tab.state.text = text
+        tab.state.fileURL = nil
+        tab.state.savedBaselineText = ""
+        tab.kind = .editor
     }
 
     /// Seeds the active launcher tab with a template's bytes as a

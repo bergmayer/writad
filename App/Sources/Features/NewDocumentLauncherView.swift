@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Document-shell launcher rendered as a tab's content. Every blank
 /// tab/window starts here — the user must either pick a template,
@@ -11,6 +12,9 @@ struct NewDocumentLauncherView: View {
     let onPickTemplate: (TemplateRecord) -> Void
     let onPickDraft: (DraftRecord) -> Void
     let onPickOpenFile: () -> Void
+    /// Seeds a fresh editor tab with the system pasteboard contents.
+    /// Disabled when the pasteboard has no string payload.
+    let onPickClipboard: (String) -> Void
     /// Closes this launcher surface without picking anything. The
     /// scene routes it to the same close path as ⌘W — if this is
     /// the only tab the window stays open with another launcher
@@ -25,6 +29,10 @@ struct NewDocumentLauncherView: View {
     /// in another window or saved one out of the recovery pool.
     @State private var templates: [TemplateRecord] = []
     @State private var drafts: [DraftRecord] = []
+    /// Snapshot of `UIPasteboard.general.hasStrings` at refresh time
+    /// so the "From Clipboard" row can disable itself when there's
+    /// nothing to paste.
+    @State private var hasClipboardText: Bool = false
 
     var body: some View {
         // Outer wash sets the chrome backdrop; the actual launcher
@@ -56,7 +64,7 @@ struct NewDocumentLauncherView: View {
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("New Document")
+                Text("New Tab")
                     .font(.title2.weight(.semibold))
                 Text("Pick a template, resume a draft, or open an existing file.")
                     .font(.footnote)
@@ -73,6 +81,7 @@ struct NewDocumentLauncherView: View {
     private func refresh() {
         templates = TemplatesStore.shared.loadAll()
         drafts = DraftsStore.shared.loadAll()
+        hasClipboardText = UIPasteboard.general.hasStrings
     }
 
     // MARK: Templates
@@ -238,32 +247,75 @@ struct NewDocumentLauncherView: View {
 
     @ViewBuilder
     private var openExistingSection: some View {
-        Button(action: onPickOpenFile) {
-            HStack(spacing: 12) {
-                Image(systemName: "folder")
-                    .font(.system(size: 20))
-                    .foregroundStyle(.tint)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Open File…")
-                        .font(.body)
-                        .foregroundStyle(.primary)
-                    Text("Browse the Files app for an existing document.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .contentShape(.rect)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 14)
+        VStack(spacing: 0) {
+            openFileRow
+            Divider().padding(.leading, 54)
+            clipboardRow
         }
-        .buttonStyle(.plain)
         .background(Color(uiColor: .secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    @ViewBuilder
+    private var openFileRow: some View {
+        Button(action: onPickOpenFile) {
+            actionRow(
+                symbol: "folder",
+                title: "Open File…",
+                detail: "Browse the Files app for an existing document.",
+                enabled: true
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var clipboardRow: some View {
+        Button {
+            // Read live at tap time — `hasClipboardText` only gates
+            // the row's enabled state; the actual bytes may differ
+            // if another app copied something between refresh and
+            // the user's tap.
+            guard let text = UIPasteboard.general.string,
+                  !text.isEmpty else { return }
+            onPickClipboard(text)
+        } label: {
+            actionRow(
+                symbol: "doc.on.clipboard",
+                title: "From Clipboard",
+                detail: hasClipboardText
+                    ? "Start a tab seeded with the current clipboard text."
+                    : "Copy text in any app, then come back here.",
+                enabled: hasClipboardText
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(!hasClipboardText)
+    }
+
+    @ViewBuilder
+    private func actionRow(symbol: String, title: String, detail: String, enabled: Bool) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: symbol)
+                .font(.system(size: 20))
+                .foregroundStyle(enabled ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.body)
+                    .foregroundStyle(enabled ? .primary : .secondary)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .contentShape(.rect)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 14)
     }
 
     // MARK: Shared chrome
