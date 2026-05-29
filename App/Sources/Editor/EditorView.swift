@@ -243,10 +243,7 @@ struct EditorView: View {
         }
     }
 
-    /// Gates sheets/pickers so a shared bus flag fires on focused window only.
-    private var isActive: Bool {
-        bus.scenes.currentEditor === state
-    }
+    private var isActive: Bool { bus.scenes.isActive(state) }
 
     /// Match by session id so the dialog fires on the originating window
     /// even when focus has shifted by the time the user answers.

@@ -59,6 +59,16 @@ final class SceneRouter {
         allOpenSessions.first { $0.tabs.contains { $0.id == tabID } }
     }
 
+    /// Single source of truth for "is this scene the foreground one."
+    /// Used to gate per-scene sheets/pickers/alerts so a shared bus flag
+    /// surfaces them on the focused window only. EditorView and
+    /// EditorScene both call this; keeping the policy here (not inlined
+    /// at each call site) is the difference between a one-line edit and
+    /// dredging up every modifier when the focus model evolves.
+    func isActive(_ state: EditorState) -> Bool {
+        currentEditor === state
+    }
+
     /// iOS has no `restorationBehavior(.disabled)`; palette / preview
     /// scenes the system tries to restore would surface on cold
     /// launch. Each user-initiated open registers here; the target

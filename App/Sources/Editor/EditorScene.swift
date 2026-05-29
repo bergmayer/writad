@@ -41,11 +41,7 @@ struct EditorScene: View {
         )) ?? Data()
     }
 
-    /// Gates per-scene file pickers — a shared bus flag would otherwise
-    /// fire on every window.
-    private var isActive: Bool {
-        bus.scenes.currentEditor === state
-    }
+    private var isActive: Bool { bus.scenes.isActive(state) }
 
     private var documentTitle: String { document.displayName }
 
