@@ -1,7 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import FileEncoding
-import LineEnding
 
 struct EditorView: View {
 
@@ -32,14 +31,6 @@ struct EditorView: View {
     @AppStorage(AppPreferenceKey.themeName) private var themeNamePref: String = AppThemeName.automatic.rawValue
     @AppStorage(AppPreferenceKey.fontSize) private var fontSizePref: Double = 14
     @AppStorage(AppPreferenceKey.fontName) private var fontNamePref: String = EditorFont.systemMono.rawValue
-    /// `.compact` in iPad Split View / Slide Over / skinny Stage
-    /// Manager — drives the wide-vs-overflow status-bar choice.
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-
-    private var isCompactWidth: Bool {
-        horizontalSizeClass == .compact
-    }
-
     var body: some View {
         observeStateForEngineUpdates()
         // Editor ignores the keyboard safe area and lets UITextView's
@@ -72,14 +63,7 @@ struct EditorView: View {
             .ignoresSafeArea(.keyboard, edges: .bottom)
 
             if state.showStatusBar {
-                // The wide bar wraps glyph-by-glyph at sub-tablet
-                // widths; the compact variant folds encoding /
-                // line-endings / syntax into an overflow menu.
-                if DeviceIdiom.isPhone || isCompactWidth {
-                    phoneStatusBar
-                } else {
-                    statusBar
-                }
+                EditorStatusBar(document: document, state: state)
             }
         }
         // CotEditor-style side inspector — slides in non-modally so
@@ -549,77 +533,6 @@ struct EditorView: View {
         return "Loading \(name)\nfrom \(provider)…"
     }
 
-    // MARK: - Status bar
-
-    @ViewBuilder
-    private var statusBar: some View {
-        HStack(spacing: 12) {
-            // Lower-left so a thumb can reach it regardless of how
-            // the centre metrics expand.
-            splitCycleButton
-            Divider().frame(height: 14)
-            // ViewThatFits hides the counts row entirely when the
-            // window is too narrow — the wide single-line text would
-            // otherwise wrap onto a second row and double the bar's
-            // height. EmptyView is the "doesn't fit" fallback.
-            ViewThatFits(in: .horizontal) {
-                counts.foregroundStyle(.secondary)
-                EmptyView()
-            }
-            Spacer(minLength: 8)
-            byteCountLabel.foregroundStyle(.secondary)
-            Divider().frame(height: 14)
-            encodingMenu
-            Divider().frame(height: 14)
-            lineEndingMenu
-            Divider().frame(height: 14)
-            languageMenu
-            Divider().frame(height: 14)
-            revisionsButton
-            Divider().frame(height: 14)
-            infoToggle
-        }
-        .font(.caption.monospacedDigit())
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
-        .background(.bar)
-    }
-
-    /// Per-document settings fold into the overflow menu; counts /
-    /// byte size move to the info inspector. Fitting the wide bar's
-    /// contents on a phone width would wrap into unreadable lines.
-    @ViewBuilder
-    private var phoneStatusBar: some View {
-        HStack(spacing: 16) {
-            phoneTabsButton
-            splitCycleButton
-            Spacer()
-            revisionsButton
-            phoneOverflowMenu
-            infoToggle
-        }
-        .font(.callout)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(.bar)
-        // Safari-style: horizontal swipe = prev/next tab. Threshold
-        // is wide enough that a stray scroll doesn't trigger.
-        .gesture(
-            DragGesture(minimumDistance: 40)
-                .onEnded { value in
-                    guard abs(value.translation.width) > abs(value.translation.height) * 2 else { return }
-                    if value.translation.width < -40 {
-                        CommandActions.nextTab()
-                    } else if value.translation.width > 40 {
-                        CommandActions.previousTab()
-                    }
-                }
-        )
-    }
-
-    /// Combines the palette and the customizable toolbar into one
-    /// nav-bar slot, so the bar doesn't grow a third trailing icon
-    /// when both are enabled.
     @ViewBuilder
     private var phonePaletteEntry: some View {
         if showToolbarPref {
@@ -740,99 +653,6 @@ struct EditorView: View {
         .accessibilityLabel("Toolbar Actions")
     }
 
-    /// Safari-style tabs button. Badge shows tab count when > 1.
-    @ViewBuilder
-    private var phoneTabsButton: some View {
-        Button {
-            claimFocus()
-            CommandActions.showTabSwitcher()
-        } label: {
-            ZStack {
-                Image(systemName: "square.on.square")
-                    .font(.system(size: 18, weight: .regular))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.secondary)
-                if let count = phoneTabBadgeCount {
-                    Text("\(count)")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1)
-                        .background(.thinMaterial, in: .capsule)
-                        .offset(x: 10, y: -8)
-                }
-            }
-            // The icon itself is 18pt; the hit area is the full
-            // 44pt HIG touch target. Earlier the area was tight to
-            // the glyph, which made long-press dicey to land.
-            .frame(width: 44, height: 44)
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .help("Show All Tabs")
-        .accessibilityLabel("Show All Tabs")
-        // Long-press surfaces the tab-management menu. The hit
-        // target above is wide enough to keep the gesture reliable.
-        .contextMenu { TabOverviewContextMenu() }
-    }
-
-    private var phoneTabBadgeCount: Int? {
-        let count = bus.scenes.currentSession?.tabs.count ?? 1
-        return count > 1 ? count : nil
-    }
-
-    @ViewBuilder
-    private var phoneOverflowMenu: some View {
-        Menu {
-            Menu("Encoding")      { encodingMenuChoices }
-            Menu("Line Endings")  { lineEndingMenuChoices }
-            Menu("Syntax")        { languageMenuChoices }
-        } label: {
-            Image(systemName: "ellipsis.circle")
-                .font(.system(size: 18, weight: .regular))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.secondary)
-                .contentShape(.rect)
-        }
-        .menuStyle(.borderlessButton)
-        .help("Document settings")
-    }
-
-    /// Glyph mirrors the current state — single rectangle when
-    /// closed, split-2x1 / split-1x2 when open.
-    @ViewBuilder
-    private var splitCycleButton: some View {
-        Button {
-            claimFocus()
-            CommandActions.cycleSplitView()
-        } label: {
-            Image(systemName: splitCycleSymbolName)
-                .font(.system(size: 18, weight: .regular))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.secondary)
-                .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(splitCycleLabel)
-        .help(splitCycleLabel)
-    }
-
-    private var splitCycleSymbolName: String {
-        switch (state.splitOpen, state.splitOrientation) {
-        case (false, _):          return "rectangle"
-        case (true, .horizontal): return "rectangle.split.2x1"
-        case (true, .vertical):   return "rectangle.split.1x2"
-        }
-    }
-
-    private var splitCycleLabel: String {
-        switch (state.splitOpen, state.splitOrientation) {
-        case (false, _):          return "Open Split View"
-        case (true, .horizontal): return "Switch to Vertical Split"
-        case (true, .vertical):   return "Close Split View"
-        }
-    }
-
     /// ~800 ms after typing stops. URL-backed docs hit `autoSave`
     /// (write + revision); untitled get `autoSnapshot` (revision
     /// only — sandbox demands a user-granted location to write).
@@ -873,170 +693,6 @@ struct EditorView: View {
             if Task.isCancelled { return }
             state?.textView?.highlightAllMisspellings()
         }
-    }
-
-    /// Always enabled — untitled buffers still capture in-memory
-    /// snapshots keyed by tab UUID, so there's something to browse.
-    @ViewBuilder
-    private var revisionsButton: some View {
-        Button {
-            claimFocus()
-            CommandActions.presentRevisions()
-        } label: {
-            Image(systemName: "clock.arrow.circlepath")
-                .font(.system(size: 14, weight: .regular))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.secondary)
-                .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .help("Browse and restore previous versions of this document")
-    }
-
-    /// Tinted/untinted state mirrors open vs closed at a glance —
-    /// CotEditor's persistent inspector affordance.
-    @ViewBuilder
-    private var infoToggle: some View {
-        Button {
-            state.inspectorOpen.toggle()
-        } label: {
-            // SF "info" glyph — reads as plain text weight so it
-            // doesn't compete with the dropdown labels.
-            Image(systemName: "info")
-                .font(.system(size: 14, weight: state.inspectorOpen ? .bold : .regular))
-                .foregroundStyle(state.inspectorOpen ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-                .frame(width: 14, height: 14)
-                .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .help("Show file info, outline, and counts")
-    }
-
-    @ViewBuilder
-    private var counts: some View {
-        let nsText = document.text as NSString
-        let (line, column) = TextMetrics.lineColumn(for: state.selectedRange.location, in: nsText)
-        let lineCount = TextMetrics.lineCount(in: nsText)
-        HStack(spacing: 8) {
-            Text("Lines: \(lineCount)  ·  Chars: \(nsText.length)  ·  Loc: \(state.selectedRange.location)  ·  Ln \(line):\(column)")
-            if state.liveMatchCount > 0 {
-                Text("·  \(state.liveMatchCount) match\(state.liveMatchCount == 1 ? "" : "es")")
-                    .foregroundStyle(.tint)
-            }
-        }
-        .lineLimit(1)
-        .fixedSize(horizontal: true, vertical: false)
-    }
-
-    @ViewBuilder
-    private var byteCountLabel: some View {
-        let bytes = document.originalData?.count ?? document.text.utf8.count
-        Text("\(byteFormatter(bytes)) bytes")
-    }
-
-    private func byteFormatter(_ bytes: Int) -> String {
-        bytes.formatted(.number)
-    }
-
-    /// Selection re-decodes the original bytes when possible —
-    /// matches CotEditor's encoding-popover behaviour.
-    @ViewBuilder
-    private var encodingMenu: some View {
-        Menu { encodingMenuChoices } label: {
-            statusMenuLabel(document.fileEncoding.localizedName)
-        }
-    }
-
-    @ViewBuilder
-    private var encodingMenuChoices: some View {
-        ForEach(statusEncodingChoices, id: \.self) { encoding in
-            let title = String.localizedName(of: encoding)
-            Button {
-                claimFocus()
-                CommandActions.setEncoding(FileEncoding(encoding: encoding))
-            } label: {
-                if document.fileEncoding.encoding == encoding && !document.fileEncoding.withUTF8BOM {
-                    Label(title, systemImage: "checkmark")
-                } else {
-                    Text(title)
-                }
-            }
-        }
-        if statusEncodingChoices.contains(.utf8) {
-            Divider()
-            Button {
-                claimFocus()
-                CommandActions.setEncoding(FileEncoding(encoding: .utf8, withUTF8BOM: true))
-            } label: {
-                if document.fileEncoding.encoding == .utf8 && document.fileEncoding.withUTF8BOM {
-                    Label("Unicode (UTF-8) with BOM", systemImage: "checkmark")
-                } else {
-                    Text("Unicode (UTF-8) with BOM")
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var lineEndingMenu: some View {
-        Menu { lineEndingMenuChoices } label: {
-            statusMenuLabel(document.lineEnding.label)
-        }
-    }
-
-    @ViewBuilder
-    private var lineEndingMenuChoices: some View {
-        ForEach(LineEnding.allCases, id: \.self) { ending in
-            Button {
-                claimFocus()
-                CommandActions.setLineEnding(ending)
-            } label: {
-                if document.lineEnding == ending {
-                    Label("\(ending.label) (\(ending.description))", systemImage: "checkmark")
-                } else {
-                    Text("\(ending.label) (\(ending.description))")
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var languageMenu: some View {
-        Menu { languageMenuChoices } label: {
-            statusMenuLabel(LanguageRegistry.displayName(for: state.languageIdentifier))
-        }
-    }
-
-    @ViewBuilder
-    private var languageMenuChoices: some View {
-        ForEach(LanguageRegistry.all, id: \.identifier) { language in
-            Button {
-                claimFocus()
-                CommandActions.setLanguage(language.identifier)
-            } label: {
-                if state.languageIdentifier == language.identifier {
-                    Label(language.displayName, systemImage: "checkmark")
-                } else {
-                    Text(language.displayName)
-                }
-            }
-        }
-    }
-
-    private func statusMenuLabel(_ text: String) -> some View {
-        HStack(spacing: 3) {
-            Text(text)
-            Image(systemName: "chevron.up.chevron.down")
-                .font(.system(size: 8, weight: .semibold))
-        }
-        .foregroundStyle(.secondary)
-        .contentShape(.rect)
-    }
-
-    /// Duplicated from `EncodingPickerSheet.encodingChoices` so the
-    /// status menu doesn't have to import the sheet.
-    private var statusEncodingChoices: [String.Encoding] {
-        String.sortedAvailableStringEncodings.compactMap { $0 }
     }
 
     // MARK: - Sheets
