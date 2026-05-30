@@ -20,13 +20,13 @@ iPad-native plain-text/code editor with multi-window tabs, menu bar / command pa
 
 ## Licensing
 
-This project vendors source from two upstream editors and ships a logo based on an ancient script.
+
 
 | Component | Source | License |
 |---|---|---|
 | `EditorEngine` | [simonbs/Runestone](https://github.com/simonbs/Runestone) — © 2021 Simon Støvring | MIT |
 | `FileEncoding`, `LineEnding`, `LineSort`, `CharacterInfo`, `StringUtils`, `ValueRange` | [coteditor/CotEditor](https://github.com/coteditor/CotEditor) — © 2005–2009 nakamuxu, © 2011, 2014 usami-k, © 2013–2026 1024jp | Apache 2.0 |
 | tree-sitter and language grammars | [tree-sitter](https://github.com/tree-sitter) | MIT |
-| Logo glyph | Proto-Sinaitic *ʾalp* — see [History of A](https://en.wikipedia.org/wiki/A#History) | Public domain (script in use ~1850 BCE; predates all modern copyright by ~3,800 years) |
+| Logo glyph | Proto-Sinaitic *ʾalp* — see [History of A](https://en.wikipedia.org/wiki/A#History) | Public domain (script in use ~1850 BCE; predates all modern copyright by ~3,800 years but I am looking for the heirs) |
 
 Full attribution and preserved upstream LICENSE text: see `NOTICE.md` and `Packages/EditorKit/LICENSE-EditorCore` / `LICENSE-Runestone`.
