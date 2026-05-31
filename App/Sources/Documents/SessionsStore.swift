@@ -269,8 +269,17 @@ extension SessionRecord {
     @MainActor
     init(scene sceneUUID: String, session: EditorSession) {
         self.sceneUUID = sceneUUID
-        self.tabs = session.tabs.map(TabSnapshot.init(of:))
-        self.activeIndex = session.tabs.firstIndex { $0.id == session.selectedTabID } ?? 0
+        // Only persist tabs with restorable content. Launcher /
+        // file-browser tabs would otherwise come back as empty
+        // `.editor` tabs (populate sets no kind), surfacing as
+        // "Untitled N" blanks on the next launch.
+        let restorable = session.tabs.filter {
+            $0.document.fileURL != nil || $0.document.draftURL != nil
+        }
+        self.tabs = restorable.map(TabSnapshot.init(of:))
+        let activeID = session.selectedTabID
+        self.activeIndex = restorable.firstIndex { $0.id == activeID }
+            ?? (restorable.isEmpty ? 0 : 0)
         self.lastModified = Date()
         self.launchID = SessionsStore.shared.currentLaunchID
         self.persistentIdentifier = SessionsStore.shared.persistentIdentifier(forSceneUUID: sceneUUID)
@@ -289,7 +298,13 @@ enum SessionRestore {
         for snapshot in record.tabs {
             let tab = TabModel()
             tab.isPinned = snapshot.isPinned
-            populate(tab, from: snapshot)
+            // Default to .editor; populate() flips back to .launcher
+            // if it finds nothing to load. Catches stale snapshots
+            // (draft file deleted from disk, bookmark unresolvable)
+            // so users see the launcher instead of a blank buffer.
+            tab.kind = .editor
+            let loaded = populate(tab, from: snapshot)
+            if !loaded { tab.kind = .launcher }
             restored.append(tab)
         }
         session.tabs = restored
@@ -297,7 +312,11 @@ enum SessionRestore {
         session.selectedTabID = restored[idx].id
     }
 
-    private static func populate(_ tab: TabModel, from snapshot: TabSnapshot) {
+    /// Returns `true` when something was actually loaded — a resolvable
+    /// fileBookmark or a draft file present on disk. `false` means the
+    /// caller should treat the tab as a fresh launcher slot.
+    @discardableResult
+    private static func populate(_ tab: TabModel, from snapshot: TabSnapshot) -> Bool {
         // Read draft bytes first — used as the dirty buffer when the
         // tab was unsaved at last quit, on top of disk content for
         // URL-backed dirty tabs.
@@ -345,13 +364,16 @@ enum SessionRestore {
                     tab.state.lineEnding = tab.document.lineEnding
                 }
             }
+            return true
         } else if let draftText {
             // Untitled draft: bytes load into the fresh tab; dirty so
             // the "edited" subtitle stays on until the user saves.
             tab.document.text = draftText
             tab.document.isDirty = true
             tab.state.text = draftText
+            return true
         }
+        return false
     }
 
     private static func resolveBookmark(_ data: Data) -> (url: URL, isStale: Bool)? {

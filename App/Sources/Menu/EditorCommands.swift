@@ -59,77 +59,99 @@ struct EditorCommands: Commands {
         // MARK: App — Preferences, Command Palette
 
         // Grouped: body is at the 10-child cap.
+        //
+        // Icons on every item: iPadOS injects iconned items (Settings,
+        // About) into the app menu, so leaving ours bare would look
+        // inconsistent. Same rule applies to every other menu below.
         Group {
             CommandGroup(replacing: .appSettings) {
-                Button("Settings…") { openWindow(id: SceneID.preferences.rawValue) }
-                    .keyboardShortcut(AppShortcut.preferences)
+                Button(action: { openWindow(id: SceneID.preferences.rawValue) }) {
+                    Label("Settings…", systemImage: "gearshape")
+                }
+                .keyboardShortcut(AppShortcut.preferences)
             }
             CommandGroup(after: .appInfo) {
-                Button("Command Palette…") { presentSheet(.commandPalette) }
-                    .keyboardShortcut(AppShortcut.commandPalette)
+                Button(action: { presentSheet(.commandPalette) }) {
+                    Label("Command Palette…", systemImage: "command")
+                }
+                .keyboardShortcut(AppShortcut.commandPalette)
                 // ⌃P alias is wired in-window via PaletteShortcutAlias
                 // (see EditorScene) rather than as a second menu entry,
                 // so the menu shows one canonical row.
             }
-            // `LSSupportsOpeningDocumentsInPlace = YES` auto-injects an
-            // "Open…" item (with a folder glyph) into the system's
-            // .importExport group, duplicating our own File ▸ Open.
-            // Replace it with empty content to suppress every iPadOS-
-            // default import/export glyph item; the Info.plist key
-            // still grants the app its Files-app / drag-and-drop
-            // capabilities.
-            CommandGroup(replacing: .importExport) { }
         }
 
         // MARK: File — New (new scene) / Open / Save / Save As
 
         CommandGroup(replacing: .newItem) {
             if DeviceIdiom.supportsMultipleWindows {
-                Button("New Window") { openWindow(id: SceneID.editor.rawValue) }
-                    .keyboardShortcut(AppShortcut.newWindow)
+                Button(action: { openWindow(id: SceneID.editor.rawValue) }) {
+                    Label("New Window", systemImage: "macwindow.badge.plus")
+                }
+                .keyboardShortcut(AppShortcut.newWindow)
             }
             // No `.disabled(...)`: SwiftUI evaluates the expression
             // at menu-build time; a transient nil session during a
             // scene swap would grey the item indefinitely.
-            Button("New Tab") {
+            Button(action: {
                 if let session = focusedSession ?? AppStateBus.shared.scenes.currentSession {
                     session.newTab()
                 } else {
                     openWindow(id: SceneID.editor.rawValue)
                 }
+            }) {
+                Label("New Tab", systemImage: "rectangle.stack.badge.plus")
             }
             .keyboardShortcut(AppShortcut.newTab)
-            Button(DeviceIdiom.supportsMultipleWindows ? "Open…" : "Open in New Tab…") {
+            // Unshortcut'd: `LSSupportsOpeningDocumentsInPlace = YES`
+            // makes iPadOS auto-inject its own ⌘O "Open…" at the
+            // system level (action `open:`); binding ours to the
+            // same chord triggers `_UIMenuBuilderError` and silently
+            // drops the entire `.newItem` replacement, taking New
+            // Window and New Tab with it.
+            Button(action: {
                 claimFocus()
                 if DeviceIdiom.supportsMultipleWindows {
                     CommandActions.presentFileBrowserInNewWindow()
                 } else {
                     CommandActions.presentFileBrowserInNewTab()
                 }
+            }) {
+                Label(
+                    DeviceIdiom.supportsMultipleWindows ? "Open…" : "Open in New Tab…",
+                    systemImage: "folder"
+                )
             }
-            .keyboardShortcut(AppShortcut.openFile)
         }
         CommandGroup(replacing: .saveItem) {
-            Button("Save", action: focused(CommandActions.saveFile))
-                .keyboardShortcut(AppShortcut.save)
-                .disabled(!isEnabled)
-            Button("Save As…") {
-                focused { AppStateBus.shared.pickers.pending = .saveAs }
+            Button(action: focused(CommandActions.saveFile)) {
+                Label("Save", systemImage: "tray.and.arrow.down")
+            }
+            .keyboardShortcut(AppShortcut.save)
+            .disabled(!isEnabled)
+            Button(action: { focused { AppStateBus.shared.pickers.pending = .saveAs } }) {
+                Label("Save As…", systemImage: "square.and.arrow.down")
             }
             .keyboardShortcut(AppShortcut.saveAs)
             .disabled(!isEnabled)
             Divider()
-            Button("Revert to Saved") {
-                focused { AppStateBus.shared.presentation.revertRequestCount += 1 }
+            Button(action: { focused { AppStateBus.shared.presentation.revertRequestCount += 1 } }) {
+                Label("Revert to Saved", systemImage: "arrow.uturn.backward")
             }
             .disabled(!isEnabled)
-            Button("Show Revisions…") { presentSheet(.revisions) }
-                .keyboardShortcut(AppShortcut.showRevisions)
-                .disabled(!isEnabled)
-            Button("Recover Unsaved Drafts…") { presentSheet(.draftsRecovery) }
+            Button(action: { presentSheet(.revisions) }) {
+                Label("Show Revisions…", systemImage: "clock.arrow.circlepath")
+            }
+            .keyboardShortcut(AppShortcut.showRevisions)
+            .disabled(!isEnabled)
+            Button(action: { presentSheet(.draftsRecovery) }) {
+                Label("Recover Unsaved Drafts…", systemImage: "tray.full")
+            }
             Divider()
-            Button("Speak Selection", action: focused(CommandActions.speakSelection))
-                .disabled(!isEnabled)
+            Button(action: focused(CommandActions.speakSelection)) {
+                Label("Speak Selection", systemImage: "speaker.wave.2")
+            }
+            .disabled(!isEnabled)
         }
 
         // MARK: Edit — selection submenu + character-level edits
@@ -137,51 +159,89 @@ struct EditorCommands: Commands {
         CommandGroup(after: .pasteboard) {
             Divider()
 
-            Button("Clipboard History…") { presentSheet(.clipboardHistory) }
-                .keyboardShortcut(AppShortcut.clipboardHistory)
+            Button(action: { presentSheet(.clipboardHistory) }) {
+                Label("Clipboard History…", systemImage: "list.clipboard")
+            }
+            .keyboardShortcut(AppShortcut.clipboardHistory)
 
             Divider()
 
-            Menu("Selection") {
-                Button("Select Word", action: focused(CommandActions.selectCurrentWord))
-                Button("Select Line", action: focused(CommandActions.selectCurrentLine))
-                Button("Select Lines Containing…") { presentSheet(.selectLinesContaining) }
+            Menu {
+                Button(action: focused(CommandActions.selectCurrentWord)) {
+                    Label("Select Word", systemImage: "character.cursor.ibeam")
+                }
+                Button(action: focused(CommandActions.selectCurrentLine)) {
+                    Label("Select Line", systemImage: "text.cursor")
+                }
+                Button(action: { presentSheet(.selectLinesContaining) }) {
+                    Label("Select Lines Containing…", systemImage: "line.horizontal.3.decrease.circle")
+                }
                 Divider()
-                Button("Smart Move to Line Start", action: focused(CommandActions.smartMoveToLineStart))
+                Button(action: focused(CommandActions.smartMoveToLineStart)) {
+                    Label("Smart Move to Line Start", systemImage: "arrow.left.to.line")
+                }
+            } label: {
+                Label("Selection", systemImage: "selection.pin.in.out")
             }
             .disabled(!isEnabled)
 
             Divider()
 
-            Button("Transpose Characters", action: focused(CommandActions.transposeCharacters))
-                .keyboardShortcut(AppShortcut.transposeChars)
-                .disabled(!isEnabled)
-            Button("Delete to End of Line", action: focused(CommandActions.deleteToEndOfLine))
-                .keyboardShortcut(AppShortcut.deleteToEOL)
-                .disabled(!isEnabled)
-            Button("Delete Word Backward", action: focused(CommandActions.deleteWordBackward))
-                .keyboardShortcut(AppShortcut.deleteWordBack)
-                .disabled(!isEnabled)
-            Button("Delete Word Forward", action: focused(CommandActions.deleteWordForward))
-                .keyboardShortcut(AppShortcut.deleteWordFwd)
-                .disabled(!isEnabled)
-            Button("Join Lines", action: focused(CommandActions.joinLines))
-                .keyboardShortcut(AppShortcut.joinLines)
-                .disabled(!isEnabled)
+            Button(action: focused(CommandActions.transposeCharacters)) {
+                Label("Transpose Characters", systemImage: "arrow.left.arrow.right")
+            }
+            .keyboardShortcut(AppShortcut.transposeChars)
+            .disabled(!isEnabled)
+            Button(action: focused(CommandActions.deleteToEndOfLine)) {
+                Label("Delete to End of Line", systemImage: "delete.right")
+            }
+            .keyboardShortcut(AppShortcut.deleteToEOL)
+            .disabled(!isEnabled)
+            Button(action: focused(CommandActions.deleteWordBackward)) {
+                Label("Delete Word Backward", systemImage: "delete.left")
+            }
+            .keyboardShortcut(AppShortcut.deleteWordBack)
+            .disabled(!isEnabled)
+            Button(action: focused(CommandActions.deleteWordForward)) {
+                Label("Delete Word Forward", systemImage: "delete.right")
+            }
+            .keyboardShortcut(AppShortcut.deleteWordFwd)
+            .disabled(!isEnabled)
+            Button(action: focused(CommandActions.joinLines)) {
+                Label("Join Lines", systemImage: "rectangle.compress.vertical")
+            }
+            .keyboardShortcut(AppShortcut.joinLines)
+            .disabled(!isEnabled)
 
             Divider()
 
-            Menu("Spelling") {
-                Button("Check Spelling…") { CommandActions.presentSpellCheckSheet() }
+            Menu {
+                Button(action: { CommandActions.presentSpellCheckSheet() }) {
+                    Label("Check Spelling…", systemImage: "checkmark.circle")
+                }
                 Divider()
-                Button("Find Next Misspelling", action: focused(CommandActions.jumpToNextMisspelling))
-                Button("Learn Spelling of Word", action: focused(CommandActions.learnSelectedWord))
-                Button("Ignore Spelling for Word", action: focused(CommandActions.ignoreSelectedWord))
+                Button(action: focused(CommandActions.jumpToNextMisspelling)) {
+                    Label("Find Next Misspelling", systemImage: "arrow.right.circle")
+                }
+                Button(action: focused(CommandActions.learnSelectedWord)) {
+                    Label("Learn Spelling of Word", systemImage: "book")
+                }
+                Button(action: focused(CommandActions.ignoreSelectedWord)) {
+                    Label("Ignore Spelling for Word", systemImage: "eye.slash")
+                }
                 Divider()
-                Button("Highlight All Misspellings", action: focused(CommandActions.highlightAllMisspellings))
-                Button("Clear Spelling Marks", action: focused(CommandActions.clearMisspellingHighlights))
+                Button(action: focused(CommandActions.highlightAllMisspellings)) {
+                    Label("Highlight All Misspellings", systemImage: "highlighter")
+                }
+                Button(action: focused(CommandActions.clearMisspellingHighlights)) {
+                    Label("Clear Spelling Marks", systemImage: "eraser")
+                }
                 Divider()
-                Button("Toggle Live Spell Check", action: focused(CommandActions.toggleSpellCheckLive))
+                Button(action: focused(CommandActions.toggleSpellCheckLive)) {
+                    Label("Toggle Live Spell Check", systemImage: "textformat.abc.dottedunderline")
+                }
+            } label: {
+                Label("Spelling", systemImage: "abc")
             }
             .disabled(!isEnabled)
         }
@@ -202,9 +262,11 @@ struct EditorCommands: Commands {
         // System Show Sidebar drives UIKit's sidebar API; our
         // outline reads `state.sidebarOpen`, so we replace.
         CommandGroup(replacing: .sidebar) {
-            Button("Show Outline", action: focused(CommandActions.showOutline))
-                .keyboardShortcut(AppShortcut.showOutline)
-                .disabled(!isEnabled)
+            Button(action: focused(CommandActions.showOutline)) {
+                Label("Show Outline", systemImage: "sidebar.left")
+            }
+            .keyboardShortcut(AppShortcut.showOutline)
+            .disabled(!isEnabled)
         }
         CommandGroup(after: .sidebar) {
             viewMenuFontItems
@@ -344,34 +406,72 @@ struct EditorCommands: Commands {
         // MARK: Tabs (attached to the system Window menu)
 
         CommandGroup(after: .windowArrangement) {
-            Button("Show All Tabs", action: focused(CommandActions.showTabSwitcher))
-                .keyboardShortcut(AppShortcut.showAllTabs)
-            Button("Close Tab", action: focused(CommandActions.closeActiveTab))
-                .keyboardShortcut(AppShortcut.closeTab)
-            Button("Close Window", action: focused(CommandActions.closeWindow))
-                .keyboardShortcut(AppShortcut.closeWindow)
-            Button("Reopen Last Closed Tab", action: focused(CommandActions.reopenLastClosedTab))
-                .keyboardShortcut(AppShortcut.reopenLastClosed)
+            Button(action: focused(CommandActions.showTabSwitcher)) {
+                Label("Show All Tabs", systemImage: "rectangle.grid.2x2")
+            }
+            .keyboardShortcut(AppShortcut.showAllTabs)
+            Button(action: focused(CommandActions.closeActiveTab)) {
+                Label("Close Tab", systemImage: "xmark.square")
+            }
+            .keyboardShortcut(AppShortcut.closeTab)
+            Button(action: focused(CommandActions.closeWindow)) {
+                Label("Close Window", systemImage: "macwindow.badge.xmark")
+            }
+            .keyboardShortcut(AppShortcut.closeWindow)
+            Button(action: focused(CommandActions.reopenLastClosedTab)) {
+                Label("Reopen Last Closed Tab", systemImage: "arrow.uturn.backward.square")
+            }
+            .keyboardShortcut(AppShortcut.reopenLastClosed)
             Divider()
-            Button("Next Tab", action: focused(CommandActions.nextTab))
-                .keyboardShortcut(AppShortcut.nextTab)
-            Button("Previous Tab", action: focused(CommandActions.previousTab))
-                .keyboardShortcut(AppShortcut.previousTab)
+            Button(action: focused(CommandActions.nextTab)) {
+                Label("Next Tab", systemImage: "arrow.right.square")
+            }
+            .keyboardShortcut(AppShortcut.nextTab)
+            Button(action: focused(CommandActions.previousTab)) {
+                Label("Previous Tab", systemImage: "arrow.left.square")
+            }
+            .keyboardShortcut(AppShortcut.previousTab)
             Divider()
-            Button("Pin / Unpin Tab", action: focused(CommandActions.pinCurrentTab))
-            Button("Close Other Tabs", action: focused(CommandActions.closeOtherTabs))
-            Button("Close Tabs to the Right", action: focused(CommandActions.closeTabsToRight))
+            Button(action: focused(CommandActions.pinCurrentTab)) {
+                Label("Pin / Unpin Tab", systemImage: "pin")
+            }
+            Button(action: focused(CommandActions.closeOtherTabs)) {
+                Label("Close Other Tabs", systemImage: "xmark.rectangle.stack")
+            }
+            Button(action: focused(CommandActions.closeTabsToRight)) {
+                Label("Close Tabs to the Right", systemImage: "arrow.right.to.line")
+            }
             Divider()
-            Menu("Jump to Tab") {
-                Button("Tab 1") { focused { CommandActions.selectTab(at: 1) } }.keyboardShortcut("1")
-                Button("Tab 2") { focused { CommandActions.selectTab(at: 2) } }.keyboardShortcut("2")
-                Button("Tab 3") { focused { CommandActions.selectTab(at: 3) } }.keyboardShortcut("3")
-                Button("Tab 4") { focused { CommandActions.selectTab(at: 4) } }.keyboardShortcut("4")
-                Button("Tab 5") { focused { CommandActions.selectTab(at: 5) } }.keyboardShortcut("5")
-                Button("Tab 6") { focused { CommandActions.selectTab(at: 6) } }.keyboardShortcut("6")
-                Button("Tab 7") { focused { CommandActions.selectTab(at: 7) } }.keyboardShortcut("7")
-                Button("Tab 8") { focused { CommandActions.selectTab(at: 8) } }.keyboardShortcut("8")
-                Button("Last Tab") { focused { CommandActions.selectTab(at: 9) } }.keyboardShortcut("9")
+            Menu {
+                Button { focused { CommandActions.selectTab(at: 1) } } label: {
+                    Label("Tab 1", systemImage: "1.square")
+                }.keyboardShortcut("1")
+                Button { focused { CommandActions.selectTab(at: 2) } } label: {
+                    Label("Tab 2", systemImage: "2.square")
+                }.keyboardShortcut("2")
+                Button { focused { CommandActions.selectTab(at: 3) } } label: {
+                    Label("Tab 3", systemImage: "3.square")
+                }.keyboardShortcut("3")
+                Button { focused { CommandActions.selectTab(at: 4) } } label: {
+                    Label("Tab 4", systemImage: "4.square")
+                }.keyboardShortcut("4")
+                Button { focused { CommandActions.selectTab(at: 5) } } label: {
+                    Label("Tab 5", systemImage: "5.square")
+                }.keyboardShortcut("5")
+                Button { focused { CommandActions.selectTab(at: 6) } } label: {
+                    Label("Tab 6", systemImage: "6.square")
+                }.keyboardShortcut("6")
+                Button { focused { CommandActions.selectTab(at: 7) } } label: {
+                    Label("Tab 7", systemImage: "7.square")
+                }.keyboardShortcut("7")
+                Button { focused { CommandActions.selectTab(at: 8) } } label: {
+                    Label("Tab 8", systemImage: "8.square")
+                }.keyboardShortcut("8")
+                Button { focused { CommandActions.selectTab(at: 9) } } label: {
+                    Label("Last Tab", systemImage: "9.square")
+                }.keyboardShortcut("9")
+            } label: {
+                Label("Jump to Tab", systemImage: "arrow.right.to.line.circle")
             }
         }
     }
@@ -433,78 +533,122 @@ struct EditorCommands: Commands {
 
     @ViewBuilder
     private var viewMenuFontItems: some View {
-        Button("Bigger Font", action: focused(CommandActions.increaseFontSize))
-            .keyboardShortcut(AppShortcut.biggerFont)
-            .disabled(!isEnabled)
-        Button("Smaller Font", action: focused(CommandActions.decreaseFontSize))
-            .keyboardShortcut(AppShortcut.smallerFont)
-            .disabled(!isEnabled)
-        Button("Reset Font Size", action: focused(CommandActions.resetFontSize))
-            .keyboardShortcut(AppShortcut.resetFontSize)
-            .disabled(!isEnabled)
+        Button(action: focused(CommandActions.increaseFontSize)) {
+            Label("Bigger Font", systemImage: "plus.magnifyingglass")
+        }
+        .keyboardShortcut(AppShortcut.biggerFont)
+        .disabled(!isEnabled)
+        Button(action: focused(CommandActions.decreaseFontSize)) {
+            Label("Smaller Font", systemImage: "minus.magnifyingglass")
+        }
+        .keyboardShortcut(AppShortcut.smallerFont)
+        .disabled(!isEnabled)
+        Button(action: focused(CommandActions.resetFontSize)) {
+            Label("Reset Font Size", systemImage: "textformat.size")
+        }
+        .keyboardShortcut(AppShortcut.resetFontSize)
+        .disabled(!isEnabled)
     }
 
     @ViewBuilder
     private var viewMenuToggleItems: some View {
-        Toggle("Show Line Numbers", isOn: bindingFor(\.showLineNumbers, defaultsKey: AppPreferenceKey.showLineNumbers))
-            .keyboardShortcut(AppShortcut.showLineNumbers)
-            .disabled(!isEnabled)
-        Toggle("Wrap Lines", isOn: bindingFor(\.wrapLines, defaultsKey: AppPreferenceKey.wrapLines))
-            .keyboardShortcut(AppShortcut.wrapLines)
-            .disabled(!isEnabled)
-        Toggle("Show Invisibles", isOn: bindingFor(\.showInvisibles, defaultsKey: AppPreferenceKey.showInvisibles))
-            .keyboardShortcut(AppShortcut.showInvisibles)
-            .disabled(!isEnabled)
-        Toggle("Show Page Guide", isOn: bindingFor(\.showPageGuide, defaultsKey: AppPreferenceKey.showPageGuide))
-            .disabled(!isEnabled)
-        Toggle("Show Status Bar", isOn: bindingFor(\.showStatusBar, defaultsKey: AppPreferenceKey.showStatusBar))
-            .disabled(!isEnabled)
-        Toggle("Show Toolbar", isOn: bindingFor(\.showToolbar, defaultsKey: AppPreferenceKey.showToolbar))
-            .disabled(!isEnabled)
-        Toggle("Highlight All Occurrences of Selection",
-               isOn: bindingFor(\.liveMatchHighlight, defaultsKey: AppPreferenceKey.liveMatchHighlight))
-            .disabled(!isEnabled)
-        Toggle("Show Change History in Gutter",
-               isOn: bindingFor(\.showChangeHistoryGutter, defaultsKey: AppPreferenceKey.showChangeHistoryGutter))
-            .disabled(!isEnabled)
+        Toggle(isOn: bindingFor(\.showLineNumbers, defaultsKey: AppPreferenceKey.showLineNumbers)) {
+            Label("Show Line Numbers", systemImage: "list.number")
+        }
+        .keyboardShortcut(AppShortcut.showLineNumbers)
+        .disabled(!isEnabled)
+        Toggle(isOn: bindingFor(\.wrapLines, defaultsKey: AppPreferenceKey.wrapLines)) {
+            Label("Wrap Lines", systemImage: "arrow.turn.down.left")
+        }
+        .keyboardShortcut(AppShortcut.wrapLines)
+        .disabled(!isEnabled)
+        Toggle(isOn: bindingFor(\.showInvisibles, defaultsKey: AppPreferenceKey.showInvisibles)) {
+            Label("Show Invisibles", systemImage: "eye")
+        }
+        .keyboardShortcut(AppShortcut.showInvisibles)
+        .disabled(!isEnabled)
+        Toggle(isOn: bindingFor(\.showPageGuide, defaultsKey: AppPreferenceKey.showPageGuide)) {
+            Label("Show Page Guide", systemImage: "ruler")
+        }
+        .disabled(!isEnabled)
+        Toggle(isOn: bindingFor(\.showStatusBar, defaultsKey: AppPreferenceKey.showStatusBar)) {
+            Label("Show Status Bar", systemImage: "rectangle.bottomthird.inset.filled")
+        }
+        .disabled(!isEnabled)
+        Toggle(isOn: bindingFor(\.showToolbar, defaultsKey: AppPreferenceKey.showToolbar)) {
+            Label("Show Toolbar", systemImage: "rectangle.topthird.inset.filled")
+        }
+        .disabled(!isEnabled)
+        Toggle(isOn: bindingFor(\.liveMatchHighlight, defaultsKey: AppPreferenceKey.liveMatchHighlight)) {
+            Label("Highlight All Occurrences of Selection", systemImage: "highlighter")
+        }
+        .disabled(!isEnabled)
+        Toggle(isOn: bindingFor(\.showChangeHistoryGutter, defaultsKey: AppPreferenceKey.showChangeHistoryGutter)) {
+            Label("Show Change History in Gutter", systemImage: "clock")
+        }
+        .disabled(!isEnabled)
     }
 
     @ViewBuilder
     private var viewMenuFoldItems: some View {
-        Button("Fold at Cursor", action: focused(CommandActions.toggleFoldAtCursor))
-            .keyboardShortcut(AppShortcut.foldAtCursor)
-            .disabled(!isEnabled)
-        Button("Fold Selection", action: focused(CommandActions.foldSelection))
-            .keyboardShortcut(AppShortcut.foldSelectionBlock)
-            .disabled(!isEnabled)
-        Button("Fold All", action: focused(CommandActions.foldAll))
-            .keyboardShortcut(AppShortcut.foldAll)
-            .disabled(!isEnabled)
-        Button("Unfold All", action: focused(CommandActions.unfoldAll))
-            .keyboardShortcut(AppShortcut.unfoldAll)
-            .disabled(!isEnabled)
-        Button("Clear Manual Fold Points", action: focused(CommandActions.clearManualFolds))
-            .disabled(!isEnabled)
+        Button(action: focused(CommandActions.toggleFoldAtCursor)) {
+            Label("Fold at Cursor", systemImage: "chevron.down.square")
+        }
+        .keyboardShortcut(AppShortcut.foldAtCursor)
+        .disabled(!isEnabled)
+        Button(action: focused(CommandActions.foldSelection)) {
+            Label("Fold Selection", systemImage: "rectangle.compress.vertical")
+        }
+        .keyboardShortcut(AppShortcut.foldSelectionBlock)
+        .disabled(!isEnabled)
+        Button(action: focused(CommandActions.foldAll)) {
+            Label("Fold All", systemImage: "arrow.down.to.line.compact")
+        }
+        .keyboardShortcut(AppShortcut.foldAll)
+        .disabled(!isEnabled)
+        Button(action: focused(CommandActions.unfoldAll)) {
+            Label("Unfold All", systemImage: "arrow.up.to.line.compact")
+        }
+        .keyboardShortcut(AppShortcut.unfoldAll)
+        .disabled(!isEnabled)
+        Button(action: focused(CommandActions.clearManualFolds)) {
+            Label("Clear Manual Fold Points", systemImage: "trash")
+        }
+        .disabled(!isEnabled)
     }
 
     @ViewBuilder
     private var viewMenuTailItems: some View {
-        Button("Cycle Split View", action: focused(CommandActions.cycleSplitView))
-            .keyboardShortcut(AppShortcut.cycleSplitView)
-            .disabled(!isEnabled)
+        Button(action: focused(CommandActions.cycleSplitView)) {
+            Label("Cycle Split View", systemImage: "rectangle.split.2x1")
+        }
+        .keyboardShortcut(AppShortcut.cycleSplitView)
+        .disabled(!isEnabled)
         Divider()
-        Button("Show File Information", action: focused(CommandActions.toggleInspector))
-            .keyboardShortcut(AppShortcut.showFileInfo)
-            .disabled(!isEnabled)
-        Button("Character Inspector…", action: focused { presentSheet(.characterInspector) })
-            .keyboardShortcut(AppShortcut.characterInspector)
-            .disabled(!isEnabled)
+        Button(action: focused(CommandActions.toggleInspector)) {
+            Label("Show File Information", systemImage: "info.circle")
+        }
+        .keyboardShortcut(AppShortcut.showFileInfo)
+        .disabled(!isEnabled)
+        Button(action: focused { presentSheet(.characterInspector) }) {
+            Label("Character Inspector…", systemImage: "character.magnify")
+        }
+        .keyboardShortcut(AppShortcut.characterInspector)
+        .disabled(!isEnabled)
         Divider()
-        Menu("Bookmarks") { bookmarkMenuItems }
-            .disabled(!isEnabled)
+        Menu {
+            bookmarkMenuItems
+        } label: {
+            Label("Bookmarks", systemImage: "bookmark")
+        }
+        .disabled(!isEnabled)
         Divider()
-        Menu("Format") { formatSubmenuContent }
-            .disabled(!isEnabled)
+        Menu {
+            formatSubmenuContent
+        } label: {
+            Label("Format", systemImage: "textformat")
+        }
+        .disabled(!isEnabled)
     }
 
     @ViewBuilder

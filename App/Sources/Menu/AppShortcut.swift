@@ -17,10 +17,6 @@ enum AppShortcut {
     // MARK: File
     static let newWindow        = KeyboardShortcut("n")
     static let newTab           = KeyboardShortcut("t")
-    /// ⌘O — claimable here only because we suppress the system-injected
-    /// `.importExport` "Open…" item in EditorCommands. With that
-    /// suppression in place, the chord no longer collides.
-    static let openFile         = KeyboardShortcut("o")
     static let save             = KeyboardShortcut("s")
     static let saveAs           = KeyboardShortcut("s", modifiers: [.command, .shift])
     static let showRevisions    = KeyboardShortcut("h", modifiers: [.command, .option])
