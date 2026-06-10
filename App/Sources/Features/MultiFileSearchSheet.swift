@@ -570,11 +570,15 @@ struct MultiFileSearchSheet: View {
             guard limit > 0 else { return [] }
             let ns = text as NSString
             var out: [SearchResult] = []
+            // Matches arrive in ascending offset order, so line
+            // counting resumes from the previous match instead of
+            // rescanning from offset 0 (quadratic on match-heavy files).
+            var cursor = LineCursor()
             if let regex {
                 let range = NSRange(location: 0, length: ns.length)
                 regex.enumerateMatches(in: text, options: [], range: range) { match, _, stop in
                     guard let match else { return }
-                    out.append(makeResult(at: match.range, ns: ns,
+                    out.append(makeResult(at: match.range, ns: ns, cursor: &cursor,
                                           groupKey: groupKey, groupLabel: groupLabel,
                                           url: fileURL))
                     if out.count >= limit { stop.pointee = true }
@@ -586,7 +590,7 @@ struct MultiFileSearchSheet: View {
                     let opts: NSString.CompareOptions = caseSensitive ? [] : [.caseInsensitive]
                     let found = ns.range(of: literal, options: opts, range: searchRange)
                     if found.location == NSNotFound { break }
-                    out.append(makeResult(at: found, ns: ns,
+                    out.append(makeResult(at: found, ns: ns, cursor: &cursor,
                                           groupKey: groupKey, groupLabel: groupLabel,
                                           url: fileURL))
                     if out.count >= limit { break }
@@ -596,17 +600,36 @@ struct MultiFileSearchSheet: View {
             return out
         }
 
+        /// Running (offset, line) position within one source.
+        private struct LineCursor {
+            var offset = 0
+            var line = 1
+
+            mutating func line(at location: Int, in ns: NSString) -> Int {
+                while offset < location {
+                    let ch = ns.character(at: offset)
+                    if ch == 0x0A {
+                        line += 1
+                    } else if ch == 0x0D,
+                              offset + 1 >= ns.length || ns.character(at: offset + 1) != 0x0A {
+                        // Bare CR (classic Mac) — CRLF is counted at the LF.
+                        line += 1
+                    }
+                    offset += 1
+                }
+                return line
+            }
+        }
+
         private func makeResult(
             at range: NSRange,
             ns: NSString,
+            cursor: inout LineCursor,
             groupKey: ResultGroupKey,
             groupLabel: String,
             url: URL?
         ) -> SearchResult {
-            var line = 1
-            for i in 0..<range.location {
-                if ns.character(at: i) == 0x0A { line += 1 }
-            }
+            let line = cursor.line(at: range.location, in: ns)
             let lineRange = ns.lineRange(for: NSRange(location: range.location, length: 0))
             var preview = ns.substring(with: lineRange)
             if let last = preview.last, last == "\n" || last == "\r" { preview.removeLast() }
@@ -793,13 +816,31 @@ struct MultiFileSearchSheet: View {
         context ctx: FindContext,
         limitToFirst: Bool
     ) throws -> Int {
+        // Children of a folder-scope pick don't carry their own
+        // security scope (startAccessing… returns false on them) —
+        // re-open the picked folder's scope for the write, same as
+        // `runFolderSearch` does for the read.
+        let folderScoped = scope == .folder && folder?.startAccessingSecurityScopedResource() == true
+        defer { if folderScoped, let folder { folder.stopAccessingSecurityScopedResource() } }
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         let data = try Data(contentsOf: url)
-        guard let text = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) else { return 0 }
+        // Re-encode with whichever decode succeeded so an ISO-Latin-1
+        // file isn't silently transcoded to UTF-8.
+        let text: String
+        let encoding: String.Encoding
+        if let utf8 = String(data: data, encoding: .utf8) {
+            text = utf8
+            encoding = .utf8
+        } else if let latin1 = String(data: data, encoding: .isoLatin1) {
+            text = latin1
+            encoding = .isoLatin1
+        } else {
+            return 0
+        }
         let (replaced, count) = try replaceInString(text, query: query, replacement: replacement, context: ctx, limitToFirst: limitToFirst)
         guard count > 0 else { return 0 }
-        let outData = replaced.data(using: .utf8) ?? data
+        let outData = replaced.data(using: encoding) ?? data
         try outData.write(to: url, options: .atomic)
         return count
     }

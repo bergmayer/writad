@@ -123,7 +123,11 @@ final class AppPreferencesStore {
         defaultLineEndingRaw = d.string(forKey: AppPreferenceKey.defaultLineEndingRaw) ?? "\n"
         defaultLanguage = d.string(forKey: AppPreferenceKey.defaultLanguage) ?? LanguageIdentifier.markdown.rawValue
 
-        syntaxLimitBytes = AppPreferencesStore.positiveInt(d, AppPreferenceKey.syntaxLimitBytes, fallback: SyntaxLimit.up5MB.rawByteValue)
+        // Not positiveInt: 0 (.never) and -1 (.always) are valid sentinels
+        // it would flatten back to the 5 MB fallback.
+        let storedLimit = d.object(forKey: AppPreferenceKey.syntaxLimitBytes) as? Int
+        syntaxLimitBytes = storedLimit.flatMap(SyntaxLimit.init(rawValue:))?.rawByteValue
+            ?? SyntaxLimit.up5MB.rawByteValue
 
         iCloudSyncEnabled = d.bool(forKey: AppPreferenceKey.iCloudSyncEnabled)
     }

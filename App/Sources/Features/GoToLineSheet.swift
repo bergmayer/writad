@@ -7,6 +7,14 @@ struct GoToLineSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var input: String = ""
+    @FocusState private var fieldFocused: Bool
+
+    /// Parsed input, nil when empty / non-numeric / out of range —
+    /// gates the Go button so a bad value can't silently dismiss.
+    private var validLine: Int? {
+        guard let line = Int(input), line >= 1, line <= lineCount else { return nil }
+        return line
+    }
 
     var body: some View {
         NavigationStack {
@@ -16,6 +24,7 @@ struct GoToLineSheet: View {
                         TextField("1 – \(lineCount)", text: $input)
                             .keyboardType(.numberPad)
                             .multilineTextAlignment(.trailing)
+                            .focused($fieldFocused)
                     }
                 } footer: {
                     Text("Enter a line number between 1 and \(lineCount).")
@@ -31,14 +40,15 @@ struct GoToLineSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Go") {
-                        if let line = Int(input), line >= 1, line <= lineCount {
+                        if let line = validLine {
                             onApply(line)
                         }
                         dismiss()
                     }
-                    .disabled(Int(input) == nil)
+                    .disabled(validLine == nil)
                 }
             }
+            .onAppear { fieldFocused = true }
         }
     }
 }

@@ -31,12 +31,27 @@ extension CommandActions {
         requestCloseTab(session.selectedTabID, in: session)
     }
 
-    /// Tear down the foreground scene. iPad-only; iPhone is single-
-    /// window and the system request is a no-op there.
-    static func closeWindow() {
+    /// Tear down the scene hosting `session` (default: the focused
+    /// session). iPad-only; iPhone is single-window and the system
+    /// request is a no-op there.
+    static func closeWindow(session: EditorSession? = nil) {
+        if let target = session ?? Self.session,
+           let scene = SessionsStore.shared.scene(forSceneUUID: target.sceneUUID) {
+            UIApplication.shared.requestSceneSessionDestruction(
+                scene.session,
+                options: nil,
+                errorHandler: nil
+            )
+            return
+        }
         destroyForegroundWindowScene()
     }
 
+    /// Last-resort fallback when the acting session's scene isn't
+    /// registered yet. With several windows visible, multiple scenes
+    /// are simultaneously `.foregroundActive` and `connectedScenes`
+    /// is unordered — this can pick the wrong window, so callers
+    /// should go through `closeWindow(session:)`.
     static func destroyForegroundWindowScene() {
         guard let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) else { return }
         UIApplication.shared.requestSceneSessionDestruction(
@@ -85,16 +100,14 @@ extension CommandActions {
             Self.context.presentation.pendingClose = nil
             return
         }
-        do {
-            try tab.document.save()
-        } catch {
-            Self.context.presentation.openErrorMessage =
-                "Couldn't save \(pending.displayName): \(error.localizedDescription)"
-            Self.context.presentation.pendingClose = nil
-            return
-        }
-        session.closeTab(pending.tabID)
+        // Same funnel as ⌘S so the live-text flush and stale-source
+        // check apply — a raised stale dialog (or failed write) keeps
+        // the tab open for the user to resolve.
+        let saved = saveDocumentSafely(tab, session: session)
         Self.context.presentation.pendingClose = nil
+        if saved {
+            session.closeTab(pending.tabID)
+        }
     }
 
     /// "Save as Draft" path from the close dialog + title menu:
@@ -145,15 +158,20 @@ extension CommandActions {
             Self.context.pickers.pending = .saveAs
             return false
         }
-        if let attrs = PlainTextDocument.diskAttrs(of: url),
-           let loadMtime = tab.document.sourceMtimeAtLoad,
-           let loadSize = tab.document.sourceSizeAtLoad,
-           attrs.mtime != loadMtime || attrs.size != loadSize {
-            Self.context.presentation.sourceStaleCheck = .changedOnSave(
-                tabID: tab.id,
-                displayName: tab.document.displayName
-            )
-            return false
+        if let attrs = PlainTextDocument.diskAttrs(of: url) {
+            // A nil baseline means the load never completed, so we
+            // can't prove the buffer reflects the disk bytes — warn
+            // instead of overwriting silently. (Save Anyway works:
+            // `save()` refreshes the baseline after writing.)
+            let baselineMatches = tab.document.sourceMtimeAtLoad == attrs.mtime
+                && tab.document.sourceSizeAtLoad == attrs.size
+            if !baselineMatches {
+                Self.context.presentation.sourceStaleCheck = .changedOnSave(
+                    tabID: tab.id,
+                    displayName: tab.document.displayName
+                )
+                return false
+            }
         }
         return performSave(tab: tab)
     }

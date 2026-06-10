@@ -33,9 +33,11 @@ enum SyntaxLimit: Int, CaseIterable, Identifiable {
     }
 
     /// Unknown stored values (forward-compat) fall back to `.up5MB`.
+    /// Reads the store, not UserDefaults — the store is the declared
+    /// single source of truth and already validated the sentinels.
+    @MainActor
     static func current() -> SyntaxLimit {
-        let stored = UserDefaults.standard.integer(forKey: AppPreferenceKey.syntaxLimitBytes)
-        return SyntaxLimit(rawValue: stored) ?? .up5MB
+        SyntaxLimit(rawValue: AppPreferencesStore.shared.syntaxLimitBytes) ?? .up5MB
     }
 }
 

@@ -24,10 +24,29 @@ struct EditorScene: View {
     private var state: EditorState { session.activeTab.state }
 
     /// SwiftUI evaluates `.fileExporter(document:)` on every body
-    /// re-render, not just at Save As time. Keep this pure — an
-    /// earlier version raced `applyPayload` and clobbered freshly-
-    /// loaded files back to "".
-    private func liveEncodedSnapshot() -> Data {
+    /// re-render, not just at Save As time, so the proxy defers this
+    /// O(n) buffer copy + encode until the exporter actually writes.
+    /// Keep the encode pure — an earlier version raced `applyPayload`
+    /// and clobbered freshly-loaded files back to "". `fileWrapper`
+    /// isn't documented to run on the main thread, hence the hop.
+    private var exportSnapshotProvider: @Sendable () -> Data {
+        let state = state
+        let document = document
+        return {
+            if Thread.isMainThread {
+                return MainActor.assumeIsolated {
+                    Self.liveEncodedSnapshot(state: state, document: document)
+                }
+            }
+            return DispatchQueue.main.sync {
+                MainActor.assumeIsolated {
+                    Self.liveEncodedSnapshot(state: state, document: document)
+                }
+            }
+        }
+    }
+
+    private static func liveEncodedSnapshot(state: EditorState, document: PlainTextDocument) -> Data {
         let liveText = state.textView?.text ?? document.text
         let defaults = UserDefaults.standard
         return (try? PlainTextDocument.encode(
@@ -40,7 +59,12 @@ struct EditorScene: View {
         )) ?? Data()
     }
 
-    private var isActive: Bool { bus.scenes.isActive(state) }
+    /// OR over (currentEditor, currentSession): a stale currentEditor
+    /// (e.g. pointing at a closed tab) must not collapse the focused
+    /// window's importer bindings into `.constant(false)`.
+    private var isActive: Bool {
+        bus.scenes.isActive(state) || bus.scenes.currentSession === session
+    }
 
     private var documentTitle: String { document.displayName }
 
@@ -100,12 +124,9 @@ struct EditorScene: View {
                     AppStateBus.shared.scenes.currentEditor = session.activeTab.state
                     return
                 }
-                for tab in session.tabs where tab.document.isDirty {
-                    if let live = tab.state.textView?.text {
-                        tab.document.text = live
-                    }
-                    tab.document.autoSave(commitDraft: true)
-                }
+                // Dirty tabs autosave inside persistSessionRecord, so
+                // every persist caller (background + onDisappear) is
+                // covered without double-saving here.
                 persistSessionRecord()
             }
             .onAppear {
@@ -201,7 +222,7 @@ struct EditorScene: View {
             .background(
                 EmptyView().fileExporter(
                     isPresented: isActive ? bus.pickers.binding(for: .saveAs) : .constant(false),
-                    document: TextFileWrapperProxy(snapshot: liveEncodedSnapshot()),
+                    document: TextFileWrapperProxy(snapshot: exportSnapshotProvider),
                     contentType: PlainTextDocument.supportedWriteType,
                     defaultFilename: state.fileURL?.deletingPathExtension().lastPathComponent ?? document.displayName
                 ) { result in
@@ -233,13 +254,16 @@ struct EditorScene: View {
                     }
                 }
             )
+            // Shared bus values: gate by isActive so only the focused
+            // scene consumes them — every open window observes the
+            // change and would otherwise act on it N times.
             .onChange(of: bus.pending.openInPlace) { _, url in
-                guard let url else { return }
+                guard isActive, let url else { return }
                 openURL(url)
                 bus.pending.openInPlace = nil
             }
             .onChange(of: bus.scenes.pendingShortcut) { _, shortcut in
-                guard let shortcut else { return }
+                guard isActive, let shortcut else { return }
                 applyHomeShortcut(shortcut)
                 bus.scenes.pendingShortcut = nil
             }
@@ -247,13 +271,11 @@ struct EditorScene: View {
                 // Counter lives on the shared bus, so every scene
                 // observes the bump. Gate by isActive so only the
                 // window the user clicked Revert in reloads its file —
-                // backgrounded scenes ignore the tick.
+                // backgrounded scenes ignore the tick. openURL reuses
+                // the async load path: errors surface via
+                // openErrorMessage and isLargeFile is recomputed.
                 guard isActive, let url = document.fileURL else { return }
-                try? document.load(from: url)
-                state.text = document.text
-                state.savedBaselineText = document.text
-                state.fileEncoding = document.fileEncoding
-                state.lineEnding = document.lineEnding
+                openURL(url)
             }
     }
 
@@ -326,7 +348,10 @@ struct EditorScene: View {
             isWindowScopeLauncher: session.tabs.count == 1,
             onCancel: {
                 if session.tabs.count == 1, DeviceIdiom.supportsMultipleWindows {
-                    CommandActions.closeWindow()
+                    // Pass the owning session — the bus's focused
+                    // session may lag behind and point at another
+                    // window, which would close the wrong one.
+                    CommandActions.closeWindow(session: session)
                 } else {
                     CommandActions.requestCloseTab(session.activeTab.id, in: session)
                 }
@@ -481,9 +506,10 @@ struct EditorScene: View {
         let manager = FileManager.default
         guard let contents = try? manager.contentsOfDirectory(at: url, includingPropertiesForKeys: [.isDirectoryKey]).sorted(by: { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }) else { return }
         var lines: [String] = ["\(url.lastPathComponent)/"]
-        for entry in contents {
+        for (index, entry) in contents.enumerated() {
             let isDir = (try? entry.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
-            lines.append("├── \(entry.lastPathComponent)\(isDir ? "/" : "")")
+            let branch = index == contents.count - 1 ? "└── " : "├── "
+            lines.append("\(branch)\(entry.lastPathComponent)\(isDir ? "/" : "")")
         }
         let nl = state.lineEnding.string
         state.textView?.replace(state.selectedRange, withText: lines.joined(separator: nl) + nl)
@@ -503,6 +529,7 @@ struct EditorScene: View {
         if sceneUUID.isEmpty {
             sceneUUID = UUID().uuidString
         }
+        session.sceneUUID = sceneUUID
         let pendingCount = SessionsStore.shared.initiateRestoreSweep()
         if pendingCount > 1 {
             for _ in 0..<(pendingCount - 1) {

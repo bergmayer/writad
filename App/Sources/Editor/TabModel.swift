@@ -42,9 +42,12 @@ final class TabModel: Identifiable {
         fresh.lineEnding = state.lineEnding
         fresh.fileURL = state.fileURL
         fresh.languageIdentifier = state.languageIdentifier
-        fresh.themeName = state.themeName
-        fresh.font = state.font
-        fresh.fontSize = state.fontSize
+        // Copy the override slots, not the computed accessors — those
+        // setters write the global preference when no override exists,
+        // silently promoting a per-window override to a global pref.
+        fresh.themeOverride = state.themeOverride
+        fresh.fontOverride = state.fontOverride
+        fresh.fontSizeOverride = state.fontSizeOverride
         fresh.showLineNumbers = state.showLineNumbers
         fresh.wrapLines = state.wrapLines
         fresh.savedBaselineText = state.savedBaselineText

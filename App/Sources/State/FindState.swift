@@ -43,7 +43,9 @@ enum FindCompile {
         let inner = ctx.useRegex
             ? ctx.query
             : NSRegularExpression.escapedPattern(for: ctx.query)
-        return #"\b"# + inner + #"\b"#
+        // Group before wrapping: bare \b…\b binds per-alternative, so
+        // `cat|dog` would become `\bcat|dog\b`.
+        return #"\b(?:"# + inner + #")\b"#
     }
 
     /// Throws when the user's regex doesn't compile. Callers should

@@ -118,15 +118,15 @@ enum CommandRegistry {
             .init(id: "pinTab",     title: "Pin / Unpin Tab",                category: .file, synonyms: ["pin", "unpin", "favourite tab"], action: CommandActions.pinCurrentTab),
             .init(id: "closeOthers", title: "Close Other Tabs",              category: .file, synonyms: ["close all other tabs"], action: CommandActions.closeOtherTabs),
             .init(id: "closeRight", title: "Close Tabs to the Right",        category: .file, synonyms: ["close trailing tabs"], action: CommandActions.closeTabsToRight),
-            .init(id: "nextTab",    title: "Next Tab",                       category: .file, shortcutHint: "⌘⇧]", synonyms: ["select next tab", "tab forward"], action: CommandActions.nextTab),
-            .init(id: "prevTab",    title: "Previous Tab",                   category: .file, shortcutHint: "⌘⇧[", synonyms: ["select previous tab", "tab back"], action: CommandActions.previousTab),
+            .init(id: "nextTab",    title: "Next Tab",                       category: .file, shortcutHint: "⇧⌘]", synonyms: ["select next tab", "tab forward"], action: CommandActions.nextTab),
+            .init(id: "prevTab",    title: "Previous Tab",                   category: .file, shortcutHint: "⇧⌘[", synonyms: ["select previous tab", "tab back"], action: CommandActions.previousTab),
             .init(id: "openInTab",  title: "Open File in New Tab…",          category: .file, shortcutHint: DeviceIdiom.supportsMultipleWindows ? nil : "⌘O", synonyms: ["open document in new tab", "open file", "load file", "force tab"], action: CommandActions.presentFileBrowserInNewTab, isEnabled: { true }),
             .init(id: "openInWin",  title: "Open File in New Window…",       category: .file, shortcutHint: "⌘O",   synonyms: ["open document in new window", "open file", "load file", "force window"], action: CommandActions.presentFileBrowserInNewWindow, isEnabled: { DeviceIdiom.supportsMultipleWindows }),
             .init(id: "saveFile",   title: "Save",                           category: .file, shortcutHint: "⌘S",   synonyms: ["write file"],                       action: CommandActions.saveFile),
             .init(id: "saveAs",     title: "Save As…",                       category: .file, shortcutHint: "⇧⌘S",  synonyms: ["save copy", "duplicate file"],     action: CommandActions.saveFileAs),
             .init(id: "revert",     title: "Revert to Saved",                category: .file, synonyms: ["reload from disk", "discard changes"], action: CommandActions.revertToSaved),
             .init(id: "revs",       title: "Show Revisions…",                category: .file, shortcutHint: "⌥⌘H",  synonyms: ["history", "versions", "time machine", "undo to disk"], action: CommandActions.presentRevisions),
-            .init(id: "prefs",      title: "Settings…",                      category: .app,  shortcutHint: "⌘,",   synonyms: ["preferences", "options", "config"], action: CommandActions.presentPreferences,    isEnabled: { true }),
+            .init(id: "prefs",      title: "Settings…",                      category: .app,  shortcutHint: "⌘,",   synonyms: ["preferences", "options", "config", "settings", "edit transforms"], action: CommandActions.presentPreferences,    isEnabled: { true }),
             .init(id: "palette",    title: "Command Palette…",               category: .app,  shortcutHint: "⌘P",   synonyms: ["all commands", "fuzzy commands"],  action: CommandActions.presentCommandPalette, isEnabled: { true })
         ]
 
@@ -137,14 +137,14 @@ enum CommandRegistry {
             .init(id: "findFast",   title: "Find Incrementally",             category: .search, shortcutHint: "⌥⌘F",  synonyms: ["quick find", "find bar", "incremental search", "live search"], action: CommandActions.presentSystemFindBar),
             .init(id: "multiFile",  title: "Multi-File Search…",             category: .search, shortcutHint: "⇧⌘F",  synonyms: ["search in folder", "grep folder", "find in files", "search across files"], action: CommandActions.presentMultiFileSearch, isEnabled: { true }),
             .init(id: "findFirst",  title: "Find First",                     category: .search, synonyms: ["first match", "jump to first match", "find from start"], action: CommandActions.findFirst),
-            .init(id: "findNext",   title: "Find Next",                      category: .search, shortcutHint: "⌘G",   action: CommandActions.findNext),
-            .init(id: "findPrev",   title: "Find Previous",                  category: .search, shortcutHint: "⇧⌘G",  action: CommandActions.findPrevious),
-            .init(id: "findNextSel", title: "Find Next Occurrence of Selection",     category: .search, shortcutHint: "⌥N", action: CommandActions.findNextOccurrenceOfSelection),
-            .init(id: "findPrevSel", title: "Find Previous Occurrence of Selection", category: .search, shortcutHint: "⌥P", action: CommandActions.findPreviousOccurrenceOfSelection),
+            .init(id: "findNext",   title: "Find Next",                      category: .search, action: CommandActions.findNext),
+            .init(id: "findPrev",   title: "Find Previous",                  category: .search, action: CommandActions.findPrevious),
+            .init(id: "findNextSel", title: "Find Next Occurrence of Selection",     category: .search, action: CommandActions.findNextOccurrenceOfSelection),
+            .init(id: "findPrevSel", title: "Find Previous Occurrence of Selection", category: .search, action: CommandActions.findPreviousOccurrenceOfSelection),
             .init(id: "replSel",    title: "Replace All in Selection",       category: .search, synonyms: ["replace within selection", "scoped replace all"], action: CommandActions.replaceAllInSelection),
             .init(id: "replEnd",    title: "Replace to End",                 category: .search, synonyms: ["replace from cursor", "replace from here"], action: CommandActions.replaceToEnd),
             .init(id: "gotoLine",   title: "Go to Line…",                    category: .search, shortcutHint: "⌘L",   action: { CommandActions.presentSheet(.goToLine) }),
-            .init(id: "gotoBracket", title: "Go to Matching Bracket",        category: .search, shortcutHint: "⇧⌘\\", action: CommandActions.goToMatchingBracket),
+            .init(id: "gotoBracket", title: "Go to Matching Bracket",        category: .search, shortcutHint: "⌃⌘B", action: CommandActions.goToMatchingBracket),
             .init(id: "posBack",    title: "Back",                           category: .navigate, shortcutHint: "⌃⌘←", action: CommandActions.positionBack),
             .init(id: "posFwd",     title: "Forward",                        category: .navigate, shortcutHint: "⌃⌘→", action: CommandActions.positionForward)
         ]
@@ -168,7 +168,7 @@ enum CommandRegistry {
             .init(id: "outline",      title: "Show Outline",                 category: .view, shortcutHint: "⌃⌘S", synonyms: ["sidebar", "show sidebar", "toggle sidebar", "headings", "toc", "table of contents", "structure", "outline sidebar", "navigation panel"], action: CommandActions.showOutline),
             .init(id: "fileInfo",     title: "Show File Information",        category: .view, shortcutHint: "⌥⌘I", synonyms: ["file info", "inspector", "metadata", "details", "outline panel"], action: CommandActions.toggleInspector),
             .init(id: "mdPreview",    title: "Markdown Preview…",           category: .markdown, shortcutHint: "⌥⌘P", synonyms: ["render", "html preview"], action: CommandActions.presentMarkdownPreview),
-            .init(id: "reflow",       title: "Reflow Paragraph (80 cols)",  category: .format,   shortcutHint: "⌃⌘W", synonyms: ["hard wrap", "rewrap", "paragraph fill", "fill"], action: { CommandActions.reflowParagraph(column: 80) }),
+            .init(id: "reflow",       title: "Reflow Paragraph (80 cols)",  category: .format,   synonyms: ["hard wrap", "rewrap", "paragraph fill", "fill"], action: { CommandActions.reflowParagraph(column: 80) }),
             .init(id: "processLines", title: "Process Lines Containing…",   category: .text, synonyms: ["filter lines", "extract lines", "keep matching", "delete matching"], action: CommandActions.presentProcessLines),
             .init(id: "canonize",     title: "Canonize / Text Merge…",      category: .text, synonyms: ["batch find replace", "lookup table", "table replace"], action: CommandActions.presentCanonize),
             .init(id: "copyBookmarks", title: "Copy Bookmarked Lines",      category: .bookmark, synonyms: ["yank bookmarks", "extract bookmarks"], action: CommandActions.copyBookmarkedLines),
@@ -298,6 +298,19 @@ enum CommandRegistry {
             ))
         }
 
+        for slot in JSTransformStore.shared.slots {
+            let id = slot.id
+            commands.append(.init(
+                id: "jsSlot\(id)",
+                title: "Run \(slot.displayName)",
+                category: .tools,
+                shortcutHint: "⌃⌥\(id == 10 ? "0" : "\(id)")",
+                synonyms: ["transform \(id)", "javascript \(id)", slot.name],
+                action: { CommandActions.runJSTransform(slotID: id) },
+                isEnabled: { JSTransformStore.shared.slot(id: id)?.isConfigured ?? false }
+            ))
+        }
+
         // MARK: Markdown wrappers + headings + structural inserts
 
         commands += [
@@ -308,7 +321,7 @@ enum CommandRegistry {
                   shortcutHint: "⌘I", synonyms: ["emphasis", "italic markdown"],
                   action: CommandActions.markdownItalic),
             .init(id: "mdCode",     title: "Inline Code (Markdown `…`)", category: .markdown,
-                  shortcutHint: "⌘`", synonyms: ["code span", "monospace"],
+                  shortcutHint: "⌥⌘C", synonyms: ["code span", "monospace"],
                   action: CommandActions.markdownCode),
             .init(id: "mdStrike",   title: "Strikethrough (Markdown ~~…~~)", category: .markdown,
                   shortcutHint: "⇧⌘X", synonyms: ["strike", "del", "crossed out"],
@@ -391,8 +404,8 @@ enum CommandRegistry {
                   synonyms: ["edit snippets", "add snippet", "delete snippet", "new snippet"],
                   action: CommandActions.presentSnippetsManager,
                   isEnabled: { true }),
-            .init(id: "openSettings", title: "Settings…", category: .app,
-                  synonyms: ["preferences", "settings", "edit transforms"],
+            .init(id: "manageTransforms", title: "Manage Transforms…", category: .tools,
+                  synonyms: ["edit transforms", "javascript transforms", "js transforms"],
                   action: CommandActions.presentPreferences,
                   isEnabled: { true })
         ]
@@ -516,8 +529,8 @@ enum CommandRegistry {
         // MARK: Spell check
 
         commands += [
-            .init(id: "spellSheet",    title: "Check Spelling…",              category: .spelling, shortcutHint: "⇧⌘:", synonyms: ["spell check", "walk through spelling", "spelling dialog", "word spell check"], action: CommandActions.presentSpellCheckSheet),
-            .init(id: "spellCheckAll", title: "Highlight All Misspellings",   category: .spelling, shortcutHint: "⇧⌘;", synonyms: ["spell check document", "highlight misspellings", "audit spelling", "manual spell check"], action: CommandActions.highlightAllMisspellings),
+            .init(id: "spellSheet",    title: "Check Spelling…",              category: .spelling, synonyms: ["spell check", "walk through spelling", "spelling dialog", "word spell check"], action: CommandActions.presentSpellCheckSheet),
+            .init(id: "spellCheckAll", title: "Highlight All Misspellings",   category: .spelling, synonyms: ["spell check document", "highlight misspellings", "audit spelling", "manual spell check"], action: CommandActions.highlightAllMisspellings),
             .init(id: "spellClear",    title: "Clear Spelling Marks",         category: .spelling, synonyms: ["remove spelling highlights", "clear misspelling highlights"], action: CommandActions.clearMisspellingHighlights),
             .init(id: "spellNext",     title: "Find Next Misspelling",        category: .spelling, synonyms: ["next typo"], action: CommandActions.jumpToNextMisspelling),
             .init(id: "spellLearn",    title: "Learn Spelling of Word",       category: .spelling, synonyms: ["add to dictionary", "remember word"], action: CommandActions.learnSelectedWord),
@@ -531,8 +544,8 @@ enum CommandRegistry {
         // led by 20 numbered entries.
 
         for slot in 0..<10 {
-            commands.append(.init(id: "bkSet.\(slot)",   title: "Set Bookmark \(slot)",     category: .bookmark, shortcutHint: "⇧⌘\(slot)", action: { CommandActions.setBookmark(slot) }))
-            commands.append(.init(id: "bkJump.\(slot)",  title: "Jump to Bookmark \(slot)", category: .bookmark, shortcutHint: "⌥\(slot)", action: { CommandActions.jumpToBookmark(slot) }))
+            commands.append(.init(id: "bkSet.\(slot)",   title: "Set Bookmark \(slot)",     category: .bookmark, shortcutHint: "⌃⇧\(slot)", action: { CommandActions.setBookmark(slot) }))
+            commands.append(.init(id: "bkJump.\(slot)",  title: "Jump to Bookmark \(slot)", category: .bookmark, shortcutHint: "⌃\(slot)", action: { CommandActions.jumpToBookmark(slot) }))
         }
 
         return commands

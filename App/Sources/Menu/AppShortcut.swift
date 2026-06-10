@@ -57,7 +57,8 @@ enum AppShortcut {
     // MARK: Markdown
     static let markdownBold      = KeyboardShortcut("b")
     static let markdownItalic    = KeyboardShortcut("i")
-    static let markdownCode      = KeyboardShortcut("`")
+    /// ⌥⌘C — ⌘` is iPadOS Cycle Through Windows in multi-window apps.
+    static let markdownCode      = KeyboardShortcut("c", modifiers: [.command, .option])
     static let markdownStrike    = KeyboardShortcut("x", modifiers: [.command, .shift])
     static let markdownBlockquote = KeyboardShortcut("'", modifiers: [.command, .shift])
     static let markdownHRule     = KeyboardShortcut("-", modifiers: [.command, .shift])

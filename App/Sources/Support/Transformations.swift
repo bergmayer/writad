@@ -37,7 +37,7 @@ enum Transformations {
             if !isFirstOrLast && titleCaseLowercaseWords.contains(lower) {
                 replacement = lower
             } else {
-                replacement = capitalizeFirst(word)
+                replacement = titleCaseWord(word)
             }
             result.replaceSubrange(range, with: replacement)
         }
@@ -82,8 +82,15 @@ enum Transformations {
 
     // MARK: - Encoding
 
+    /// RFC 3986 unreserved set. `.urlQueryAllowed` leaves `&` `=` `+` `?` `/`
+    /// raw, which corrupts values pasted into query strings and isn't the
+    /// inverse of `urlDecode`.
+    private static let rfc3986Unreserved = CharacterSet(
+        charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
+    )
+
     static func urlEncode(_ input: String) -> String {
-        input.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? input
+        input.addingPercentEncoding(withAllowedCharacters: rfc3986Unreserved) ?? input
     }
 
     static func urlDecode(_ input: String) -> String {
@@ -142,6 +149,14 @@ enum Transformations {
         return first.uppercased() + word.dropFirst().lowercased()
     }
 
+    /// Title Case only: any existing uppercase signals an acronym or brand
+    /// ("NASA", "iCloud") that `capitalizeFirst`'s aggressive lowercasing
+    /// would destroy, so only all-lowercase words get touched.
+    private static func titleCaseWord(_ word: String) -> String {
+        guard word == word.lowercased(), let first = word.first else { return word }
+        return first.uppercased() + word.dropFirst()
+    }
+
     /// Lowercase-unless-first-or-last word list for Title Case: articles +
     /// coordinating conjunctions + short prepositions + a few extras.
     private static let titleCaseLowercaseWords: Set<String> = [
@@ -160,7 +175,10 @@ enum Transformations {
     static func splitParagraphs(_ text: String) -> [String] {
         var paragraphs: [String] = []
         var current: [String] = []
-        for line in text.split(omittingEmptySubsequences: false, whereSeparator: { $0 == "\n" || $0 == "\r" }) {
+        // splitKeepingNewlines rather than split(whereSeparator:) — Character
+        // comparison never matches the fused CRLF grapheme cluster.
+        for piece in splitKeepingNewlines(text) {
+            let line = splitTrailingNewline(piece).0
             let stripped = line.trimmingCharacters(in: .whitespaces)
             if stripped.isEmpty {
                 if !current.isEmpty {
@@ -168,7 +186,7 @@ enum Transformations {
                     current.removeAll()
                 }
             } else {
-                current.append(String(line))
+                current.append(line)
             }
         }
         if !current.isEmpty { paragraphs.append(current.joined(separator: "\n")) }
@@ -289,7 +307,8 @@ enum Transformations {
     /// Tabs → `tabWidth` spaces. Naive — no column tracking; bulk-convert
     /// editors rarely do column-aware expansion either.
     static func tabsToSpaces(_ text: String, tabWidth: Int) -> String {
-        let pad = String(repeating: " ", count: max(1, tabWidth))
+        guard tabWidth > 0 else { return text }
+        let pad = String(repeating: " ", count: tabWidth)
         return text.replacingOccurrences(of: "\t", with: pad)
     }
 
@@ -384,7 +403,9 @@ enum Transformations {
                         i = hex.1
                     } else { out.append(ch); i = text.index(after: i) }
                 case "u":
+                    // Exactly 4 digits — \u is fixed-width, unlike C-style \x.
                     if let hex = takeHex(in: text, from: text.index(after: next), count: 4),
+                       hex.0.count == 4,
                        let val = UInt32(hex.0, radix: 16),
                        let scalar = Unicode.Scalar(val) {
                         out.unicodeScalars.append(scalar)
@@ -403,13 +424,15 @@ enum Transformations {
     static func escapeSpecialCharacters(_ text: String) -> String {
         var out = String()
         out.reserveCapacity(text.count)
-        for ch in text {
-            switch ch {
+        // Scalars, not Characters: the fused CRLF grapheme cluster matches
+        // neither "\r" nor "\n" and would pass through raw.
+        for scalar in text.unicodeScalars {
+            switch scalar {
             case "\n": out.append("\\n")
             case "\t": out.append("\\t")
             case "\r": out.append("\\r")
             case "\\": out.append("\\\\")
-            default:   out.append(ch)
+            default:   out.unicodeScalars.append(scalar)
             }
         }
         return out
@@ -418,12 +441,14 @@ enum Transformations {
     /// Straight → curly. Opening vs closing picked from prior char:
     /// whitespace/start → opening, otherwise closing.
     static func educateQuotes(_ text: String) -> String {
-        let chars = Array(text)
         var out = String()
-        out.reserveCapacity(chars.count)
-        for (i, ch) in chars.enumerated() {
-            let prev: Character? = i > 0 ? chars[i - 1] : nil
-            let openingContext = (prev == nil) || prev!.isWhitespace || "([{<«—–-".contains(prev!)
+        out.reserveCapacity(text.count)
+        for ch in text {
+            // Context comes from the output, not the source: a just-educated
+            // opening “ / ‘ must count as opening context or nested quotes
+            // ("'nested'") come out closing.
+            let prev: Character? = out.last
+            let openingContext = (prev == nil) || prev!.isWhitespace || "([{<«—–-“‘".contains(prev!)
             switch ch {
             case "\"":
                 out.append(openingContext ? "\u{201C}" : "\u{201D}")

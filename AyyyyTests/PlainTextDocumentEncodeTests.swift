@@ -193,6 +193,35 @@ final class PlainTextDocumentEncodeTests: XCTestCase {
         XCTAssertEqual(String(data: data, encoding: .utf8), "alpha\r\n")
     }
 
+    // MARK: - Decode (Unicode BOMs)
+
+    func test_decode_utf16LEWithBOM_roundTrips() throws {
+        // UTF-16 data is full of NUL high bytes — the BOM must route it
+        // past the binary-file heuristic into encoding detection.
+        let text = "héllo wörld"
+        var data = Data([0xFF, 0xFE])
+        data.append(try XCTUnwrap(text.data(using: .utf16LittleEndian)))
+        let payload = try PlainTextDocument.decodePayload(from: data)
+        XCTAssertEqual(payload.text, text)
+    }
+
+    func test_decode_utf16BEWithBOM_roundTrips() throws {
+        let text = "héllo wörld"
+        var data = Data([0xFE, 0xFF])
+        data.append(try XCTUnwrap(text.data(using: .utf16BigEndian)))
+        let payload = try PlainTextDocument.decodePayload(from: data)
+        XCTAssertEqual(payload.text, text)
+    }
+
+    func test_decode_nulBytesWithoutBOM_throwsBinaryFile() {
+        let data = Data([0x68, 0x69, 0x00, 0x68, 0x69])
+        XCTAssertThrowsError(try PlainTextDocument.decodePayload(from: data)) { error in
+            guard case PlainTextDocument.DocumentError.binaryFile = error else {
+                return XCTFail("Expected .binaryFile, got \(error)")
+            }
+        }
+    }
+
     // MARK: - Composite
 
     func test_encode_allOptions_chainCorrectly() throws {

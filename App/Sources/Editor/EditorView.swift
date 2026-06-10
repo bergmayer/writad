@@ -20,6 +20,10 @@ struct EditorView: View {
     @Bindable private var bus = AppStateBus.shared
     @Environment(\.openWindow) private var openWindow
     @Bindable private var prefs = AppPreferencesStore.shared
+    /// Fraction at divider-drag start; DragGesture translation is
+    /// cumulative, so deltas must apply against this anchor, not the
+    /// already-updated live fraction.
+    @State private var dividerDragStartFraction: CGFloat?
     var body: some View {
         observeStateForEngineUpdates()
         // Editor ignores keyboard safe area; UITextView's own contentInset
@@ -98,6 +102,15 @@ struct EditorView: View {
             if let session = AppStateBus.shared.scenes.currentSession {
                 AppStateBus.shared.scenes.registerSession(session)
             }
+            // Restore-with-split-open: the onChange below won't fire
+            // for the initial value.
+            if state.splitOpen { _ = currentTab?.ensureSecondaryState() }
+        }
+        // ensureSecondaryState mutates @Observable state, so it can't
+        // run during body. Create the pane state here and let body
+        // render the split once `secondaryState` exists.
+        .onChange(of: state.splitOpen) { _, open in
+            if open { _ = currentTab?.ensureSecondaryState() }
         }
         // No matching .onDisappear: SwiftUI fires it on any focus loss
         // (palette / preferences / multitasking swipe), which dimmed the
@@ -214,6 +227,10 @@ struct EditorView: View {
 
     private var session: EditorSession? {
         bus.scenes.allOpenSessions.first { $0.tabs.contains(where: { $0.state === state }) }
+    }
+
+    private var currentTab: TabModel? {
+        session?.tabs.first(where: { $0.state === state })
     }
 
     private var openErrorAlertBinding: Binding<Bool> {
@@ -366,10 +383,12 @@ struct EditorView: View {
     }
 
     /// Two editors over the same document; pane size tracks splitFraction.
+    /// Reads the already-created `secondaryState` (never creates it here —
+    /// that mutates @Observable state during view update); until the
+    /// onChange trigger lands, the single editor renders.
     @ViewBuilder
     private var splitOrSingleEditor: some View {
-        if state.splitOpen, let session = bus.scenes.currentSession,
-           let tab = session.tabs.first(where: { $0.state === state }) {
+        if state.splitOpen, let secondary = currentTab?.secondaryState {
             GeometryReader { proxy in
                 switch state.splitOrientation {
                 case .horizontal:
@@ -379,7 +398,7 @@ struct EditorView: View {
                         EditorTextView(document: document, state: state)
                             .frame(width: leftWidth)
                         splitDivider(in: total, axis: .horizontal)
-                        EditorTextView(document: document, state: tab.ensureSecondaryState())
+                        EditorTextView(document: document, state: secondary)
                     }
                 case .vertical:
                     let total = max(proxy.size.height, 1)
@@ -388,7 +407,7 @@ struct EditorView: View {
                         EditorTextView(document: document, state: state)
                             .frame(height: topHeight)
                         splitDivider(in: total, axis: .vertical)
-                        EditorTextView(document: document, state: tab.ensureSecondaryState())
+                        EditorTextView(document: document, state: secondary)
                     }
                 }
             }
@@ -408,18 +427,22 @@ struct EditorView: View {
                 case .vertical:   Rectangle().fill(Color.secondary).frame(height: 1)
                 }
             }
-            .contentShape(Rectangle())
+            // Inset hit area: the bare 6 pt strip is near-undraggable
+            // by touch.
+            .contentShape(Rectangle().inset(by: -12))
             .gesture(
                 DragGesture()
                     .onChanged { value in
+                        let start = dividerDragStartFraction ?? state.splitFraction
+                        dividerDragStartFraction = start
                         let delta: CGFloat
                         switch axis {
                         case .horizontal: delta = value.translation.width
                         case .vertical:   delta = value.translation.height
                         }
-                        let newFraction = (totalSize * state.splitFraction + delta) / totalSize
-                        state.splitFraction = max(0.1, min(0.9, newFraction))
+                        state.splitFraction = max(0.1, min(0.9, start + delta / totalSize))
                     }
+                    .onEnded { _ in dividerDragStartFraction = nil }
             )
     }
 
@@ -488,8 +511,12 @@ struct EditorView: View {
             LineEndingPickerSheet(
                 current: document.lineEnding,
                 onSelect: { lineEnding in
+                    // document.text is a 300 ms debounced snapshot;
+                    // operating on it would drop keystrokes typed
+                    // inside the debounce window.
+                    let live = state.textView?.text ?? document.text
                     state.lineEnding = lineEnding
-                    document.text = document.text.replacingLineEndings(with: lineEnding)
+                    document.text = live.replacingLineEndings(with: lineEnding)
                 }
             )
         case .languagePicker:
@@ -503,13 +530,13 @@ struct EditorView: View {
             CharacterInspectorSheet(text: document.text, range: state.selectedRange)
         case .sortLines:
             SortLinesSheet(
-                text: document.text,
+                text: state.textView?.text ?? document.text,
                 lineEnding: document.lineEnding,
                 onApply: { sorted in document.text = sorted }
             )
         case .goToLine:
             GoToLineSheet(
-                lineCount: lineCount(in: document.text),
+                lineCount: lineCount(in: state.textView?.text ?? document.text),
                 onApply: { line in goToLine(line) }
             )
         case .selectLinesContaining:

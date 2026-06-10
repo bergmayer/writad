@@ -27,12 +27,24 @@ struct CommandPaletteSheet: View {
 
                 Divider()
 
-                if isSearching {
-                    flatResultsList
-                } else if let group = selectedGroup {
-                    groupCommandsList(group: group)
-                } else {
-                    groupBrowseList
+                // ↑/↓ moves the highlight while focus stays in the
+                // text field — without an explicit scrollTo the
+                // selection walks off-screen.
+                ScrollViewReader { proxy in
+                    Group {
+                        if isSearching {
+                            flatResultsList
+                        } else if let group = selectedGroup {
+                            groupCommandsList(group: group)
+                        } else {
+                            groupBrowseList
+                        }
+                    }
+                    .onChange(of: selectionIndex) { _, newValue in
+                        if let id = rowID(at: newValue) {
+                            proxy.scrollTo(id)
+                        }
+                    }
                 }
             }
             .navigationTitle(navTitle)
@@ -200,6 +212,21 @@ struct CommandPaletteSheet: View {
     // MARK: - Data
 
     private var isSearching: Bool { !query.isEmpty }
+
+    /// Row identity at `index` in whichever list is showing — the
+    /// scrollTo target for keyboard navigation.
+    private func rowID(at index: Int) -> String? {
+        if isSearching {
+            let list = filtered
+            return list.indices.contains(index) ? list[index].id : nil
+        }
+        if let group = selectedGroup {
+            let list = commands(in: group)
+            return list.indices.contains(index) ? list[index].id : nil
+        }
+        let groups = MenuGroup.allCases
+        return groups.indices.contains(index) ? groups[index].id : nil
+    }
 
     /// Active row count for ↑/↓ keyboard navigation bounds. Different
     /// list per mode (groups vs. group commands vs. flat search).

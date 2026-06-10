@@ -166,9 +166,25 @@ struct RevisionsSheet: View {
         guard let text = RevisionStore.shared.loadText(of: entry, forKey: document.revisionKey) else { return }
         document.text = text
         document.isDirty = true
-        AppStateBus.shared.scenes.currentEditor?.text = text
-        AppStateBus.shared.scenes.currentEditor?.setText?(text)
+        // `currentEditor` can point at a different window than the one
+        // that presented this sheet — push into the editor whose tab
+        // actually owns this document.
+        if let editor = owningEditorState {
+            editor.text = text
+            editor.setText?(text)
+        }
         dismiss()
+    }
+
+    /// The editor state for the tab that owns `document`, found via
+    /// the bus's open-session registry.
+    private var owningEditorState: EditorState? {
+        for session in AppStateBus.shared.scenes.allOpenSessions {
+            if let tab = session.tabs.first(where: { $0.document === document }) {
+                return tab.state
+            }
+        }
+        return nil
     }
 
     private func revertToOriginal() {

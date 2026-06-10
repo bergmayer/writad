@@ -57,8 +57,23 @@ final class DraftsStore {
     /// local pick follows the live Settings toggle.
     private let rootOverride: URL?
 
-    init(rootOverride: URL? = nil) {
+    /// Draft filenames the cap must never evict. Defaults to every
+    /// draft referenced by a persisted session record: when several
+    /// dirty tabs commit drafts on backgrounding, FIFO eviction would
+    /// otherwise delete drafts just written for other still-open tabs
+    /// — permanent data loss on restore. Injectable for tests.
+    private let protectedDraftFilenames: @MainActor () -> Set<String>
+
+    init(
+        rootOverride: URL? = nil,
+        protectedDraftFilenames: (@MainActor () -> Set<String>)? = nil
+    ) {
         self.rootOverride = rootOverride
+        self.protectedDraftFilenames = protectedDraftFilenames ?? {
+            Set(SessionsStore.shared.records.flatMap { record in
+                record.tabs.compactMap(\.draftFilename)
+            })
+        }
         // Eagerly ensure draft directories exist so first-write doesn't
         // race with directory creation when the user toggles iCloud
         // mid-session.
@@ -125,15 +140,18 @@ final class DraftsStore {
     /// FIFO eviction. `freshlySaved` is exempt even if its mtime
     /// is older — an in-place overwrite doesn't always bump
     /// `contentModificationDate`, and we don't want to evict the
-    /// caller's brand-new write.
+    /// caller's brand-new write. Drafts referenced by a persisted
+    /// session record are exempt too.
     private func enforceCap(keeping freshlySaved: URL) {
         let records = loadAll()
         guard records.count > Self.maxDrafts else { return }
+        let protected = protectedDraftFilenames()
         var toEvict = Array(records.reversed())
         var remaining = records.count
         while remaining > Self.maxDrafts, let oldest = toEvict.first {
             toEvict.removeFirst()
             if oldest.url.standardizedFileURL == freshlySaved.standardizedFileURL { continue }
+            if protected.contains(oldest.url.lastPathComponent) { continue }
             discard(oldest.url)
             remaining -= 1
         }
@@ -171,8 +189,11 @@ final class DraftsStore {
                 let bytes = attrs?.fileSize ?? 0
                 guard bytes > 0 else { continue }
                 let preview: String
-                if let data = try? Data(contentsOf: url),
-                   let str = String(data: data.prefix(2_048), encoding: .utf8) {
+                if let data = try? Data(contentsOf: url) {
+                    // Lossy decode — the 2 KB cut can split a multibyte
+                    // character, which would make String(data:encoding:)
+                    // return nil and blank the whole preview.
+                    let str = String(decoding: data.prefix(2_048), as: UTF8.self)
                     preview = String(str.prefix(80))
                         .replacingOccurrences(of: "\n", with: " ")
                 } else {

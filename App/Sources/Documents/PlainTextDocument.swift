@@ -103,14 +103,22 @@ final class PlainTextDocument {
         applyPayload(payload, url: url)
     }
 
-    nonisolated private static func decodePayload(from data: Data) throws -> LoadPayload {
+    // Internal (not private) so encoding-detection unit tests can
+    // exercise it without touching disk or the revision store.
+    nonisolated static func decodePayload(from data: Data) throws -> LoadPayload {
         if data.isEmpty {
             return LoadPayload(data: data, text: "", encoding: FileEncoding(encoding: .utf8))
         }
         if data.count > hardSizeCap {
             throw DocumentError.fileTooLarge(bytes: data.count)
         }
-        if data.prefix(8192).contains(0) {
+        // UTF-16/32 text is full of NUL bytes by construction; a Unicode
+        // BOM marks the data as text, so the binary heuristic must only
+        // apply to BOM-less data. FF FE also covers UTF-32LE (FF FE 00 00).
+        let hasUnicodeBOM = data.starts(with: [0xFF, 0xFE])
+            || data.starts(with: [0xFE, 0xFF])
+            || data.starts(with: [0x00, 0x00, 0xFE, 0xFF])
+        if !hasUnicodeBOM, data.prefix(8192).contains(0) {
             throw DocumentError.binaryFile
         }
         let options = String.DetectionOptions(
@@ -125,11 +133,9 @@ final class PlainTextDocument {
             )
             return LoadPayload(data: data, text: decoded, encoding: encoding)
         } catch {
-            return LoadPayload(
-                data: data,
-                text: String(data: data, encoding: .utf8) ?? "",
-                encoding: FileEncoding(encoding: .utf8)
-            )
+            // Never substitute an empty buffer here — with fileURL set
+            // and isDirty false, a later ⌘S would truncate the file.
+            throw DocumentError.undecodable
         }
     }
 
@@ -175,7 +181,7 @@ final class PlainTextDocument {
         }
     }
 
-    private struct LoadPayload: Sendable {
+    struct LoadPayload: Sendable {
         let data: Data
         let text: String
         let encoding: FileEncoding
@@ -331,7 +337,12 @@ final class PlainTextDocument {
         if !text.isEmpty {
             var metadata: DraftMetadata?
             if let source = fileURL {
-                let bookmark = try? source.bookmarkData(options: .minimalBookmark)
+                // Bookmark under an active security scope — without it,
+                // file-provider URLs fail bookmarkData and the draft
+                // silently loses its source link. Best-effort either way.
+                let scoped = source.startAccessingSecurityScopedResource()
+                defer { if scoped { source.stopAccessingSecurityScopedResource() } }
+                let bookmark = try? source.bookmarkData()
                 metadata = DraftMetadata(
                     sourceBookmark: bookmark,
                     sourceDisplay: Self.displayPath(for: source),
@@ -459,6 +470,7 @@ final class PlainTextDocument {
         case noFileURL
         case fileTooLarge(bytes: Int)
         case binaryFile
+        case undecodable
         var errorDescription: String? {
             switch self {
             case .noFileURL:
@@ -472,6 +484,8 @@ final class PlainTextDocument {
                 )
             case .binaryFile:
                 return "This file looks like a binary (it contains NUL bytes). The text editor can only open plain-text files."
+            case .undecodable:
+                return "This file couldn't be decoded with any supported text encoding."
             }
         }
     }

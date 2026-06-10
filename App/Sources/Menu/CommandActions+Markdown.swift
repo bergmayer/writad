@@ -29,13 +29,19 @@ extension CommandActions {
         let cursor = textView.selectedRange.location
         let lineEnding = state?.lineEnding.string ?? "\n"
         let line = nsText.lineRange(for: NSRange(location: cursor, length: 0))
-        let onBlankLine = nsText.substring(with: line)
+        let lineText = nsText.substring(with: line)
+        let onBlankLine = lineText
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .isEmpty
         let insertion: String
         if onBlankLine {
             insertion = "---\(lineEnding)"
-            textView.replace(NSRange(location: line.location, length: 0), withText: insertion)
+            // Whitespace-only lines: replace the whole line so the
+            // stray spaces don't survive after the rule.
+            let target = lineText.trimmingCharacters(in: .newlines).isEmpty
+                ? NSRange(location: line.location, length: 0)
+                : line
+            textView.replace(target, withText: insertion)
             textView.setSelection(NSRange(location: line.location + (insertion as NSString).length, length: 0))
         } else {
             insertion = "\(lineEnding)---\(lineEnding)"
@@ -132,7 +138,9 @@ extension CommandActions {
         // Pad to a fresh line so the definition lands at the footer,
         // not wedged into the last paragraph.
         let textNow = textView.text as NSString
-        let endsWithNL = textNow.length > 0 && textNow.substring(from: textNow.length - 1) == lineEnding
+        let nlLength = (lineEnding as NSString).length
+        let endsWithNL = textNow.length >= nlLength
+            && textNow.substring(from: textNow.length - nlLength) == lineEnding
         let prefix = endsWithNL ? lineEnding : lineEnding + lineEnding
         let definition = "\(prefix)[^\(nextId)]: "
         let appendAt = textNow.length

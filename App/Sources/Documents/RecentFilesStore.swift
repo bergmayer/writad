@@ -39,24 +39,31 @@ final class RecentFilesStore {
 
     private func load() {
         let raw = UserDefaults.standard.array(forKey: defaultsKey) as? [Data] ?? []
+        var sawStale = false
         self.urls = raw.compactMap { data in
             var stale = false
-            return try? URL(
+            let url = try? URL(
                 resolvingBookmarkData: data,
                 options: [],
                 relativeTo: nil,
                 bookmarkDataIsStale: &stale
             )
+            if stale, url != nil { sawStale = true }
+            return url
         }
+        // A stale bookmark resolved this time but may not next launch
+        // — re-persist now so every entry gets a fresh bookmark.
+        if sawStale { persist() }
     }
 
     private func persist() {
         let bookmarks: [Data] = urls.compactMap { url in
-            try? url.bookmarkData(
-                options: [.minimalBookmark],
-                includingResourceValuesForKeys: nil,
-                relativeTo: nil
-            )
+            // Bookmark under an active security scope — without it,
+            // file-provider URLs fail bookmarkData and silently drop
+            // out of Recents. Best-effort either way.
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            return try? url.bookmarkData()
         }
         UserDefaults.standard.set(bookmarks, forKey: defaultsKey)
     }

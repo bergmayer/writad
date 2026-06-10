@@ -143,6 +143,17 @@ final class SessionsStore {
         persistentIdsByUUID[uuid]
     }
 
+    /// Resolves the live `UIScene` registered for a scene UUID, so
+    /// session-scoped commands (Close Window) can target the window
+    /// that actually owns the session instead of guessing from the
+    /// unordered `connectedScenes` set.
+    func scene(forSceneUUID uuid: String) -> UIScene? {
+        guard !uuid.isEmpty else { return nil }
+        return UIApplication.shared.connectedScenes.first {
+            sceneUUIDsByObjectIdentifier[ObjectIdentifier($0)] == uuid
+        }
+    }
+
     /// `true` if any prior-launch record claims this iPadOS session.
     /// AppDelegate's `configurationForConnecting` uses it to decide
     /// whether a restoring session is one we want back or an iPadOS
@@ -257,7 +268,12 @@ extension TabSnapshot {
     init(of tab: TabModel) {
         self.isPinned = tab.isPinned
         if let url = tab.document.fileURL {
-            self.fileBookmark = try? url.bookmarkData(options: .minimalBookmark)
+            // Bookmark under an active security scope — without it,
+            // file-provider URLs fail bookmarkData and the tab silently
+            // restores as a launcher. Best-effort either way.
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            self.fileBookmark = try? url.bookmarkData()
         }
         if let draft = tab.document.draftURL {
             self.draftFilename = draft.lastPathComponent
@@ -278,8 +294,7 @@ extension SessionRecord {
         }
         self.tabs = restorable.map(TabSnapshot.init(of:))
         let activeID = session.selectedTabID
-        self.activeIndex = restorable.firstIndex { $0.id == activeID }
-            ?? (restorable.isEmpty ? 0 : 0)
+        self.activeIndex = restorable.firstIndex { $0.id == activeID } ?? 0
         self.lastModified = Date()
         self.launchID = SessionsStore.shared.currentLaunchID
         self.persistentIdentifier = SessionsStore.shared.persistentIdentifier(forSceneUUID: sceneUUID)
@@ -322,11 +337,24 @@ enum SessionRestore {
         // URL-backed dirty tabs.
         var draftText: String?
         if let draftFilename = snapshot.draftFilename {
-            let draftURL = DraftsStore.shared.directory
-                .appendingPathComponent(draftFilename)
-            draftText = (try? String(contentsOf: draftURL, encoding: .utf8))
-                ?? (try? String(contentsOf: draftURL, encoding: .isoLatin1))
-            tab.document.draftURL = draftURL
+            // Probe every read root, not just the current write root —
+            // if the iCloud sync toggle flipped between runs the draft
+            // lives under the other root.
+            for dir in DraftsStore.shared.readDirectories {
+                let candidate = dir.appendingPathComponent(draftFilename)
+                draftText = (try? String(contentsOf: candidate, encoding: .utf8))
+                    ?? (try? String(contentsOf: candidate, encoding: .isoLatin1))
+                if draftText != nil {
+                    tab.document.draftURL = candidate
+                    break
+                }
+            }
+            if tab.document.draftURL == nil {
+                // Not found anywhere — keep the snapshot's filename so
+                // future autosaves still overwrite the same entry.
+                tab.document.draftURL = DraftsStore.shared.directory
+                    .appendingPathComponent(draftFilename)
+            }
         }
 
         if let bookmark = snapshot.fileBookmark, let resolved = resolveBookmark(bookmark) {
@@ -340,28 +368,43 @@ enum SessionRestore {
                 tab.document.isDirty = true
                 tab.state.text = draftText
             }
+            // Keystrokes bump bufferRevision; capture it now so the
+            // post-load re-apply can tell whether the user typed while
+            // the disk read was in flight.
+            let seedRevision = tab.document.bufferRevision
             tab.state.loadTask = Task { @MainActor [weak tab] in
                 guard let tab else { return }
                 defer { tab.state.loadTask = nil }
                 do {
                     try await tab.document.loadAsync(from: resolved.url)
                 } catch {
+                    // Same fallback as a stale snapshot: leaving fileURL
+                    // on an empty, clean buffer would let a later ⌘S
+                    // truncate the real file. A drafted buffer stays
+                    // visible instead — it's dirty with a nil mtime
+                    // baseline, so saving raises the stale-source check.
+                    if draftText == nil {
+                        tab.kind = .launcher
+                    }
                     return
                 }
-                if let draftText {
-                    // Disk content is the baseline; drafted text wins
-                    // for the live buffer.
-                    tab.state.savedBaselineText = tab.document.text
+                // Disk content is the baseline either way.
+                tab.state.savedBaselineText = tab.document.text
+                tab.state.fileEncoding = tab.document.fileEncoding
+                tab.state.lineEnding = tab.document.lineEnding
+                if let draftText, tab.document.bufferRevision == seedRevision {
+                    // Drafted text wins for the live buffer.
                     tab.document.text = draftText
                     tab.document.isDirty = true
                     tab.state.text = draftText
-                    tab.state.fileEncoding = tab.document.fileEncoding
-                    tab.state.lineEnding = tab.document.lineEnding
+                } else if draftText != nil {
+                    // The user typed while the load was in flight —
+                    // re-applying the captured draft would clobber those
+                    // edits. state.text is the freshest snapshot we own.
+                    tab.document.text = tab.state.text
+                    tab.document.isDirty = true
                 } else {
                     tab.state.text = tab.document.text
-                    tab.state.savedBaselineText = tab.document.text
-                    tab.state.fileEncoding = tab.document.fileEncoding
-                    tab.state.lineEnding = tab.document.lineEnding
                 }
             }
             return true

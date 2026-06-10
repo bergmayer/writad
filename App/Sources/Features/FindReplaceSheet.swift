@@ -228,6 +228,9 @@ struct FindReplaceSheet: View {
                 textView.replace(match.range, withText: match.replacement)
                 count += 1
                 cursor = match.range.location + (match.replacement as NSString).length
+                // Zero-width matches (`a*`, `^`) with an empty replacement
+                // never move the cursor — force it past the match site.
+                if match.range.length == 0 { cursor += 1 }
             }
             AppStateBus.shared.scenes.currentEditor?.setText?(textView.text)
             statusText = "Replaced \(count) match\(count == 1 ? "" : "es")."
@@ -249,7 +252,15 @@ struct FindReplaceSheet: View {
 
     private func queryAdvance() {
         errorText = nil
-        let cursor = AppStateBus.shared.scenes.currentEditor?.selectedRange.location ?? 0
+        // `revealMatch` parked the selection at the current match's
+        // start, so restarting the search there re-finds the same
+        // match and Skip never advances — resume past its end.
+        let cursor: Int
+        if let match = currentMatch {
+            cursor = max(NSMaxRange(match.range), match.range.location + 1)
+        } else {
+            cursor = AppStateBus.shared.scenes.currentEditor?.selectedRange.location ?? 0
+        }
         do {
             if let match = try CommandActions.nextQueryReplaceMatch(
                 query: resolvedQuery,
@@ -295,6 +306,8 @@ struct FindReplaceSheet: View {
                 CommandActions.applyQueryReplaceMatch(match)
                 count += 1
                 cursor = match.range.location + (match.replacement as NSString).length
+                // Same zero-width guard as replaceAll().
+                if match.range.length == 0 { cursor += 1 }
             }
             queryReplacedCount += count
             currentMatch = nil

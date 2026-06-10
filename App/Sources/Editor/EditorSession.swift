@@ -11,8 +11,9 @@ final class EditorSession {
     /// call sites don't need to reach into `ClosedTabsStore` directly.
     var recentlyClosed: [ClosedTabRecord] { ClosedTabsStore.shared.records }
     /// Set by `EditorScene` after its `@State` UUID is generated.
-    /// Lets cross-scene save loops (the dev-quit handler) write each
-    /// session's `SessionRecord` under the correct key.
+    /// Lets session-scoped commands (Close Window) resolve the
+    /// hosting `UIScene` via `SessionsStore.scene(forSceneUUID:)`
+    /// instead of guessing from the unordered `connectedScenes`.
     var sceneUUID: String = ""
     /// Per-window — used to be a single bool on the shared
     /// PresentationState, which made the switcher overlay flip on every

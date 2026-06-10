@@ -216,7 +216,7 @@ struct EditorCommands: Commands {
             Divider()
 
             Menu {
-                Button(action: { CommandActions.presentSpellCheckSheet() }) {
+                Button(action: { presentSheet(.spellCheck) }) {
                     Label("Check Spelling…", systemImage: "checkmark.circle")
                 }
                 Divider()
@@ -414,7 +414,7 @@ struct EditorCommands: Commands {
                 Label("Close Tab", systemImage: "xmark.square")
             }
             .keyboardShortcut(AppShortcut.closeTab)
-            Button(action: focused(CommandActions.closeWindow)) {
+            Button(action: focused { CommandActions.closeWindow() }) {
                 Label("Close Window", systemImage: "macwindow.badge.xmark")
             }
             .keyboardShortcut(AppShortcut.closeWindow)
@@ -716,6 +716,7 @@ struct EditorCommands: Commands {
                 }
             }
             .keyboardShortcut(AppShortcut.find)
+            .disabled(!isEnabled)
             Button("Multi-File Search…", action: focused(CommandActions.presentMultiFileSearch))
                 .keyboardShortcut(AppShortcut.multiFileSearch)
         }
@@ -729,17 +730,17 @@ struct EditorCommands: Commands {
                 .keyboardShortcut(AppShortcut.goToMatchingBracket)
             Button("Center Line", action: focused(CommandActions.centerLine))
         }
+        .disabled(!isEnabled)
 
         Divider()
 
         Group {
-            Divider()
-
             Button("Back", action: focused(CommandActions.positionBack))
                 .keyboardShortcut(AppShortcut.positionBack)
             Button("Forward", action: focused(CommandActions.positionForward))
                 .keyboardShortcut(AppShortcut.positionForward)
         }
+        .disabled(!isEnabled)
     }
 
     /// Inactive slots stay visible (disabled) so users see which
@@ -862,12 +863,16 @@ struct EditorCommands: Commands {
 
     @ViewBuilder
     private var bookmarkMenuItems: some View {
+        // ⌃⇧/⌃ digits: ⇧⌘0 collides with system Default Zoom and
+        // ⇧⌘3/4 with screenshots (a conflict silently drops the whole
+        // CommandGroup), and bare ⌥digit shadows Option-digit
+        // characters on international layouts.
         Menu("Set Bookmark") {
             ForEach(0..<10, id: \.self) { slot in
                 Button("Slot \(slot)") {
                     focused { CommandActions.setBookmark(slot) }
                 }
-                .keyboardShortcut(KeyEquivalent(Character("\(slot)")), modifiers: [.command, .shift])
+                .keyboardShortcut(KeyEquivalent(Character("\(slot)")), modifiers: [.control, .shift])
             }
         }
         Menu("Jump to Bookmark") {
@@ -875,7 +880,7 @@ struct EditorCommands: Commands {
                 Button("Slot \(slot)") {
                     focused { CommandActions.jumpToBookmark(slot) }
                 }
-                .keyboardShortcut(KeyEquivalent(Character("\(slot)")), modifiers: .option)
+                .keyboardShortcut(KeyEquivalent(Character("\(slot)")), modifiers: .control)
             }
         }
         Menu("Clear Bookmark") {

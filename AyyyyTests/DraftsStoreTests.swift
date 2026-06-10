@@ -12,7 +12,9 @@ final class DraftsStoreTests: XCTestCase {
         tempRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent("ayyyy-drafts-test-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
-        store = DraftsStore(rootOverride: tempRoot)
+        // Empty protected set keeps eviction tests hermetic — the
+        // default consults the process-wide SessionsStore.shared.
+        store = DraftsStore(rootOverride: tempRoot, protectedDraftFilenames: { [] })
     }
 
     override func tearDown() async throws {
@@ -93,6 +95,36 @@ final class DraftsStoreTests: XCTestCase {
         let records = store.loadAll()
         XCTAssertEqual(records.count, DraftsStore.maxDrafts)
         XCTAssertTrue(records.contains { $0.url == fresh })
+    }
+
+    func test_save_doesNotEvictDraftsReferencedBySessions() throws {
+        // Six drafts at the cap, oldest-first mtimes.
+        var urls: [URL] = []
+        for i in 0..<6 {
+            let url = try XCTUnwrap(store.save(text: "draft-\(i)", existing: nil))
+            try FileManager.default.setAttributes(
+                [.modificationDate: Date(timeIntervalSinceReferenceDate: Double(i))],
+                ofItemAtPath: url.path
+            )
+            urls.append(url)
+        }
+        // A store that treats the two oldest as referenced by persisted
+        // session records (same root, so it sees the same files).
+        let protectedNames = Set(urls.prefix(2).map(\.lastPathComponent))
+        let protecting = DraftsStore(
+            rootOverride: tempRoot,
+            protectedDraftFilenames: { protectedNames }
+        )
+        let fresh = try XCTUnwrap(protecting.save(text: "newest", existing: nil))
+        let remaining = protecting.loadAll().map(\.url.lastPathComponent)
+        XCTAssertEqual(remaining.count, DraftsStore.maxDrafts)
+        XCTAssertTrue(remaining.contains(urls[0].lastPathComponent),
+                      "Session-referenced draft must survive the cap")
+        XCTAssertTrue(remaining.contains(urls[1].lastPathComponent),
+                      "Session-referenced draft must survive the cap")
+        XCTAssertFalse(remaining.contains(urls[2].lastPathComponent),
+                       "Oldest unprotected draft is the one evicted")
+        XCTAssertTrue(remaining.contains(fresh.lastPathComponent))
     }
 
     // MARK: - discard

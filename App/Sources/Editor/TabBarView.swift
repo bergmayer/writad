@@ -168,7 +168,7 @@ struct TabBarView: View {
         .accessibilityLabel("Show All Tabs")
         // Long-press surfaces the multi-tab management menu. Same
         // entries as the iPhone status-bar overview button.
-        .contextMenu { TabOverviewContextMenu() }
+        .contextMenu { TabOverviewContextMenu(session: session) }
     }
 
     private func tabLabel(_ tab: TabModel) -> String {
@@ -263,13 +263,6 @@ private struct TabPillView: View {
         .padding(.top, 10)
         .padding(.bottom, 4)
         .background { pillBackground }
-    }
-
-    /// Whether to render the leading unsaved-dot on the active pill.
-    /// Only fires for genuinely dirty buffers — a blank Untitled tab
-    /// shouldn't claim to have unsaved changes.
-    private var showsDirtyDot: Bool {
-        tab.document.isDirty
     }
 
     private var pillBackground: some View {

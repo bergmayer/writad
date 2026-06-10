@@ -137,13 +137,20 @@ final class EditorTextViewCoordinator: NSObject, @preconcurrency EditorEngine.Te
 
     func refreshLiveMatches(_ textView: EditorEngine.TextView) {
         let selRange = textView.selectedRange
-        let ns = textView.text as NSString
         let cleared = textView.highlightedRanges.filter { !$0.id.hasPrefix(Self.liveMatchIDPrefix) }
 
+        // Length checks run BEFORE the O(n) `textView.text` bridge —
+        // this fires on every caret move, and a caret never matches.
         guard state.liveMatchHighlight,
               selRange.length >= 2,
-              selRange.length < 200,
-              selRange.location + selRange.length <= ns.length else {
+              selRange.length < 200 else {
+            textView.highlightedRanges = cleared
+            state.liveMatchCount = 0
+            matchScrollOverlay?.matchRanges = []
+            return
+        }
+        let ns = textView.text as NSString
+        guard selRange.location + selRange.length <= ns.length else {
             textView.highlightedRanges = cleared
             state.liveMatchCount = 0
             matchScrollOverlay?.matchRanges = []
@@ -197,8 +204,8 @@ final class EditorTextViewCoordinator: NSObject, @preconcurrency EditorEngine.Te
         if isApplyingSiblingSync { return true }
 
         // Armed accessory modifier wins over the literal
-        // keystroke. The flag stays set after consumption — the
-        // user toggles off via the same key or Esc.
+        // keystroke. `handleArmedKey` disarms before dispatching —
+        // armed actions can re-enter this delegate via `replace`.
         if state.armedAccessoryControl
             || state.armedAccessoryCommand
             || state.armedAccessoryOption,
@@ -214,9 +221,11 @@ final class EditorTextViewCoordinator: NSObject, @preconcurrency EditorEngine.Te
 
         // Sibling sync: cast the abstract `EditorActions` to the
         // concrete engine view to reach the sibling coordinator
-        // and arm its recursion guard.
-        if state.splitOpen,
-           let siblingActions = state.siblingState?.textView,
+        // and arm its recursion guard. Gated on the sibling view
+        // existing, not `splitOpen` — that flag only lives on the
+        // primary pane's state, so the secondary pane would skip
+        // syncing its edits back.
+        if let siblingActions = state.siblingState?.textView,
            let sibling = siblingActions as? EditorEngine.TextView,
            let siblingCoord = sibling.editorDelegate as? EditorTextViewCoordinator {
             siblingCoord.isApplyingSiblingSync = true

@@ -24,6 +24,11 @@ final class TransformationsTests: XCTestCase {
         )
     }
 
+    func test_titleCase_preservesAcronymsAndMixedCaseWords() {
+        XCTAssertEqual(Transformations.titleCase("NASA report"), "NASA Report")
+        XCTAssertEqual(Transformations.titleCase("syncing with iCloud daily"), "Syncing with iCloud Daily")
+    }
+
     func test_snakeCase_splitsCamelAndSeparators() {
         XCTAssertEqual(Transformations.snakeCase("helloWorld"),      "hello_world")
         XCTAssertEqual(Transformations.snakeCase("hello-world"),     "hello_world")
@@ -128,12 +133,28 @@ final class TransformationsTests: XCTestCase {
         XCTAssertEqual(Transformations.convertToASCII("Crème brûlée"), "Creme brulee")
     }
 
+    func test_urlEncode_percentEncodesQueryDelimiters() {
+        XCTAssertEqual(Transformations.urlEncode("a&b=c+d"), "a%26b%3Dc%2Bd")
+        XCTAssertEqual(Transformations.urlDecode(Transformations.urlEncode("a&b=c+d")), "a&b=c+d")
+    }
+
     func test_interpretEscapeSequences_handlesCommonEscapesAndHex() {
         XCTAssertEqual(Transformations.interpretEscapeSequences(#"a\nb\tc\x41é"#), "a\nb\tcAé")
     }
 
+    func test_interpretEscapeSequences_requiresExactlyFourHexDigitsForUnicode() {
+        XCTAssertEqual(Transformations.interpretEscapeSequences("\\u0041"), "A")
+        // Short \u escapes pass through rather than decoding greedily.
+        XCTAssertEqual(Transformations.interpretEscapeSequences(#"\u41"#), #"\u41"#)
+    }
+
     func test_escapeSpecialCharacters_isInverseForCommonCases() {
         XCTAssertEqual(Transformations.escapeSpecialCharacters("a\nb\tc\\"), #"a\nb\tc\\"#)
+    }
+
+    func test_escapeSpecialCharacters_escapesCRLFAsTwoSequences() {
+        // CRLF is one grapheme cluster; both scalars must still escape.
+        XCTAssertEqual(Transformations.escapeSpecialCharacters("a\r\nb"), #"a\r\nb"#)
     }
 
     func test_educateAndStraightenQuotes_roundTripToSafeForm() {
@@ -141,6 +162,13 @@ final class TransformationsTests: XCTestCase {
         XCTAssertTrue(curly.contains("\u{201C}"))
         XCTAssertTrue(curly.contains("\u{201D}"))
         XCTAssertEqual(Transformations.straightenQuotes(curly), "he said \"hi\" and 'bye'")
+    }
+
+    func test_educateQuotes_opensNestedQuoteAfterOpeningQuote() {
+        XCTAssertEqual(
+            Transformations.educateQuotes("\"'nested' quote\""),
+            "\u{201C}\u{2018}nested\u{2019} quote\u{201D}"
+        )
     }
 
     // MARK: - Paragraph helpers
@@ -157,6 +185,16 @@ final class TransformationsTests: XCTestCase {
         XCTAssertEqual(
             Transformations.splitParagraphs(input),
             ["first paragraph\nstill first", "second paragraph", "third"]
+        )
+    }
+
+    func test_splitParagraphs_handlesCRLFLineEndings() {
+        // CRLF is one grapheme cluster; Character-based splitting never
+        // matched it and CRLF documents came back as a single paragraph.
+        let input = "first paragraph\r\nstill first\r\n\r\nsecond paragraph\r\n"
+        XCTAssertEqual(
+            Transformations.splitParagraphs(input),
+            ["first paragraph\nstill first", "second paragraph"]
         )
     }
 

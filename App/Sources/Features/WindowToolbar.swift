@@ -261,6 +261,7 @@ struct WindowToolbar: View {
             ForEach(items) { slot in
                 if let cmd = CommandRegistry.lookup(id: slot.commandId) {
                     Button {
+                        onInteraction?()
                         if cmd.isEnabled() { cmd.action() }
                     } label: {
                         Label(cmd.title, systemImage: slot.symbol.isEmpty ? "questionmark" : slot.symbol)
@@ -299,8 +300,16 @@ private struct ToolbarSlotButton: View {
     private var isEnabled: Bool { command?.isEnabled() ?? false }
     private var symbolName: String { slot.symbol.isEmpty ? "questionmark.square.dashed" : slot.symbol }
 
+    /// A long press that opened the slot editor also delivers the
+    /// Button action on finger release — consume that one tap.
+    @State private var longPressFired = false
+
     var body: some View {
         Button {
+            if longPressFired {
+                longPressFired = false
+                return
+            }
             onInteraction?()
             if let cmd = command, cmd.isEnabled() { cmd.action() }
         } label: {
@@ -315,7 +324,10 @@ private struct ToolbarSlotButton: View {
         // Long-press opens the per-slot editor. Settings ▸ Toolbar
         // is the canonical customization UI.
         .simultaneousGesture(
-            LongPressGesture(minimumDuration: 0.5).onEnded { _ in onLongPress() }
+            LongPressGesture(minimumDuration: 0.5).onEnded { _ in
+                longPressFired = true
+                onLongPress()
+            }
         )
     }
 }

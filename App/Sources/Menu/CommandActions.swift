@@ -349,7 +349,7 @@ enum CommandActions {
         guard let state = state, let actions = actions else { return }
         state.lineEnding = lineEnding
         let converted = actions.text.replacingLineEndings(with: lineEnding)
-        actions.text = converted
+        replaceWholeText(with: converted)
         actions.applyLineEndingRawValue(lineEnding.rawValue)
         state.setText?(converted)
     }
@@ -535,7 +535,7 @@ enum CommandActions {
         let range = textView.selectedRange
         if range.length == 0 {
             let newText = transform(textView.text)
-            textView.text = newText
+            replaceWholeText(with: newText)
             state?.setText?(newText)
             return
         }
@@ -548,8 +548,16 @@ enum CommandActions {
     static func applyToWholeText(_ transform: (String) -> String) {
         guard let textView = actions else { return }
         let newText = transform(textView.text)
-        textView.text = newText
+        replaceWholeText(with: newText)
         state?.setText?(newText)
+    }
+
+    /// Whole-document writes must go through `replace` — the engine's
+    /// `text` setter wipes the undo stack.
+    static func replaceWholeText(with newText: String) {
+        guard let textView = actions else { return }
+        let full = NSRange(location: 0, length: (textView.text as NSString).length)
+        textView.replace(full, withText: newText)
     }
 
     static func insertAtSelection(_ string: String) {

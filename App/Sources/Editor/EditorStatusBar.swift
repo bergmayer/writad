@@ -110,7 +110,18 @@ struct EditorStatusBar: View {
         .buttonStyle(.plain)
         .help("Show All Tabs")
         .accessibilityLabel("Show All Tabs")
-        .contextMenu { TabOverviewContextMenu() }
+        .contextMenu {
+            if let session = owningSession {
+                TabOverviewContextMenu(session: session)
+            }
+        }
+    }
+
+    /// The session whose tab strip this status bar fronts — same
+    /// lookup EditorView uses. The bus's `currentSession` may point
+    /// at another window when the user long-presses here.
+    private var owningSession: EditorSession? {
+        bus.scenes.allOpenSessions.first { $0.tabs.contains(where: { $0.state === state }) }
     }
 
     private var phoneTabBadgeCount: Int? {
@@ -133,6 +144,7 @@ struct EditorStatusBar: View {
         }
         .menuStyle(.borderlessButton)
         .help("Document settings")
+        .accessibilityLabel("Document Settings")
     }
 
     @ViewBuilder
@@ -178,10 +190,14 @@ struct EditorStatusBar: View {
                 .font(.system(size: 14, weight: .regular))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.secondary)
-                .contentShape(.rect)
+                .frame(width: 14, height: 14)
+                // Negative inset reaches the HIG 44pt touch target
+                // without inflating the bar's intrinsic height.
+                .contentShape(Rectangle().inset(by: -15))
         }
         .buttonStyle(.plain)
         .help("Browse and restore previous versions of this document")
+        .accessibilityLabel("Versions")
     }
 
     @ViewBuilder
@@ -193,7 +209,9 @@ struct EditorStatusBar: View {
                 .font(.system(size: 14, weight: state.inspectorOpen ? .bold : .regular))
                 .foregroundStyle(state.inspectorOpen ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                 .frame(width: 14, height: 14)
-                .contentShape(.rect)
+                // Negative inset reaches the HIG 44pt touch target
+                // without inflating the bar's intrinsic height.
+                .contentShape(Rectangle().inset(by: -15))
         }
         .buttonStyle(.plain)
         .help("Show file info, outline, and counts")
@@ -201,11 +219,8 @@ struct EditorStatusBar: View {
 
     @ViewBuilder
     private var counts: some View {
-        let nsText = document.text as NSString
-        let (line, column) = TextMetrics.lineColumn(for: state.selectedRange.location, in: nsText)
-        let lineCount = TextMetrics.lineCount(in: nsText)
         HStack(spacing: 8) {
-            Text("Lines: \(lineCount)  ·  Chars: \(nsText.length)  ·  Loc: \(state.selectedRange.location)  ·  Ln \(line):\(column)")
+            Text(countSegments().joined(separator: "  ·  "))
             if state.liveMatchCount > 0 {
                 Text("·  \(state.liveMatchCount) match\(state.liveMatchCount == 1 ? "" : "es")")
                     .foregroundStyle(.tint)
@@ -213,6 +228,24 @@ struct EditorStatusBar: View {
         }
         .lineLimit(1)
         .fixedSize(horizontal: true, vertical: false)
+    }
+
+    /// Each segment honors its Settings toggle.
+    private func countSegments() -> [String] {
+        let nsText = document.text as NSString
+        var segments: [String] = []
+        if state.statusShowsLineCount {
+            segments.append("Lines: \(TextMetrics.lineCount(in: nsText))")
+        }
+        if state.statusShowsCharCount {
+            segments.append("Chars: \(nsText.length)")
+        }
+        if state.statusShowsLineCol {
+            let (line, column) = TextMetrics.lineColumn(for: state.selectedRange.location, in: nsText)
+            segments.append("Loc: \(state.selectedRange.location)")
+            segments.append("Ln \(line):\(column)")
+        }
+        return segments
     }
 
     @ViewBuilder

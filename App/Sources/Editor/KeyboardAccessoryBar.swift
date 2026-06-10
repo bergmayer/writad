@@ -349,13 +349,24 @@ enum AccessoryKeyboard {
         let engine = state.textView as? EditorEngine.TextView
         let shifted = (text != lower)
 
-        if state.armedAccessoryCommand {
+        let command = state.armedAccessoryCommand
+        let control = state.armedAccessoryControl
+        let option = state.armedAccessoryOption
+        // Disarm BEFORE dispatching — armed actions call `replace`,
+        // which re-enters `shouldChangeTextIn`; a still-armed flag on
+        // a single-char insert (e.g. pasting a clipboard containing
+        // "v" with ⌘ armed) recurses forever.
+        state.armedAccessoryCommand = false
+        state.armedAccessoryControl = false
+        state.armedAccessoryOption = false
+
+        if command {
             return handleCommandKey(lower, shifted: shifted, engine: engine)
         }
-        if state.armedAccessoryControl {
+        if control {
             return handleControlKey(lower, engine: engine)
         }
-        if state.armedAccessoryOption {
+        if option {
             return handleOptionKey(lower, engine: engine)
         }
         return false
@@ -489,6 +500,11 @@ final class EditorAccessoryView: UIInputView {
     private weak var controlButton: AccessoryButton?
     private weak var commandButton: AccessoryButton?
     private weak var optionButton: AccessoryButton?
+    /// `nonisolated(unsafe)` so the nonisolated deinit can release
+    /// the timer; mirrors `IPadAccessoryObserver`. Without the
+    /// invalidate, the run loop retains a 10 Hz timer per closed
+    /// editor forever.
+    nonisolated(unsafe) private var stateTimer: Timer?
 
     private static let rowHeight: CGFloat = 44
 
@@ -518,6 +534,12 @@ final class EditorAccessoryView: UIInputView {
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    deinit {
+        // Timer must invalidate on the thread that scheduled it.
+        let captured = stateTimer
+        DispatchQueue.main.async { captured?.invalidate() }
+    }
 
     override var intrinsicContentSize: CGSize {
         CGSize(width: UIView.noIntrinsicMetric, height: Self.rowHeight)
@@ -654,7 +676,7 @@ final class EditorAccessoryView: UIInputView {
             Task { @MainActor in self?.refreshModifierVisuals() }
         }
         timer.tolerance = 0.04
-        objc_setAssociatedObject(self, &observerTimerKey, timer, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        stateTimer = timer
     }
 
     // MARK: Button factory
@@ -668,8 +690,6 @@ final class EditorAccessoryView: UIInputView {
         return btn
     }
 }
-
-private nonisolated(unsafe) var observerTimerKey: UInt8 = 0
 
 // MARK: - Row
 

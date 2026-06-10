@@ -130,12 +130,18 @@ struct EditorTextView: UIViewRepresentable {
         // Gutter gated on pref + byte ceiling
         // (`changeHistoryGutterByteLimit` — per-line diff +
         // caretRect lookups slow past 100KB) + cache short-circuit.
+        // Pref / large-file checks run BEFORE touching `textView.text`
+        // — the getter is an O(n) buffer copy per render.
         let coord = context.coordinator
-        let prefOn = state.showChangeHistoryGutter
-        let withinSize = textView.text.utf16.count <= Timing.changeHistoryGutterByteLimit
-        let shouldRender = prefOn && !state.isLargeFile && withinSize
+        var gutterText: String?
+        if state.showChangeHistoryGutter, !state.isLargeFile {
+            let candidate = textView.text
+            if candidate.utf16.count <= Timing.changeHistoryGutterByteLimit {
+                gutterText = candidate
+            }
+        }
         if let overlay = coord.changeHistoryOverlay {
-            if !shouldRender {
+            if gutterText == nil {
                 // Drop stale bars; resetting caches lets a re-enable
                 // render fresh.
                 coord.overlayRefreshTask?.cancel()
@@ -145,9 +151,8 @@ struct EditorTextView: UIViewRepresentable {
                     coord.changeHistoryBaselineCache = nil
                     coord.changeHistoryCurrentCache = nil
                 }
-            } else {
+            } else if let currentText = gutterText {
                 let baselineText = state.savedBaselineText
-                let currentText = textView.text
                 if coord.changeHistoryBaselineCache != baselineText ||
                    coord.changeHistoryCurrentCache != currentText {
                     coord.overlayRefreshTask?.cancel()
@@ -183,7 +188,7 @@ struct EditorTextView: UIViewRepresentable {
         textView.spellCheckingType = state.spellCheck ? .yes : .no
         // `autoLinkDetection` stored but not wired — engine doesn't
         // expose `dataDetectorTypes`.
-        textView.keyboardType = .asciiCapable
+        textView.keyboardType = .default
     }
 
     private func applyViewSettings(to textView: EditorEngine.TextView) {
@@ -463,12 +468,20 @@ extension EditorEngine.TextView: EditorActions {
         guard length >= 2 else { return }
         if cursor == 0 { cursor = 1 }
         if cursor >= length { cursor = length - 1 }
-        let leftRange = NSRange(location: cursor - 1, length: 1)
-        let rightRange = NSRange(location: cursor, length: 1)
+        // Composed sequences, not single UTF-16 units — swapping raw
+        // units splits surrogate pairs next to emoji.
+        let leftRange = nsText.rangeOfComposedCharacterSequence(at: cursor - 1)
+        let rightRange = nsText.rangeOfComposedCharacterSequence(at: cursor)
+        // Cursor mid-sequence: both probes land in the same character.
+        guard leftRange.location < rightRange.location else { return }
         let left = nsText.substring(with: leftRange)
         let right = nsText.substring(with: rightRange)
-        replace(NSRange(location: cursor - 1, length: 2), withText: right + left)
-        selectedRange = NSRange(location: cursor + 1, length: 0)
+        let combined = NSRange(
+            location: leftRange.location,
+            length: NSMaxRange(rightRange) - leftRange.location
+        )
+        replace(combined, withText: right + left)
+        selectedRange = NSRange(location: NSMaxRange(combined), length: 0)
     }
 
     func deleteToEndOfLine() {
@@ -580,8 +593,14 @@ extension EditorEngine.TextView: EditorActions {
             wrap: true,
             language: "en_US"
         )
-        // Skip ranges whose word we've been told to ignore.
+        // Skip ranges whose word we've been told to ignore. With
+        // wrap:true the checker cycles forever when every remaining
+        // hit is ignored — bail once the first range comes around
+        // again.
+        var firstSeen: NSRange?
         while range.location != NSNotFound {
+            if let firstSeen, NSEqualRanges(range, firstSeen) { return }
+            if firstSeen == nil { firstSeen = range }
             let word = nsText.substring(with: range)
             if !Self.ignoredWords.contains(word) {
                 selectedRange = range
@@ -634,7 +653,12 @@ extension EditorEngine.TextView: EditorActions {
             wrap: true,
             language: "en_US"
         )
+        // wrap:true cycles forever when every remaining hit is
+        // ignored — bail once the first range comes around again.
+        var firstSeen: NSRange?
         while range.location != NSNotFound {
+            if let firstSeen, NSEqualRanges(range, firstSeen) { return nil }
+            if firstSeen == nil { firstSeen = range }
             let word = nsText.substring(with: range)
             if !Self.ignoredWords.contains(word) {
                 let guesses = Self.textChecker.guesses(
@@ -725,7 +749,10 @@ extension EditorEngine.TextView: EditorActions {
         var start = min(selectedRange.location, length)
         var end = start
         let isWordChar: (unichar) -> Bool = { ch in
-            CharacterSet.letters.contains(Unicode.Scalar(ch)!) || (ch >= 0x30 && ch <= 0x39) || ch == 0x27
+            // Surrogate halves aren't valid scalars (force-unwrap
+            // trapped on emoji); treat them as non-word.
+            guard let scalar = Unicode.Scalar(ch) else { return false }
+            return CharacterSet.letters.contains(scalar) || (ch >= 0x30 && ch <= 0x39) || ch == 0x27
         }
         while start > 0 {
             let ch = nsText.character(at: start - 1)
@@ -758,22 +785,30 @@ extension EditorEngine.TextView: EditorActions {
     }
 
     func refreshBracketMatchHighlight() {
-        let nsText = text as NSString
         let cursor = selectedRange.location
-        let length = nsText.length
         // Strip any prior bracket highlight.
         var others = highlightedRanges.filter { $0.id != Self.bracketHighlightID && $0.id != Self.bracketHighlightID + ".pair" }
         defer { highlightedRanges = others }
-        guard selectedRange.length == 0, length > 0 else { return }
+        guard selectedRange.length == 0 else { return }
+        // Peek one UTF-16 unit either side via the engine's ranged
+        // read — this runs per caret move, and `text as NSString`
+        // is an O(n) buffer copy. `text(in:)` is nil out of bounds.
+        func unit(at index: Int) -> unichar? {
+            guard index >= 0 else { return nil }
+            return text(in: NSRange(location: index, length: 1))?.utf16.first
+        }
         // Look at char before or at cursor.
         var bracketIndex: Int?
-        if cursor < length, BracketMatcher.isBracket(nsText.character(at: cursor)) {
+        if let ch = unit(at: cursor), BracketMatcher.isBracket(ch) {
             bracketIndex = cursor
-        } else if cursor > 0, BracketMatcher.isBracket(nsText.character(at: cursor - 1)) {
+        } else if let ch = unit(at: cursor - 1), BracketMatcher.isBracket(ch) {
             bracketIndex = cursor - 1
         }
-        guard let bracket = bracketIndex,
-              let mate = BracketMatcher.matchingLocation(in: nsText, atBracketAt: bracket) else {
+        guard let bracket = bracketIndex else { return }
+        // Adjacent to a bracket — only now pay for the full bridge
+        // to walk for the mate.
+        let nsText = text as NSString
+        guard let mate = BracketMatcher.matchingLocation(in: nsText, atBracketAt: bracket) else {
             return
         }
         let color = UIColor.systemBlue.withAlphaComponent(0.25)

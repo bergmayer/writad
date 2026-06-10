@@ -249,17 +249,14 @@ final class ClipboardHistory {
         let timestamp: Date
     }
 
+    // Deliberately no capture at init or on app activation: reading
+    // `UIPasteboard.general.string` outside an explicit user action
+    // triggers the iOS paste-permission banner on every launch /
+    // foreground. The history learns about cross-app copies only when
+    // the user opens the chooser sheet (its `onAppear` captures).
     private init() {
-        capture()
         NotificationCenter.default.addObserver(
             forName: UIPasteboard.changedNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in self?.capture() }
-        }
-        NotificationCenter.default.addObserver(
-            forName: UIApplication.didBecomeActiveNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
@@ -328,6 +325,9 @@ struct ClipboardHistorySheet: View {
             }
             .navigationTitle("Clipboard History")
             .navigationBarTitleDisplayMode(.inline)
+            // Lazy capture point for copies made outside the app —
+            // see the `ClipboardHistory.init` comment.
+            .onAppear { history.capture() }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }

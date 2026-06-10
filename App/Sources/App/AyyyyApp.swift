@@ -78,6 +78,16 @@ private struct WindowOpenerInstaller: View {
             .onAppear {
                 guard AppStateBus.shared.scenes.openWindow == nil else { return }
                 AppStateBus.shared.scenes.openWindow = { id in
+                    // New same-size windows stack exactly over an
+                    // existing window at the default spot — visually
+                    // confusing, but not fixable from the app: iPadOS
+                    // has no window-frame API (systemFrame is
+                    // Catalyst-only, SwiftUI WindowPlacement is
+                    // iOS-unavailable), and routing through a UIKit
+                    // activation request with
+                    // UIWindowSceneProminentPlacement was tested and
+                    // placed the window identically. Placement is the
+                    // system's call.
                     openWindow(id: id.rawValue)
                 }
             }

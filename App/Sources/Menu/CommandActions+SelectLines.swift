@@ -63,7 +63,7 @@ extension CommandActions {
         let filtered = lines.filter { keepMatching ? matcher.matches($0) : !matcher.matches($0) }
         var result = filtered.joined(separator: separator)
         if trailing { result += separator }
-        textView.text = result
+        replaceWholeText(with: result)
         state?.setText?(result)
     }
 

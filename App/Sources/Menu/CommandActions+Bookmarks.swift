@@ -11,6 +11,7 @@ extension CommandActions {
         let collected = collectBookmarkedLines()
         UIPasteboard.general.string = collected.text
         removeLines(at: collected.ranges)
+        state?.bookmarks.removeAll()
     }
 
     /// Copy bookmarked-line text to the clipboard without altering
@@ -23,8 +24,8 @@ extension CommandActions {
     /// move into "filter" mode — the result is an extract.
     static func keepBookmarkedLinesOnly() {
         guard let textView = actions, let state else { return }
-        let bookmarkedSet = Set(state.bookmarks.values)
         let nsText = textView.text as NSString
+        let bookmarkedSet = bookmarkedLineStarts(state, in: nsText)
         let nl = state.lineEnding.string
         var output: [String] = []
         var scan = 0
@@ -37,7 +38,8 @@ extension CommandActions {
             }
             scan = line.location + line.length
         }
-        textView.text = output.joined(separator: nl)
+        textView.replace(NSRange(location: 0, length: nsText.length),
+                         withText: output.joined(separator: nl))
         state.bookmarks.removeAll()
         commitTextChange()
     }
@@ -54,8 +56,8 @@ extension CommandActions {
     /// slot becomes bookmarked (limited to 10 slots).
     static func invertBookmarks() {
         guard let textView = actions, let state else { return }
-        let oldStarts = Set(state.bookmarks.values)
         let nsText = textView.text as NSString
+        let oldStarts = bookmarkedLineStarts(state, in: nsText)
         var freshStarts: [Int] = []
         var scan = 0
         while scan < nsText.length {
@@ -69,6 +71,15 @@ extension CommandActions {
         for (slot, loc) in freshStarts.prefix(10).enumerated() {
             state.bookmarks[slot] = loc
         }
+    }
+
+    /// Bookmarks store raw cursor offsets (`selectedRange.location`),
+    /// so a mid-line bookmark never equals its line's start — line-set
+    /// membership tests need the owning line's start instead.
+    private static func bookmarkedLineStarts(_ state: EditorState, in nsText: NSString) -> Set<Int> {
+        Set(state.bookmarks.values.map { offset in
+            nsText.lineRange(for: NSRange(location: min(offset, nsText.length), length: 0)).location
+        })
     }
 
     private struct BookmarkedLines {

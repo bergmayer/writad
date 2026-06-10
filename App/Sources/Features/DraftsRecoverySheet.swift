@@ -8,6 +8,7 @@ struct DraftsRecoverySheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var drafts: [DraftRecord] = []
+    @State private var confirmingDeleteAll: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -52,14 +53,26 @@ struct DraftsRecoverySheet: View {
                     }
                     ToolbarItem(placement: .destructiveAction) {
                         Button("Delete All", role: .destructive) {
-                            for draft in drafts {
-                                DraftsStore.shared.discard(draft.url)
-                            }
-                            drafts.removeAll()
-                            dismiss()
+                            confirmingDeleteAll = true
                         }
                     }
                 }
+            }
+            .confirmationDialog(
+                "Delete all \(drafts.count) draft\(drafts.count == 1 ? "" : "s")?",
+                isPresented: $confirmingDeleteAll,
+                titleVisibility: .visible
+            ) {
+                Button("Delete All", role: .destructive) {
+                    for draft in drafts {
+                        DraftsStore.shared.discard(draft.url)
+                    }
+                    drafts.removeAll()
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Deleted drafts cannot be recovered.")
             }
             .onAppear { drafts = DraftsStore.shared.loadAll() }
         }
@@ -112,7 +125,7 @@ struct DraftsRecoverySheet: View {
             // Explicit × is more discoverable than swipe (especially
             // on iPad). No per-row confirm — if the user thought
             // the draft was valuable they'd have tapped Recover.
-            // Bulk Discard All still gates on the toolbar role.
+            // Bulk Delete All gates behind a confirmation dialog.
             Button {
                 DraftsStore.shared.discard(draft.url)
                 drafts.removeAll { $0.id == draft.id }

@@ -53,6 +53,9 @@ final class SceneRouter {
             currentSession = candidate
             return
         }
+        // Fail closed: a stale currentSession from another window would
+        // route OR-gated sheets/pickers to the wrong scene.
+        currentSession = nil
     }
 
     func session(containing tabID: UUID) -> EditorSession? {

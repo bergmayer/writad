@@ -15,6 +15,10 @@ struct MarkdownPreviewContent: View {
     @State private var renderedHTML: String = ""
     /// Last rendered source — throttles re-renders while typing.
     @State private var lastSource: String = ""
+    /// Scratch-sandbox `.html` for the share sheet, refreshed by
+    /// `rerender()` — `ShareLink(item:)` is body-evaluated, so the
+    /// file write must not happen inline there.
+    @State private var exportURL: URL?
 
     var body: some View {
         NavigationStack {
@@ -29,8 +33,10 @@ struct MarkdownPreviewContent: View {
                         }
                     }
                     ToolbarItem(placement: .topBarTrailing) {
-                        ShareLink(item: htmlExportURL,
-                                  preview: SharePreview(currentTitle))
+                        if let exportURL {
+                            ShareLink(item: exportURL,
+                                      preview: SharePreview(currentTitle))
+                        }
                     }
                 }
         }
@@ -52,6 +58,7 @@ struct MarkdownPreviewContent: View {
         guard src != lastSource else { return }
         lastSource = src
         renderedHTML = MarkdownRenderer.html(for: src, title: currentTitle)
+        exportURL = writeExportFile(html: renderedHTML)
     }
 
     private var currentTitle: String {
@@ -61,16 +68,16 @@ struct MarkdownPreviewContent: View {
             .lastPathComponent ?? "Untitled"
     }
 
-    /// Scratch-sandbox `.html` written each time the share sheet
-    /// opens. System Print → Save as PDF renders it to PDF.
-    private var htmlExportURL: URL {
-        let dir = FileManager.default.temporaryDirectory
-        let url = dir.appendingPathComponent("\(currentTitle).html")
-        let safeHTML = renderedHTML.isEmpty
-            ? MarkdownRenderer.html(for: lastSource, title: currentTitle)
-            : renderedHTML
-        try? safeHTML.write(to: url, atomically: true, encoding: .utf8)
-        return url
+    /// System Print → Save as PDF renders the shared `.html` to PDF.
+    private func writeExportFile(html: String) -> URL? {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(currentTitle).html")
+        do {
+            try html.write(to: url, atomically: true, encoding: .utf8)
+            return url
+        } catch {
+            return nil
+        }
     }
 }
 
@@ -119,7 +126,17 @@ private struct MarkdownWebView: UIViewRepresentable {
         return view
     }
 
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    /// Tracks the last-loaded HTML — `updateUIView` fires on every
+    /// host re-render, and an unconditional reload resets scroll.
+    final class Coordinator {
+        var lastHTML: String?
+    }
+
     func updateUIView(_ view: WKWebView, context: Context) {
+        guard html != context.coordinator.lastHTML else { return }
+        context.coordinator.lastHTML = html
         view.loadHTMLString(html, baseURL: nil)
     }
 }
