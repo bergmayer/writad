@@ -293,6 +293,7 @@ struct EditorView: View {
         _ = state.spellCheck
         _ = state.autoLinkDetection
         _ = state.savedBaselineText
+        _ = state.editorFocusRequestID
         _ = state.showChangeHistoryGutter
         _ = state.overscroll
         _ = state.sidebarOpen
@@ -594,4 +595,3 @@ struct EditorView: View {
         state.textView?.goToLine(line)
     }
 }
-

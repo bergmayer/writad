@@ -375,6 +375,7 @@ struct EditorScene: View {
         tab.state.fileURL = nil
         tab.state.savedBaselineText = ""
         tab.kind = .editor
+        tab.state.requestEditorFocus()
     }
 
     private func adoptTemplateIntoActiveTab(_ template: TemplateRecord) {
@@ -388,6 +389,7 @@ struct EditorScene: View {
         tab.state.savedBaselineText = ""
         tab.state.languageIdentifier = LanguageRegistry.identifier(for: template.url)
         tab.kind = .editor
+        tab.state.requestEditorFocus()
     }
 
     /// Checks the draft out of the synced folder so two devices
@@ -415,6 +417,7 @@ struct EditorScene: View {
                 tab.state.languageIdentifier = LanguageRegistry.identifier(for: resolved.url)
                 tab.state.savedBaselineText = ""
                 tab.kind = .editor
+                tab.state.requestEditorFocus()
                 bus.presentation.sourceStaleCheck = .missing(
                     tabID: tab.id,
                     displayName: resolved.url.lastPathComponent
@@ -436,6 +439,7 @@ struct EditorScene: View {
                 ?? ""
             tab.state.savedBaselineText = onDisk
             tab.kind = .editor
+            tab.state.requestEditorFocus()
             // Did anything change between draft creation and now?
             // Compare the draft's recorded attrs to current disk.
             // If we don't have recorded attrs (older draft), skip —
@@ -453,6 +457,7 @@ struct EditorScene: View {
         }
         tab.state.savedBaselineText = ""
         tab.kind = .editor
+        tab.state.requestEditorFocus()
     }
 
     private static func resolveBookmark(_ data: Data) -> (url: URL, isStale: Bool)? {
@@ -576,6 +581,7 @@ struct EditorScene: View {
         // briefly hosts two tabs and animates the placeholder out.
         let placeholder = session.activeTab
         session.attachTab(adopted)
+        adopted.state.requestEditorFocus()
         if let idx = session.tabs.firstIndex(where: { $0 === placeholder }) {
             session.tabs.remove(at: idx)
         }
@@ -644,6 +650,7 @@ struct EditorScene: View {
             state.savedBaselineText = document.text
             state.fileEncoding = document.fileEncoding
             state.lineEnding = document.lineEnding
+            state.requestEditorFocus()
             RecentFilesStore.shared.record(url)
             let persisted = FoldPersistence.ranges(for: url)
             if !persisted.isEmpty {

@@ -78,13 +78,15 @@ enum CommandActions {
                 Self.context.scenes.openWindow?(.editor)
                 return
             }
-            session.newTab(kind: .editor)
-            session.activeTab.document.fileURL = url
-            Task { @MainActor in
-                try? await session.activeTab.document.loadAsync(from: url)
-                session.activeTab.state.text = session.activeTab.document.text
-                session.activeTab.state.fileURL = url
-                session.activeTab.state.languageIdentifier = LanguageRegistry.identifier(for: url)
+            let tab = session.newTab(kind: .editor)
+            tab.document.fileURL = url
+            Task { @MainActor [weak tab] in
+                guard let tab else { return }
+                try? await tab.document.loadAsync(from: url)
+                tab.state.text = tab.document.text
+                tab.state.fileURL = url
+                tab.state.languageIdentifier = LanguageRegistry.identifier(for: url)
+                tab.state.requestEditorFocus()
             }
         }
     }

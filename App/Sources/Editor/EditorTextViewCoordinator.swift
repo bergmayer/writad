@@ -14,6 +14,8 @@ final class EditorTextViewCoordinator: NSObject, @preconcurrency EditorEngine.Te
     /// Last EXTERNAL push (load / revert / restore); the cached
     /// value lets updateUIView skip the per-render O(n) compare.
     var lastPushedDocumentText: String?
+    /// Last focus request consumed by this mounted engine view.
+    var handledFocusRequestID: Int = 0
     /// Short-circuits delegate callbacks while propagating a
     /// sibling split-pane edit so the change doesn't bounce.
     var isApplyingSiblingSync: Bool = false

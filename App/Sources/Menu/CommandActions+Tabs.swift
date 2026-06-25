@@ -205,6 +205,7 @@ extension CommandActions {
                 tab.state.text = tab.document.text
                 tab.state.fileURL = url
                 tab.state.savedBaselineText = tab.document.text
+                tab.state.requestEditorFocus()
             } catch {
                 Self.context.presentation.openErrorMessage =
                     "Couldn't reload \(check.displayName): \(error.localizedDescription)"
@@ -226,6 +227,7 @@ extension CommandActions {
         else { return }
         tab.document.sourceMtimeAtLoad = attrs.mtime
         tab.document.sourceSizeAtLoad = attrs.size
+        tab.state.requestEditorFocus()
     }
 
     /// "OK" off the source-missing dialog — the file's gone, so
@@ -244,6 +246,7 @@ extension CommandActions {
         // No baseline against a missing file — every line is "added"
         // until the user picks a new save target.
         tab.state.savedBaselineText = ""
+        tab.state.requestEditorFocus()
     }
 
     private static func performSave(tab: TabModel) -> Bool {
@@ -328,6 +331,7 @@ extension CommandActions {
         tab.document.isDirty = true
         tab.document.draftURL = draft.url
         tab.state.text = text
+        tab.state.requestEditorFocus()
 
         if let bookmark = draft.metadata?.sourceBookmark,
            let resolved = resolveBookmark(bookmark) {
@@ -565,5 +569,6 @@ extension CommandActions {
             tab.document.isDirty = true
             tab.state.text = snapshot
         }
+        tab.state.requestEditorFocus()
     }
 }

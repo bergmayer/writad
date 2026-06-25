@@ -61,6 +61,9 @@ final class EditorState {
 
     /// Selection / cursor (mirrored from editor engine).
     var selectedRange: NSRange = NSRange(location: 0, length: 0)
+    /// Monotonic request ID. Incrementing this asks the mounted editor
+    /// view to become first responder once SwiftUI has rendered it.
+    var editorFocusRequestID: Int = 0
 
     /// Bookmarks: digit (0–9) → cursor location in the document.
     var bookmarks: [Int: Int] = [:]
@@ -99,6 +102,10 @@ final class EditorState {
         let d = UserDefaults.standard
         self.languageIdentifier = d.string(forKey: AppPreferenceKey.defaultLanguage)
             .flatMap(LanguageIdentifier.init(rawValue:)) ?? .plain
+    }
+
+    func requestEditorFocus() {
+        editorFocusRequestID &+= 1
     }
 
     // MARK: - Preferences (pass-through to AppPreferencesStore)

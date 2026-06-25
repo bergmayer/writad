@@ -85,6 +85,7 @@ struct EditorTextView: UIViewRepresentable {
         // `bringSubviewToFront(gutterContainerView)`).
 
         state.textView = textView
+        applyFocusRequestIfNeeded(to: textView, context: context)
         return textView
     }
 
@@ -126,6 +127,7 @@ struct EditorTextView: UIViewRepresentable {
             applyLanguage(to: textView, identifier: state.languageIdentifier, coordinator: context.coordinator)
         }
         context.coordinator.refreshFoldableRegions(textView)
+        applyFocusRequestIfNeeded(to: textView, context: context)
         context.coordinator.bookmarkOverlay?.bookmarks = state.bookmarks
         // Gutter gated on pref + byte ceiling
         // (`changeHistoryGutterByteLimit` — per-line diff +
@@ -176,6 +178,18 @@ struct EditorTextView: UIViewRepresentable {
 
     func makeCoordinator() -> EditorTextViewCoordinator {
         EditorTextViewCoordinator(document: document, state: state)
+    }
+
+    private func applyFocusRequestIfNeeded(to textView: EditorEngine.TextView, context: Context) {
+        let requestID = state.editorFocusRequestID
+        guard requestID != 0, context.coordinator.handledFocusRequestID != requestID else { return }
+        context.coordinator.handledFocusRequestID = requestID
+        DispatchQueue.main.async { [weak textView] in
+            textView?.focusForEditing()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak textView] in
+                textView?.focusForEditing()
+            }
+        }
     }
 
     // MARK: - Settings
@@ -301,6 +315,10 @@ private struct BasicCharacterPair: EditorEngine.CharacterPair {
 // MARK: - EditorActions conformance
 
 extension EditorEngine.TextView: EditorActions {
+
+    func focusForEditing() {
+        _ = becomeFirstResponder()
+    }
 
     func presentFindNavigator() {
         findInteraction?.presentFindNavigator(showingReplace: false)
@@ -842,5 +860,3 @@ extension EditorEngine.TextView: EditorActions {
         self.lineEndings = mapped
     }
 }
-
-

@@ -18,6 +18,13 @@ protocol TextAccess: AnyObject {
     func replace(_ range: NSRange, withText text: String)
 }
 
+// MARK: - Focus
+
+@MainActor
+protocol EditorFocusing: AnyObject {
+    func focusForEditing()
+}
+
 // MARK: - Selection / scrolling
 
 @MainActor
@@ -157,6 +164,7 @@ protocol LineEndingApplying: AnyObject {
 
 @MainActor
 protocol EditorActions: TextAccess,
+                       EditorFocusing,
                        Selecting,
                        Finding,
                        LineOps,
