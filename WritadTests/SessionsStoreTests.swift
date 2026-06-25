@@ -1,5 +1,5 @@
 import XCTest
-@testable import Ayyyy
+@testable import Writad
 
 @MainActor
 final class SessionsStoreTests: XCTestCase {
@@ -10,7 +10,7 @@ final class SessionsStoreTests: XCTestCase {
 
     override func setUp() async throws {
         try await super.setUp()
-        suiteName = "ayyyy-sessions-test-\(UUID().uuidString)"
+        suiteName = "writad-sessions-test-\(UUID().uuidString)"
         defaults = UserDefaults(suiteName: suiteName)
         defaults.removePersistentDomain(forName: suiteName)
         // observesScenes: false skips the global UIScene observer that

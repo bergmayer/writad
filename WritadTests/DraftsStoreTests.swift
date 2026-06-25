@@ -1,5 +1,5 @@
 import XCTest
-@testable import Ayyyy
+@testable import Writad
 
 @MainActor
 final class DraftsStoreTests: XCTestCase {
@@ -10,7 +10,7 @@ final class DraftsStoreTests: XCTestCase {
     override func setUp() async throws {
         try await super.setUp()
         tempRoot = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ayyyy-drafts-test-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("writad-drafts-test-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
         // Empty protected set keeps eviction tests hermetic — the
         // default consults the process-wide SessionsStore.shared.

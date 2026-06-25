@@ -497,7 +497,7 @@ final class PlainTextDocument {
     nonisolated static let hardSizeCap: Int = 100 * 1024 * 1024  // 100 MB
 
     /// File picker / Recents are gated on these types so the user
-    /// only sees files Ayyyy can actually open. Dropping `.data`
+    /// only sees files writað can actually open. Dropping `.data`
     /// removes the over-broad fallback — it matches every file. Add
     /// custom UTIs (markdown / TeX / Typst) when registered.
     static let supportedReadTypes: [UTType] = {
@@ -575,4 +575,3 @@ final class PlainTextDocument {
         return output
     }
 }
-

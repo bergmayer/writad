@@ -2,7 +2,7 @@ import Foundation
 
 /// Resolves the app's iCloud Drive ubiquity container — the
 /// directory under <iCloud>/<container>/Documents that the Files
-/// app exposes as "Ayyyy" and syncs across the user's devices.
+/// app exposes as "writað" and syncs across the user's devices.
 /// Drafts and templates live inside it so a draft started on iPad
 /// shows up on iPhone, and so the user can drop a custom template
 /// in from Files.app on any device.
@@ -17,7 +17,7 @@ enum UbiquityContainer {
 
     /// `iCloud.<bundle-id>` per Apple's container-ID convention.
     /// Kept in sync with the entitlements file and Info.plist.
-    static let containerIdentifier = "iCloud.com.palefire.ayyyy"
+    static let containerIdentifier = "iCloud.com.palefire.writad"
 
     /// `<container>/Documents` — the public scope visible in Files.
     /// `nil` means iCloud isn't available; caller should use local

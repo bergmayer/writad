@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 import EditorEngine
-import AyyyySyntax
+import WritadSyntax
 
 /// The engine's `TextView` is the buffer's source of truth. The
 /// coordinator bumps `document.bufferRevision` per keystroke;
@@ -681,7 +681,7 @@ extension EditorEngine.TextView: EditorActions {
 
     /// Namespace so we replace only misspelling marks, not live-match
     /// / bracket-match / find-bar highlights.
-    private static let misspellingHighlightID = "ayyyy.misspelling-"
+    private static let misspellingHighlightID = "writad.misspelling-"
 
     func highlightAllMisspellings() {
         let nsText = text as NSString
@@ -770,7 +770,7 @@ extension EditorEngine.TextView: EditorActions {
 
     // MARK: - Bracket match
 
-    private static let bracketHighlightID = "ayyyy.bracketMatch"
+    private static let bracketHighlightID = "writad.bracketMatch"
 
     func goToMatchingBracket() {
         guard let match = BracketMatcher.matchingLocation(in: text as NSString, cursor: selectedRange.location) else { return }

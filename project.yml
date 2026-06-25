@@ -1,10 +1,10 @@
-# XcodeGen spec — fallback if Ayyyy.xcodeproj fails to open.
+# XcodeGen spec — fallback if Writad.xcodeproj fails to open.
 #
 # Install XcodeGen via Homebrew (brew install xcodegen), then:
-#   rm -rf Ayyyy.xcodeproj
+#   rm -rf Writad.xcodeproj
 #   xcodegen generate
 #
-name: Ayyyy
+name: Writad
 options:
   bundleIdPrefix: com.palefire
   deploymentTarget:
@@ -19,7 +19,7 @@ packages:
     path: Packages/TreeSitterTypst
 
 targets:
-  Ayyyy:
+  Writad:
     type: application
     platform: iOS
     sources:
@@ -28,7 +28,7 @@ targets:
     info:
       path: App/Resources/Info.plist
     entitlements:
-      path: App/Resources/Ayyyy.entitlements
+      path: App/Resources/Writad.entitlements
     dependencies:
       - package: EditorKit
         product: FileEncoding
@@ -41,10 +41,10 @@ targets:
       - package: EditorKit
         product: EditorEngine
       - package: EditorKit
-        product: AyyyySyntax
+        product: WritadSyntax
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.palefire.ayyyy
+        PRODUCT_BUNDLE_IDENTIFIER: com.palefire.writad
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: "6.0"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -53,4 +53,4 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
         GENERATE_INFOPLIST_FILE: "NO"
-        CODE_SIGN_ENTITLEMENTS: App/Resources/Ayyyy.entitlements
+        CODE_SIGN_ENTITLEMENTS: App/Resources/Writad.entitlements

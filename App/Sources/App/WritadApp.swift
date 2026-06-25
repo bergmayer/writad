@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 @main
-struct AyyyyApp: App {
+struct WritadApp: App {
 
     /// Bridges UIKit's quick-action callbacks (Info.plist
     /// `UIApplicationShortcutItems`) into `AppStateBus.pendingShortcut`

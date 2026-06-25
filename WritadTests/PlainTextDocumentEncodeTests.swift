@@ -1,7 +1,7 @@
 import XCTest
 import FileEncoding
 import LineEnding
-@testable import Ayyyy
+@testable import Writad
 
 final class PlainTextDocumentEncodeTests: XCTestCase {
 

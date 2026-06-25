@@ -1,5 +1,5 @@
 import XCTest
-@testable import Ayyyy
+@testable import Writad
 
 @MainActor
 final class ClosedTabsStoreTests: XCTestCase {
@@ -10,7 +10,7 @@ final class ClosedTabsStoreTests: XCTestCase {
 
     override func setUp() async throws {
         try await super.setUp()
-        suiteName = "ayyyy-closed-tabs-test-\(UUID().uuidString)"
+        suiteName = "writad-closed-tabs-test-\(UUID().uuidString)"
         defaults = UserDefaults(suiteName: suiteName)
         defaults.removePersistentDomain(forName: suiteName)
         store = ClosedTabsStore(defaults: defaults)

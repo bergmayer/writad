@@ -10,8 +10,10 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleDisplayName</key>
+	<string>writað</string>
 	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
+	<string>writað</string>
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<key>CFBundleShortVersionString</key>
@@ -23,7 +25,7 @@
 
 	<!-- System-wide registration for text & Markdown. Each
 	     CFBundleDocumentTypes entry tells Springboard and the Files
-	     app "Ayyyy can edit these UTIs"; with
+	     app "writað can edit these UTIs"; with
 	     LSSupportsOpeningDocumentsInPlace = YES (below) we accept the
 	     URL hand-off directly instead of forcing an import-and-copy.
 	     The DocumentGroup-era FP -1005 bug that previously kept this
@@ -188,7 +190,7 @@
 		</dict>
 	</array>
 	<!-- Now ON: system-wide handler. Files app, share sheets, and the
-	     "Open with…" path will offer Ayyyy for any registered UTI and
+	     "Open with…" path will offer writað for any registered UTI and
 	     hand us the file URL directly. `.onOpenURL` in EditorScene
 	     receives it and routes through `route(open:)`. -->
 	<key>LSSupportsOpeningDocumentsInPlace</key>
@@ -200,18 +202,18 @@
 	<true/>
 	<!-- iCloud Drive ubiquity container. Templates + drafts live in
 	     <container>/Documents/, which `NSUbiquitousContainerIsDocumentScopePublic`
-	     surfaces in the Files app as "Ayyyy" so the user can drag in
+	     surfaces in the Files app as "writað" so the user can drag in
 	     their own templates and other apps can read the drafts. -->
 	<key>NSUbiquitousContainers</key>
 	<dict>
-		<key>iCloud.com.palefire.ayyyy</key>
+		<key>iCloud.com.palefire.writad</key>
 		<dict>
 			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
 			<true/>
 			<key>NSUbiquitousContainerSupportedFolderLevels</key>
 			<string>Any</string>
 			<key>NSUbiquitousContainerName</key>
-			<string>Ayyyy</string>
+			<string>writað</string>
 		</dict>
 	</dict>
 
@@ -241,7 +243,7 @@
 	<array>
 		<dict>
 			<key>UIApplicationShortcutItemType</key>
-			<string>com.palefire.ayyyy.shortcut.newFile</string>
+			<string>com.palefire.writad.shortcut.newFile</string>
 			<key>UIApplicationShortcutItemTitle</key>
 			<string>New File</string>
 			<key>UIApplicationShortcutItemIconType</key>
@@ -249,7 +251,7 @@
 		</dict>
 		<dict>
 			<key>UIApplicationShortcutItemType</key>
-			<string>com.palefire.ayyyy.shortcut.commandPalette</string>
+			<string>com.palefire.writad.shortcut.commandPalette</string>
 			<key>UIApplicationShortcutItemTitle</key>
 			<string>Command Palette</string>
 			<key>UIApplicationShortcutItemIconType</key>

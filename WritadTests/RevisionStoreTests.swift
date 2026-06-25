@@ -1,5 +1,5 @@
 import XCTest
-@testable import Ayyyy
+@testable import Writad
 
 @MainActor
 final class RevisionStoreTests: XCTestCase {
@@ -11,7 +11,7 @@ final class RevisionStoreTests: XCTestCase {
     override func setUp() async throws {
         try await super.setUp()
         tempRoot = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ayyyy-revisions-test-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("writad-revisions-test-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
         store = RevisionStore(
             supportDirOverride: tempRoot,

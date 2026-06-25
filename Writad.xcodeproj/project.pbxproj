@@ -14,7 +14,7 @@
 		B2000096 /* PlainTextDocumentEncodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000096 /* PlainTextDocumentEncodeTests.swift */; };
 		B2000090 /* TransformationsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000090 /* TransformationsTests.swift */; };
 		B2000091 /* FuzzyMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000091 /* FuzzyMatcherTests.swift */; };
-		B2000001 /* AyyyyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001 /* AyyyyApp.swift */; };
+		B2000001 /* WritadApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001 /* WritadApp.swift */; };
 		B2000002 /* PlainTextDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002 /* PlainTextDocument.swift */; };
 		B2000003 /* EditorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000003 /* EditorState.swift */; };
 		B2000004 /* EditorTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000004 /* EditorTextView.swift */; };
@@ -125,7 +125,7 @@
 		B2020003 /* LineSort in Frameworks */ = {isa = PBXBuildFile; productRef = B4000003 /* LineSort */; };
 		B2020004 /* CharacterInfo in Frameworks */ = {isa = PBXBuildFile; productRef = B4000004 /* CharacterInfo */; };
 		B2020005 /* EditorEngine in Frameworks */ = {isa = PBXBuildFile; productRef = B4000005 /* EditorEngine */; };
-		B2020006 /* AyyyySyntax in Frameworks */ = {isa = PBXBuildFile; productRef = B4000006 /* AyyyySyntax */; };
+		B2020006 /* WritadSyntax in Frameworks */ = {isa = PBXBuildFile; productRef = B4000006 /* WritadSyntax */; };
 /* End PBXBuildFile section */
 
 
@@ -135,7 +135,7 @@
 			containerPortal = B8000001 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = B6000001;
-			remoteInfo = Ayyyy;
+			remoteInfo = Writad;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -145,11 +145,11 @@
 		B1000094 /* RevisionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevisionStoreTests.swift; sourceTree = "<group>"; };
 		B1000095 /* SessionsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsStoreTests.swift; sourceTree = "<group>"; };
 		B1000096 /* PlainTextDocumentEncodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainTextDocumentEncodeTests.swift; sourceTree = "<group>"; };
-		B1010004 /* AyyyyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AyyyyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1010004 /* WritadTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WritadTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B1000090 /* TransformationsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationsTests.swift; sourceTree = "<group>"; };
 		B1000091 /* FuzzyMatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuzzyMatcherTests.swift; sourceTree = "<group>"; };
-		B1000000 /* Ayyyy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ayyyy.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		B1000001 /* AyyyyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AyyyyApp.swift; sourceTree = "<group>"; };
+		B1000000 /* Writad.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Writad.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1000001 /* WritadApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WritadApp.swift; sourceTree = "<group>"; };
 		B1000002 /* PlainTextDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainTextDocument.swift; sourceTree = "<group>"; };
 		B1000003 /* EditorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorState.swift; sourceTree = "<group>"; };
 		B1000004 /* EditorTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorTextView.swift; sourceTree = "<group>"; };
@@ -256,7 +256,7 @@
 		B100006A /* EditorStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorStatusBar.swift; sourceTree = "<group>"; };
 		B1010001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B1010002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		B1010003 /* Ayyyy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ayyyy.entitlements; sourceTree = "<group>"; };
+		B1010003 /* Writad.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Writad.entitlements; sourceTree = "<group>"; };
 		B1020001 /* EditorKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = EditorKit; path = Packages/EditorKit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -270,7 +270,7 @@
 				B2020003 /* LineSort in Frameworks */,
 				B2020004 /* CharacterInfo in Frameworks */,
 				B2020005 /* EditorEngine in Frameworks */,
-				B2020006 /* AyyyySyntax in Frameworks */,
+				B2020006 /* WritadSyntax in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -289,7 +289,7 @@
 			children = (
 				B5000010 /* App */,
 				B5000020 /* Packages */,
-				B5000022 /* AyyyyTests */,
+				B5000022 /* WritadTests */,
 				B5000030 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -323,7 +323,7 @@
 			children = (
 				B1010001 /* Assets.xcassets */,
 				B1010002 /* Info.plist */,
-				B1010003 /* Ayyyy.entitlements */,
+				B1010003 /* Writad.entitlements */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -331,7 +331,7 @@
 		B5000013 /* App */ = {
 			isa = PBXGroup;
 			children = (
-				B1000001 /* AyyyyApp.swift */,
+				B1000001 /* WritadApp.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -500,13 +500,13 @@
 		B5000030 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				B1000000 /* Ayyyy.app */,
-				B1010004 /* AyyyyTests.xctest */,
+				B1000000 /* Writad.app */,
+				B1010004 /* WritadTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		B5000022 /* AyyyyTests */ = {
+		B5000022 /* WritadTests */ = {
 			isa = PBXGroup;
 			children = (
 				B1000092 /* DraftsStoreTests.swift */,
@@ -517,15 +517,15 @@
 				B1000090 /* TransformationsTests.swift */,
 				B1000091 /* FuzzyMatcherTests.swift */,
 			);
-			path = AyyyyTests;
+			path = WritadTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		B6000001 /* Ayyyy */ = {
+		B6000001 /* Writad */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B7000002 /* Build configuration list for PBXNativeTarget "Ayyyy" */;
+			buildConfigurationList = B7000002 /* Build configuration list for PBXNativeTarget "Writad" */;
 			buildPhases = (
 				B3000003 /* Sources */,
 				B3000004 /* Frameworks */,
@@ -535,22 +535,22 @@
 			);
 			dependencies = (
 			);
-			name = Ayyyy;
+			name = Writad;
 			packageProductDependencies = (
 				B4000001 /* FileEncoding */,
 				B4000002 /* LineEnding */,
 				B4000003 /* LineSort */,
 				B4000004 /* CharacterInfo */,
 				B4000005 /* EditorEngine */,
-				B4000006 /* AyyyySyntax */,
+				B4000006 /* WritadSyntax */,
 			);
-			productName = Ayyyy;
-			productReference = B1000000 /* Ayyyy.app */;
+			productName = Writad;
+			productReference = B1000000 /* Writad.app */;
 			productType = "com.apple.product-type.application";
 		};
-		B6000002 /* AyyyyTests */ = {
+		B6000002 /* WritadTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B7000003 /* Build configuration list for PBXNativeTarget "AyyyyTests" */;
+			buildConfigurationList = B7000003 /* Build configuration list for PBXNativeTarget "WritadTests" */;
 			buildPhases = (
 				B3000006 /* Sources */,
 				B3000007 /* Frameworks */,
@@ -561,9 +561,9 @@
 			dependencies = (
 				BB000001 /* PBXTargetDependency */,
 			);
-			name = AyyyyTests;
-			productName = AyyyyTests;
-			productReference = B1010004 /* AyyyyTests.xctest */;
+			name = WritadTests;
+			productName = WritadTests;
+			productReference = B1010004 /* WritadTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -581,7 +581,7 @@
 					};
 				};
 			};
-			buildConfigurationList = B7000001 /* Build configuration list for PBXProject "Ayyyy" */;
+			buildConfigurationList = B7000001 /* Build configuration list for PBXProject "Writad" */;
 			compatibilityVersion = "Xcode 16.0.Superseded.1";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -597,8 +597,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				B6000001 /* Ayyyy */,
-				B6000002 /* AyyyyTests */,
+				B6000001 /* Writad */,
+				B6000002 /* WritadTests */,
 			);
 		};
 /* End PBXProject section */
@@ -626,7 +626,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B2000001 /* AyyyyApp.swift in Sources */,
+				B2000001 /* WritadApp.swift in Sources */,
 				B2000002 /* PlainTextDocument.swift in Sources */,
 				B2000003 /* EditorState.swift in Sources */,
 				B2000004 /* EditorTextView.swift in Sources */,
@@ -754,7 +754,7 @@
 /* Begin PBXTargetDependency section */
 		BB000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = B6000001 /* Ayyyy */;
+			target = B6000001 /* Writad */;
 			targetProxy = BC000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -882,7 +882,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = App/Resources/Ayyyy.entitlements;
+				CODE_SIGN_ENTITLEMENTS = App/Resources/Writad.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -901,7 +901,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.palefire.ayyyy;
+				PRODUCT_BUNDLE_IDENTIFIER = com.palefire.writad;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -915,7 +915,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = App/Resources/Ayyyy.entitlements;
+				CODE_SIGN_ENTITLEMENTS = App/Resources/Writad.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -930,7 +930,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.palefire.ayyyy;
+				PRODUCT_BUNDLE_IDENTIFIER = com.palefire.writad;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -949,12 +949,12 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.palefire.ayyyy.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.palefire.writad.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ayyyy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Ayyyy";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Writad.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Writad";
 			};
 			name = Debug;
 		};
@@ -968,19 +968,19 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.palefire.ayyyy.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.palefire.writad.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ayyyy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Ayyyy";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Writad.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Writad";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		B7000001 /* Build configuration list for PBXProject "Ayyyy" */ = {
+		B7000001 /* Build configuration list for PBXProject "Writad" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				BA000001 /* Debug */,
@@ -989,7 +989,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		B7000002 /* Build configuration list for PBXNativeTarget "Ayyyy" */ = {
+		B7000002 /* Build configuration list for PBXNativeTarget "Writad" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				BA000003 /* Debug */,
@@ -998,7 +998,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		B7000003 /* Build configuration list for PBXNativeTarget "AyyyyTests" */ = {
+		B7000003 /* Build configuration list for PBXNativeTarget "WritadTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				BA000005 /* Debug */,
@@ -1037,9 +1037,9 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = EditorEngine;
 		};
-		B4000006 /* AyyyySyntax */ = {
+		B4000006 /* WritadSyntax */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = AyyyySyntax;
+			productName = WritadSyntax;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

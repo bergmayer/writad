@@ -1,5 +1,5 @@
 import XCTest
-@testable import Ayyyy
+@testable import Writad
 
 final class TransformationsTests: XCTestCase {
 

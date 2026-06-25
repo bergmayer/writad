@@ -8,11 +8,11 @@
 	</array>
 	<key>com.apple.developer.icloud-container-identifiers</key>
 	<array>
-		<string>iCloud.com.palefire.ayyyy</string>
+		<string>iCloud.com.palefire.writad</string>
 	</array>
 	<key>com.apple.developer.ubiquity-container-identifiers</key>
 	<array>
-		<string>iCloud.com.palefire.ayyyy</string>
+		<string>iCloud.com.palefire.writad</string>
 	</array>
 </dict>
 </plist>

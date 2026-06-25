@@ -4,7 +4,7 @@ import CryptoKit
 /// Per-document snapshot history persisted in the app sandbox.
 ///
 /// Each file URL maps to a folder under
-/// `Application Support/Ayyyy/Revisions/<sha256(path)>/` holding
+/// `Application Support/writað/Revisions/<sha256(path)>/` holding
 /// numbered `.bin` snapshot files plus a `meta.json` manifest.
 ///
 /// Three kinds of revisions:
@@ -284,7 +284,7 @@ final class RevisionStore {
         }
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
             .first ?? FileManager.default.temporaryDirectory
-        return support.appendingPathComponent("Ayyyy/Revisions", isDirectory: true)
+        return support.appendingPathComponent("writað/Revisions", isDirectory: true)
     }
 
     private func ensureDirectory(at url: URL) throws {
