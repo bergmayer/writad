@@ -1,6 +1,6 @@
 # writað
 
-![writað icon](simpler.jpg)
+![writað icon](w.jpg)
 
 ---
 
